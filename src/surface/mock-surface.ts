@@ -41,12 +41,17 @@ export class MockSurface implements Surface {
     // Simulate navigation
     if (action.type === "navigate" && action.value) {
       this.url = action.value;
-      this.axTree = [];
     }
 
-    // Simulate extract
+    // Get current state from sequence for extract
+    const currentState = this.stateSequence.length > 0 && this.stepCount <= this.stateSequence.length
+      ? this.stateSequence[this.stepCount - 1]
+      : null;
+
+    // Simulate extract using the current state sequence's axTree
     if (action.type === "extract" && action.target) {
-      const node = this.axTree.find(
+      const tree = currentState?.axTree || this.axTree;
+      const node = tree.find(
         (n) => n.role === action.target!.role && n.name === action.target!.name
       );
       if (node) {
