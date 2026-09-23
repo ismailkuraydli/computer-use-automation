@@ -1,0 +1,46 @@
+{
+  "12345": {
+    "name": "John A. Smith",
+    "ssn": "123-45-6789",
+    "dob": "1975-03-15",
+    "accounts": [
+      { "type": "Checking", "number": "1002003004", "balance": "$4,521.33" },
+      { "type": "Savings", "number": "2003004005", "balance": "$12,847.00" }
+    ]
+  },
+  "23456": {
+    "name": "Maria B. Johnson",
+    "ssn": "234-56-7890",
+    "dob": "1982-07-22",
+    "accounts": [
+      { "type": "Savings", "number": "3004005006", "balance": "$8,234.50" },
+      { "type": "Checking", "number": "4005006007", "balance": "$1,100.00" },
+      { "type": "CD", "number": "5006007008", "balance": "$25,000.00" }
+    ]
+  },
+  "34567": {
+    "name": "Robert C. Lee",
+    "ssn": "345-67-8901",
+    "dob": "1968-11-30",
+    "accounts": [
+      { "type": "Checking", "number": "6007008009", "balance": "$3,421.00" }
+    ]
+  },
+  "45678": {
+    "name": "Susan D. Patel",
+    "ssn": "456-78-9012",
+    "dob": "1990-05-18",
+    "accounts": [
+      { "type": "Savings", "number": "7008009010", "balance": "$45,200.00" },
+      { "type": "Checking", "number": "8009010011", "balance": "$2,340.00" }
+    ]
+  },
+  "56789": {
+    "name": "James E. Brown",
+    "ssn": "567-89-0123",
+    "dob": "1955-09-10",
+    "accounts": [
+      { "type": "Savings", "number": "9010110012", "balance": "$67,800.00" }
+    ]
+  }
+}
