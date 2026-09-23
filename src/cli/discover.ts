@@ -87,7 +87,9 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
   await surface._start(target);
 
   const evidence = new EvidenceCollector("./evidence");
-  const recorder = new Recorder("lookup-member-balance", goal, allowlist);
+  const recorder = new Recorder("lookup-member-balance", goal, allowlist, [
+    { name: "memberId", type: "string", required: true },
+  ]);
   const safetyGuard = new SafetyGuard(allowlist);
 
   const loop = new AgentLoop({
