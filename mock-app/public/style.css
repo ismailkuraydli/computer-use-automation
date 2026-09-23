@@ -1,0 +1,10 @@
+body { font-family: Arial, sans-serif; font-size: 12px; margin: 0; background: #f0f0f0; }
+.cls1 { background: #ffffff; }
+.cls2 { padding: 4px; }
+.cls3 { border-collapse: collapse; }
+.cls3 td, .cls3 th { border: 1px solid #999; padding: 3px; font-size: 12px; }
+.cls4 { background: #dde4f0; font-weight: bold; }
+.cls5 { color: #cc0000; padding: 4px; }
+h1 { font-size: 16px; margin: 0; padding: 4px; }
+a { color: #003366; }
+input, select { font-size: 12px; }
