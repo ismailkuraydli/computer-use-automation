@@ -1,0 +1,77 @@
+#!/usr/bin/env node
+/**
+ * cua — Computer-Use Automation CLI
+ * Thin wrapper that delegates to existing components.
+ */
+
+import { parseArgs } from "util";
+
+const { values, positionals } = parseArgs({
+  args: process.argv.slice(2),
+  allowPositionals: true,
+  options: {
+    goal: { type: "string" },
+    target: { type: "string", default: "http://localhost:3000" },
+    output: { type: "string", default: "./artifacts" },
+    artifact: { type: "string" },
+    params: { type: "string", default: "{}" },
+    "mock-llm": { type: "boolean", default: false },
+    allowlist: { type: "string" },
+    help: { type: "boolean", default: false },
+  },
+});
+
+const command = positionals[0];
+
+if (values.help || !command) {
+  console.log(`cua — Computer-Use Automation CLI
+
+Usage:
+  cua discover --goal "Look up member 12345" --target http://localhost:3000 --output ./artifacts/test.json
+  cua replay --artifact ./artifacts/lookup-member-balance/v1.json --params '{"memberId":"12345"}' --target http://localhost:3000
+  cua escalate --session <session-id>
+
+Options:
+  --goal       Natural language goal (discover)
+  --target     Target URL (default: http://localhost:3000)
+  --output     Output path for artifact (discover)
+  --artifact   Path to saved artifact JSON (replay)
+  --params     JSON string of input parameters (replay)
+  --mock-llm   Use MockLLMClient instead of real LLM (discover)
+  --allowlist  Path to allowlist JSON file (discover)
+  --help       Show this help
+
+Environment:
+  OPENROUTER_API_KEY  Required for real LLM discovery runs (unless --mock-llm)
+`);
+  process.exit(0);
+}
+
+async function main() {
+  switch (command) {
+    case "discover": {
+      const { runDiscover } = await import("./discover.js");
+      await runDiscover(values);
+      break;
+    }
+    case "replay": {
+      const { runReplay } = await import("./replay.js");
+      await runReplay(values);
+      break;
+    }
+    case "escalate": {
+      const { runEscalate } = await import("./escalate.js");
+      await runEscalate(values);
+      break;
+    }
+    default:
+      console.error(`Unknown command: ${command}`);
+      console.error("Run 'cua --help' for usage.");
+      process.exit(1);
+  }
+}
+
+main().catch((err) => {
+  console.error("Error:", err.message);
+  process.exit(1);
+});
