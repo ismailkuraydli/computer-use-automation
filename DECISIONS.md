@@ -1,0 +1,187 @@
+# Architecture Decision Records
+
+A living log of every significant design decision, the alternatives considered, and the consequences. Updated as the design evolves.
+
+---
+
+### ADR-001: TypeScript + Node.js + Playwright
+
+**Context:** The system needs a runtime that can drive a browser, call an LLM API, serialize artifacts, and run deterministically. The assignment leaves language/runtime open.
+
+**Options considered:**
+- **TypeScript/Node.js + Playwright** — typed, Playwright is first-class, matches existing stack
+- **Python + Playwright** — richer LLM/agent ecosystem, but weaker typing
+- **Go** — fast and typed, but weak LLM agent ecosystem and no native browser automation
+
+**Decision:** TypeScript/Node.js + Playwright.
+
+**Rationale:** Playwright provides the best browser automation API (AX-tree access, iframe/frame traversal, auto-waiting). TypeScript gives us typed contracts for the artifact schema and replay result — critical for the "typed, serializable artifact" requirement. Matches the developer's existing stack (sew-gateway), reducing friction.
+
+**Consequences:** Enables strong typing of artifact schema and contracts. Precludes Python's richer LLM tooling, but we call Claude via raw HTTP/SDK — no heavy agent framework needed. Watch for: Playwright AX-tree API limitations on legacy frameset pages (spike needed).
+
+---
+
+### ADR-002: Hybrid Step-List with State Guards (Option C)
+
+**Context:** The artifact schema is the focal point of evaluation. It must be reviewable by humans, invocable by agents, and robust to runtime errors during replay.
+
+**Options considered:**
+- **A: Imperative Step-List** — flat ordered list of actions with per-step error handlers. Simplest, most readable, but happy-path-bound — can't detect mid-flow interruptions.
+- **B: State-Machine** — named states with recognition signatures and transitions. Most robust to interruptions, but harder to author/review (graph vs list). Works against the "reviewable" requirement.
+- **C: Hybrid — Step-List with State Guards** — ordered steps, each with a pre-execution guard (what the screen must look like) and a post-execution checkpoint. Combines readability of a list with robustness of state-matching.
+
+**Decision:** Option C — Hybrid Step-List with State Guards.
+
+**Rationale:** The assignment requires both reviewability ("a human reviewer and a calling agent should be able to understand what the capability does") and robustness ("a capability that only works on the happy path is not useful in production"). Option C satisfies both: the linear structure is human-readable, while guards and checkpoints detect runtime errors before and after each step. The artifact doubles as a communication medium during human escalation — the operator can see exactly which step failed, what the guard expected, and what was observed instead.
+
+**Consequences:** Enables readable artifacts with robust error detection. Precludes the natural mid-flow recovery of a full state machine (if a dialog appears between steps, we need an explicit guard on the next step to catch it, rather than the state machine re-evaluating from observed state). Watch for: guard definitions becoming verbose — keep them lightweight (key-element presence, not full screen hashes).
+
+---
+
+### ADR-003: AX-Tree-First Locator Strategy with DOM Fallback
+
+**Context:** The target surface is intentionally hostile (framesets, nested tables, no test IDs, non-semantic markup). The locator strategy determines whether replay works next month.
+
+**Options considered:**
+- **DOM-first (CSS selectors)** — standard Playwright approach, but fragile on legacy surfaces without stable IDs/classes
+- **AX-tree-first (role + name)** — uses the accessibility tree, which is more stable than raw markup and available on both web and desktop
+- **Screenshot + coordinates** — most surface-agnostic, but least deterministic (layout-dependent)
+
+**Decision:** AX-tree-first (role + accessible name), with DOM structural fallback (tag + text + tree position), with visual fallback (screenshot region) as last resort.
+
+**Rationale:** The AX tree is the most stable representation that works across surfaces (web, legacy web, desktop via OS accessibility APIs). It's what a screen reader uses — if a human can identify a control by its announced name and role, our locator can too. DOM fallback handles cases where the AX tree is ambiguous (multiple elements with same role+name). Visual fallback is last resort for completely non-semantic surfaces.
+
+**Consequences:** Enables surface-agnostic locators that generalize to desktop (AX APIs exist on macOS/Windows). Precludes pure-DOM approaches that would break on legacy markup. Watch for: AX-tree availability inside framesets — Playwright's `page.accessibility.snapshot()` may not traverse frames; need to walk frame tree manually (spike candidate).
+
+---
+
+### ADR-004: Three-Tier Error Taxonomy (Business Outcome / Recoverable / Hard Failure)
+
+**Context:** The assignment explicitly requires distinguishing "expected business outcomes" (member-not-found is a legitimate result, not a crash) from "recoverable conditions" (dismiss a dialog, wait for a load) from "hard failures" (stop and surface a debuggable error).
+
+**Options considered:**
+- **Binary (success/failure)** — simplest, but conflates "member not found" with "element not found"
+- **Three-tier (business outcome / recoverable / hard failure)** — matches the assignment's taxonomy exactly
+- **Four-tier (add "warning")** — over-engineered for the scope
+
+**Decision:** Three-tier error taxonomy:
+1. **Business outcome** — legitimate result the caller needs to know (member-not-found, validation-error, permission-denied, already-exists). Replay returns `{ status: "business-outcome", outcome: string }`.
+2. **Recoverable condition** — system can handle and continue (unexpected-dialog → dismiss + retry; slow-load → wait + retry; session-expired → escalate or re-auth). Defined per-step in artifact `onError` handlers.
+3. **Hard failure** — stop and escalate (locator-not-found, unexpected-state, checkpoint-failed-with-no-handler). Replay returns `{ status: "failure", step, expected, observed, error }`.
+
+**Rationale:** Directly maps to the assignment's requirement. The distinction between business outcome and failure is "the most common design mistake" per the glossary — we make it structurally impossible to conflate them by having distinct result types.
+
+**Consequences:** Enables clean caller contracts — the agent invoking a capability gets typed outcomes, not exceptions. Precludes catch-all error handling — every error must be classified. Watch for: new error types discovered during real runs that don't fit any tier — add them to the taxonomy deliberately, don't force-fit.
+
+---
+
+### ADR-005: Allowlist + Action Classification Safety Model
+
+**Context:** The system operates on regulated financial data. It needs an allowlist of permitted actions/domains and must handle risky/irreversible actions conservatively.
+
+**Options considered:**
+- **Allowlist only** — permit listed domains + action types, block everything else
+- **Allowlist + action classification** — allowlist for scope, plus tiered action classification (safe/risky/irreversible)
+- **Capability-level policy** — each artifact declares its own policy (too decentralized for the security model)
+
+**Decision:** Allowlist + action classification:
+- **Allowlist**: configured per-capability — permitted URL patterns + permitted action types. Agent cannot navigate or act outside the allowlist.
+- **Action classification**:
+  - `safe`: read, navigate, type (input), wait, extract — auto-execute
+  - `risky`: submit, click-confirm, click-action-button — flag in evidence, execute only if artifact explicitly declares the action
+  - `irreversible`: delete, transfer, approve — always escalate to human before executing
+- **PII redaction**: before writing to artifacts or evidence, redact patterns matching SSN, account numbers, card numbers, credentials/tokens. Configurable redaction patterns. Original values never persisted — only parameterized placeholders (`{{memberId}}`) in artifacts.
+
+**Rationale:** Allowlist prevents the agent from wandering outside scope. Action classification ensures irreversible financial actions always get human approval. PII redaction is non-negotiable for regulated financial data — the artifact should never contain real member data, only parameter references.
+
+**Consequences:** Enables auditable safety — every action is classified and logged. Precludes fully autonomous operation on irreversible actions (by design). Watch for: allowlist being too permissive — review each capability's allowlist during the artifact approval step.
+
+---
+
+### ADR-006: Live-Session Control Transfer via CDP
+
+**Context:** When the system is stuck, a human must take control of the *same live session* — not a fresh one — perform manual steps, and hand control back. The assignment says "make the handoff mechanism and the control-transfer model real and well-reasoned."
+
+**Options considered:**
+- **CDP (Chrome DevTools Protocol) endpoint** — expose the live Playwright browser's CDP endpoint; operator connects with a real Chrome instance to the same browser session
+- **Web-based operator console** — build a web UI that proxies the live session (co-browsing)
+- **VNC/remote desktop** — share the screen of the machine running the browser
+
+**Decision:** CDP endpoint exposure + minimal CLI operator interface. The Playwright browser is launched with `--remote-debugging-port`. When escalation occurs:
+1. EscalationManager pauses automation (stops the agent loop / replay engine)
+2. Exposes the CDP endpoint URL + a session token
+3. Operator connects to the same browser via Chrome (`chrome --remote-debugging-port=...`) or a minimal web-based viewer
+4. A control-state machine tracks who is in control: `automation → paused → human → resuming → automation`
+5. During human control, a Playwright listener records clicks/types/navigations as "human-assisted steps" in evidence
+6. Human signals done → EscalationManager verifies current state against the artifact's checkpoint for the current step → resume or complete
+
+**Rationale:** CDP is the native, real mechanism for connecting to a live Chromium session. It requires no custom co-browsing infrastructure. The operator gets a real browser to interact with — not a mock. The control-state machine makes "who is in control" explicit and verifiable, which the assignment asks for.
+
+**Consequences:** Enables real control transfer on the same live session. Precludes a polished operator console (we mock the UI but make the mechanism real — exactly what the assignment asks). Watch for: CDP security — the debugging port should only be exposed locally, not to the network.
+
+---
+
+### ADR-007: Single Process, CLI-Driven, JSON File Storage
+
+**Context:** This is a take-home project evaluated on design judgment, not infrastructure. The assignment explicitly says "We do not reward building scaling infrastructure."
+
+**Options considered:**
+- **Single process, CLI-driven, JSON files** — one Node.js process, CLI commands for discovery/replay, JSON files for artifacts and evidence
+- **Multi-service (discovery service + replay service + artifact registry)** — cleaner separation, but premature for the scope
+- **Dockerized microservices** — over-engineered
+
+**Decision:** Single process, CLI-driven, JSON file storage. The design has clean seams (interfaces) that *could* split into services later, but we build one process.
+
+**Rationale:** The assignment evaluates the quality of abstractions, not infrastructure. A single process with well-defined interfaces demonstrates the design without wasting effort on deployment plumbing. JSON files for artifacts make them human-readable and git-versionable — directly supporting the "reviewable" requirement.
+
+**Consequences:** Enables fast iteration and easy evidence collection. Precludes horizontal scaling (by design — the design supports it, the implementation doesn't). Watch for: keeping the seams clean — the ReplayEngine, ArtifactStore, and EscalationManager must be interface-driven so they could split later.
+
+---
+
+### ADR-008: Surface Abstraction via Observe/Act Interface
+
+**Context:** The system must implement against one surface (web), but the design must credibly extend to legacy web and desktop. The core abstractions must not paint us into a corner.
+
+**Options considered:**
+- **Playwright-specific throughout** — fastest to build, but couples everything to web
+- **Surface interface (observe/act) with Playwright implementation** — define a `Surface` interface: `observe() → ScreenState`, `act(Action) → Result`. PlaywrightSurface implements it. A future DesktopSurface (via OS accessibility APIs) could too.
+- **Plugin architecture** — over-engineered for the scope
+
+**Decision:** Define a `Surface` interface with `observe()` and `act()` methods. The artifact's actions and guards reference surface-agnostic concepts (role, name, action type) — never Playwright-specific APIs. PlaywrightSurface implements the interface for web. The design document describes how a DesktopSurface would implement the same interface.
+
+**Rationale:** The artifact schema must be surface-agnostic to support multi-tenant reuse across different app types. By defining the surface as an interface, the artifact, replay engine, and error classifier never depend on Playwright directly — only on the interface. This is the seam the assignment asks for in Section 3.7.
+
+**Consequences:** Enables extending to desktop without changing the artifact schema or replay engine. Precludes using Playwright-specific features directly in the replay engine (must go through the interface). Watch for: the interface being too leaky — if we find Playwright concepts bleeding into the artifact, the abstraction is wrong.
+
+---
+
+### ADR-009: Multi-Tenant Reuse via Base Artifact + Per-Tenant Overrides
+
+**Context:** Hundreds of tenants run ~20 apps each, many sharing the same vendor product configured/branded/versioned differently. Artifacts should be reusable across tenants running the same app.
+
+**Options considered:**
+- **One artifact per tenant** — simplest, but doesn't scale (thousands of artifacts)
+- **Base artifact + per-tenant overrides** — a base artifact defines the flow; per-tenant overrides patch specific locators/URLs/labels
+- **Parameterized templates with tenant resolution** — most flexible, but complex to implement
+
+**Decision (design-level, not built):** Base artifact + per-tenant overrides. The artifact schema supports:
+- **Base artifact**: the flow for a vendor product (e.g. "lookup member balance on Fiserv DNA")
+- **Tenant overrides**: a patch document that overrides specific steps' locators, URLs, or labels for a specific tenant's configuration
+- **Version detection**: each artifact declares the app version it was recorded against; replay checks version compatibility and warns on mismatch
+- **Canonicalization**: concrete routes/values are normalized to patterns (`/member/12345` → `/member/:id`) so the same artifact works across tenants with different URL structures
+
+**Rationale:** This is the 80/20 of multi-tenant reuse. Most of the flow is identical across tenants running the same vendor product — only specific locators (branded labels), URLs (tenant-specific domains), and labels differ. Override patches handle these without re-recording. The assignment says "design, not necessarily build" — we implement the schema support but stub the override resolution.
+
+**Consequences:** Enables cross-tenant reuse without per-tenant rebuilds. Precludes automatic drift detection (design-only — would need a scheduled re-validation runner). Watch for: override conflicts — two tenants overriding the same step in incompatible ways.
+
+---
+
+### ADR-010: LLM Isolation — Mock in Tests, Real Only for Manual Discovery
+
+**Context:** The discovery run needs a real LLM (Claude via OpenRouter), but automated tests must not burn tokens. The user wants to test the LLM path by hand first.
+
+**Decision:** The AgentLoop depends on an `LLMClient` interface. In tests, a `MockLLMClient` returns scripted responses. The real `OpenRouterClient` is only used for manual discovery runs via CLI. No test ever makes a real API call.
+
+**Rationale:** Token cost control + test determinism. Mocked LLM responses make tests fast, free, and reproducible. The interface seam means we can swap in the real client for the actual discovery run without changing any code.
+
+**Consequences:** Enables testing the full agent loop without API costs. Precludes testing real LLM behavior in CI (by design — the user tests that by hand). Watch for: mock responses drifting from real model behavior — keep mocks representative of actual Claude tool-use format.
