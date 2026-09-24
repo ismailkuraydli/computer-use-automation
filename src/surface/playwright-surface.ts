@@ -381,22 +381,57 @@ export class PlaywrightSurface implements Surface {
 
   /**
    * Build a unified AX tree across all frames on the page.
-   * Uses JavaScript evaluation in each frame to extract AX-like data.
+   * Per ADR-011: CDP Accessibility.getFullAXTree for main frame (browser's real AX tree),
+   * JS builder fallback for iframe content. Also supplements CDP with JS-scanned
+   * label/span elements that CDP doesn't expose (e.g. Wikipedia settings).
    */
   private async _buildUnifiedAXTree(): Promise<AXNode[]> {
     if (!this.page) return [];
 
     const result: AXNode[] = [];
 
-    // Get AX tree for the main frame
+    // --- Main frame: use CDP Accessibility.getFullAXTree (browser's real AX tree) ---
+    let cdpSuccess = false;
     try {
-      const mainNodes = await this.page.evaluate(BUILD_AX_TREE_JS) as any[];
-      result.push(...mainNodes.map((n) => ({ ...n, framePath: [] as string[] })));
+      const cdp = await this.page.context().newCDPSession(this.page);
+      const cdpResult = await cdp.send("Accessibility.getFullAXTree");
+      if (cdpResult.nodes && cdpResult.nodes.length > 0) {
+        const cdpNodes = this._convertCDPAXTree(cdpResult.nodes);
+        result.push(...cdpNodes.map((n) => ({ ...n, framePath: [] as string[] })));
+        cdpSuccess = true;
+      }
     } catch {
-      // Page may not be ready — return empty
+      // CDP may not be available
     }
 
-    // Get AX tree for all child frames
+    // --- Supplement with JS scan for label/span settings elements ---
+    // CDP's AX tree doesn't expose label/span elements without aria-label or
+    // explicit role attributes. These are common in settings panels (e.g.
+    // Wikipedia's appearance settings: Small/Standard/Large, Wide, Dark/Light).
+    // We scan for visible label/span/div elements with short text that aren't
+    // already captured by CDP.
+    try {
+      const supplementNodes = await this.page.evaluate(BUILD_AX_TREE_JS) as any[];
+      const existingNames = new Set(result.map((n) => `${n.role}:${n.name}`));
+      for (const node of supplementNodes) {
+        const key = `${node.role}:${node.name}`;
+        if (!existingNames.has(key)) {
+          result.push({ ...node, framePath: [] as string[] });
+        }
+      }
+    } catch {
+      // If CDP also failed and JS fails too, return whatever we have
+      if (!cdpSuccess) {
+        try {
+          const mainNodes = await this.page.evaluate(BUILD_AX_TREE_JS) as any[];
+          result.push(...mainNodes.map((n) => ({ ...n, framePath: [] as string[] })));
+        } catch {
+          // Page not ready
+        }
+      }
+    }
+
+    // --- Child frames: use JS builder (CDP doesn't traverse iframes) ---
     const allFrames = this.page.frames();
     for (const frame of allFrames) {
       if (frame === this.page.mainFrame()) continue;
@@ -407,6 +442,48 @@ export class PlaywrightSurface implements Surface {
       } catch {
         // Frame may not be accessible — skip it
       }
+    }
+
+    return result;
+  }
+
+  /**
+   * Convert CDP AX tree nodes to our AXNode format.
+   * CDP returns nodes with role.value and name.value — we normalize to role/name strings.
+   * Filters out ignored/invisible nodes.
+   */
+  private _convertCDPAXTree(nodes: any[]): AXNode[] {
+    const result: AXNode[] = [];
+
+    for (const node of nodes) {
+      const role = node.role?.value;
+      const name = node.name?.value;
+
+      if (!role || !name) continue;
+
+      // Skip layout/ignored roles
+      if (role === "none" || role === "presentation" ||
+          role === "LayoutTable" || role === "LayoutTableRow" ||
+          role === "LayoutTableCell" || role === "LineBreak" ||
+          role === "GenericContainer" || role === "Section") {
+        continue;
+      }
+
+      // Skip empty names
+      if (!name || name.trim().length === 0) continue;
+
+      // Skip very long names (likely content, not interactive elements)
+      if (name.length > 200) continue;
+
+      // Check if node is ignored or hidden
+      if (node.ignored) continue;
+
+      result.push({
+        role,
+        name: name.substring(0, 200),
+        value: node.value?.value,
+        children: [],
+      });
     }
 
     return result;
