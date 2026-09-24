@@ -285,10 +285,6 @@ app.post("/api/replay", (req, res) => {
     sendSSE("error", { error: String(err) });
     res.end();
   });
-
-  req.on("close", () => {
-    child.kill();
-  });
 });
 
 /**
