@@ -92,6 +92,29 @@ const BUILD_AX_TREE_JS = `(() => {
       const text = (el.textContent || '').trim();
       return text.length > 0 ? text.substring(0, 100) : '';
     }
+    // For label elements: text content
+    if (el.tagName === 'LABEL') {
+      return (el.textContent || '').trim();
+    }
+    // For elements with role attribute (e.g. div role="button"): use text content
+    // if it's short enough to be a label (< 80 chars) and the element is visible
+    if (el.getAttribute('role') && el.offsetParent !== null) {
+      const text = (el.textContent || '').trim();
+      if (text.length > 0 && text.length <= 80) {
+        return text;
+      }
+    }
+    // For span elements with short text inside a form/fieldset (settings, options)
+    if (el.tagName === 'SPAN' && el.offsetParent !== null) {
+      const text = (el.textContent || '').trim();
+      if (text.length > 0 && text.length <= 40) {
+        // Only include if parent is a label, form, or has a role
+        const parent = el.parentElement;
+        if (parent && (parent.tagName === 'LABEL' || parent.tagName === 'FORM' || parent.getAttribute('role'))) {
+          return text;
+        }
+      }
+    }
     return '';
   }
 
@@ -330,8 +353,8 @@ export class PlaywrightSurface implements Surface {
         const count = await labelLocator.count();
         if (count > 0) return labelLocator.first();
       }
-      // Try getByText for buttons and links
-      if (target.role === "button" || target.role === "link") {
+      // Try getByText for buttons, links, and labels
+      if (target.role === "button" || target.role === "link" || target.role === "label") {
         const textLocator = frame.getByText(target.name, { exact: true });
         const count = await textLocator.count();
         if (count > 0) return textLocator.first();
@@ -340,6 +363,15 @@ export class PlaywrightSurface implements Surface {
       const locator = frame.getByRole(target.role as any, { name: target.name });
       const count = await locator.count();
       if (count > 0) return locator.first();
+    } catch {
+      // ignore
+    }
+
+    // Last resort: try getByText for any role (settings labels, spans, etc.)
+    try {
+      const textLocator = frame.getByText(target.name, { exact: true });
+      const count = await textLocator.count();
+      if (count > 0) return textLocator.first();
     } catch {
       // ignore
     }
