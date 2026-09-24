@@ -101,9 +101,10 @@ Greenfield — no existing system.
 - **Outputs:** ScreenState (AX tree, DOM snapshot, URL, screenshot), ActionResult (success/failure with detail)
 - **Dependencies (upstream):** AgentLoop, ReplayEngine (call observe/act)
 - **Dependencies (downstream):** Playwright browser (Chromium)
-- **Technology:** Playwright, TypeScript interface
+- **Technology:** Playwright, TypeScript interface, CDP (Chrome DevTools Protocol) for AX tree
 - **Scaling:** Single browser session
 - **State:** Holds the live browser session (Playwright Page/BrowserContext)
+- **AX tree strategy (ADR-011):** observe() uses CDP `Accessibility.getFullAXTree` for the main frame (the browser's real accessibility tree — handles all element types, ARIA attributes, shadow DOM, computed names automatically). Falls back to the JS-based AX tree builder for iframe content (CDP doesn't traverse frames). act() uses Playwright's native `getByRole()` (which also uses the browser's real AX tree) with `getByText()` as a last-resort fallback for elements that getByRole misses (labels, spans, custom widgets).
 
 #### 6. LocatorStrategy
 - **Responsibility:** Given a target spec (AX role + name, or DOM selector, or visual region), resolves to a concrete element on the current page. Handles frameset/iframe traversal.
@@ -435,10 +436,11 @@ See [DECISIONS.md](./DECISIONS.md) for the full ADR log. Summary:
 - ADR-008: Surface Abstraction via Observe/Act Interface
 - ADR-009: Multi-Tenant Reuse via Base Artifact + Per-Tenant Overrides
 - ADR-010: LLM Isolation — Mock in Tests, Real Only for Manual Discovery
+- ADR-011: CDP AX Tree for observe(), Playwright getByRole/getByText for act()
 
 ## Open Questions
 
-- [ ] OQ-1: Does Playwright's `page.accessibility.snapshot()` traverse framesets/iframes correctly? Spike needed before committing to AX-tree-first locators on the hostile mock surface.
+- [x] OQ-1: ~~Does Playwright's `page.accessibility.snapshot()` traverse framesets/iframes correctly?~~ RESOLVED: page.accessibility.snapshot() was removed in Playwright 1.63. Replaced with CDP Accessibility.getFullAXTree for main frame (ADR-011) + JS builder fallback for iframes. Spike confirmed locator stability on hostile surface.
 - [ ] OQ-2: Will the mock app need session-based auth to exercise the session-timeout error path, or should we simulate it with a configurable timeout flag?
 - [ ] OQ-3: Should the operator UI be a minimal web page (CDP viewer) or just a CLI that prints the CDP URL for the operator to paste into Chrome? Lean toward CLI — simpler, real mechanism.
 - [ ] OQ-4: Do we implement the agent-facing capability catalog (stretch goal) or leave it as a documented seam? Depends on time remaining after the core vertical slice.

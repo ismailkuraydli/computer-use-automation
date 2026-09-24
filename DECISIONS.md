@@ -185,3 +185,26 @@ A living log of every significant design decision, the alternatives considered, 
 **Rationale:** Token cost control + test determinism. Mocked LLM responses make tests fast, free, and reproducible. The interface seam means we can swap in the real client for the actual discovery run without changing any code.
 
 **Consequences:** Enables testing the full agent loop without API costs. Precludes testing real LLM behavior in CI (by design — the user tests that by hand). Watch for: mock responses drifting from real model behavior — keep mocks representative of actual Claude tool-use format.
+
+---
+
+### ADR-011: CDP AX Tree for observe(), Playwright getByRole/getByText for act()
+
+**Context:** The original AX tree builder used a JavaScript-based approach — a custom function evaluated in the browser that walked the DOM and extracted role+name from aria-label, role attributes, and implicit semantics. This approach broke repeatedly in real-world testing:
+
+- Wikipedia's appearance settings (Small/Standard/Large, Standard/Wide, Automatic/Light/Dark) are label/span elements without aria-label — the JS builder couldn't see them
+- Custom widgets with role="button" divs, toggle switches, menu items, and shadow DOM components all use different patterns for accessible names
+- Each new website exposed a new element type the JS builder didn't handle, requiring a patch
+
+The fundamental problem: the JS builder was reimplementing what the browser already computes — the accessibility tree. The browser's real AX tree handles all element types, ARIA attributes, shadow DOM, and computed names automatically.
+
+**Options considered:**
+- **JS-based AX tree builder (original)** — custom function walks DOM, extracts role+name manually. Fragile: needs patching for every new element type (labels, spans, role'd divs, shadow DOM, custom widgets). We kept hitting edge cases on real websites.
+- **CDP Accessibility.getFullAXTree** — Chrome DevTools Protocol returns the browser's real accessibility tree. Handles all element types automatically. But doesn't traverse iframes (each frame needs its own CDP session, which isn't supported for iframe content).
+- **Hybrid: CDP for observe() + Playwright getByRole/getByText for act()** — use CDP's real AX tree for the main frame (handles all element types), fall back to the JS builder only for iframe content. For act(), use Playwright's native getByRole (which also uses the browser's real AX tree) with getByText as a last-resort fallback.
+
+**Decision:** Hybrid approach — CDP Accessibility.getFullAXTree for observe() (main frame), JS builder fallback for iframes, Playwright getByRole + getByText for act().
+
+**Rationale:** The browser's accessibility tree is the authoritative source — it's what screen readers use, it handles all element types, ARIA attributes, shadow DOM, and computed names. Reimplementing it in JS was a losing battle. CDP gives us the real tree for the main frame. Playwright's getByRole uses the same real AX tree for element interaction. The JS builder is kept only as a fallback for iframe content (CDP doesn't traverse frames automatically).
+
+**Consequences:** Eliminates the entire class of "AX tree builder can't see this element type" bugs. The LLM sees every accessible element on the page, including labels, spans, custom widgets, and role'd divs. act() uses Playwright's real AX tree for clicking/typing/extracting, with getByText as a last resort for elements that getByRole misses. Watch for: CDP AX tree node format differs from our AXNode type — needs a converter. CDP may include ignored/hidden nodes that should be filtered.
