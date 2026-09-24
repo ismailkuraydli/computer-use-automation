@@ -252,55 +252,71 @@ export class ReplayEngine {
   }
 
   /**
-   * Try to open a dropdown panel so a hidden radio/checkbox becomes visible.
+   * When a radio/checkbox can't be found during replay, the dropdown panel
+   * it lives in is likely closed. The artifact may not have recorded a
+   * "click to open dropdown" step if the dropdown was already open during
+   * discovery.
    *
-   * Strategy: instead of guessing which button is the toggle by keyword
-   * matching (fragile — keeps picking wrong buttons), try clicking each
-   * visible button on the page one by one. After each click, re-observe
-   * and check if the target element appeared. Stop when found or all
-   * buttons exhausted.
-   *
-   * This is slower but handles ANY dropdown UI pattern:
-   * - Wikipedia Appearance settings
-   * - Gmail settings menus
-   * - Custom JS widgets
-   * - Collapsible panels
-   *
-   * Excludes buttons we know aren't toggles (search, donate, language switcher)
-   * to avoid side effects.
+   * Strategy: find the button that opens the dropdown by looking at the
+   * current page's AX tree. Try buttons that are likely toggles (Appearance,
+   * Settings, etc.) first, then any remaining buttons. After clicking,
+   * check if radio/checkbox elements appeared. Cache the result so we don't
+   * search again for subsequent radio clicks in the same dropdown.
    */
+  private _dropdownToggleCache: { buttonRole: string; buttonName: string } | null = null;
+
   private async _tryOpenDropdown(state: ScreenState): Promise<boolean> {
-    // Collect all visible buttons from the AX tree
-    const EXCLUDE_NAMES = ["search", "donate", "log in", "create account", "languages"];
-    const buttons = state.axTree.filter((n) => {
-      if (n.role !== "button") return false;
-      const name = n.name.toLowerCase();
-      // Skip buttons that are clearly not dropdown toggles
-      if (EXCLUDE_NAMES.some((ex) => name.includes(ex))) return false;
-      // Skip "hide", "move" — these are panel management, not openers
-      if (name.includes("hide") || name.includes("move")) return false;
-      // Skip toggle subsection buttons (table of contents)
-      if (name.includes("toggle") && name.includes("subsection")) return false;
-      return true;
+    // If we already found the toggle button, just click it again
+    if (this._dropdownToggleCache) {
+      const cached = this._dropdownToggleCache;
+      const cachedButton = state.axTree.find(
+        (n) => n.role === cached.buttonRole && n.name === cached.buttonName
+      );
+      if (cachedButton) {
+        try {
+          await this.surface.act({ type: "click", target: cachedButton });
+          await this.surface.act({ type: "wait", value: "300" });
+          return true;
+        } catch {
+          // Cached button may have changed — fall through to search
+        }
+      }
+    }
+
+    // Search for the toggle: try buttons likely to be settings toggles first
+    const PREFERRED_NAMES = ["appearance", "settings", "preferences", "options", "display", "theme"];
+    const allButtons = state.axTree.filter((n) => n.role === "button");
+    
+    // Sort: preferred buttons first, then the rest
+    const sortedButtons = [...allButtons].sort((a, b) => {
+      const aPreferred = PREFERRED_NAMES.some((kw) => a.name.toLowerCase().includes(kw)) ? 0 : 1;
+      const bPreferred = PREFERRED_NAMES.some((kw) => b.name.toLowerCase().includes(kw)) ? 0 : 1;
+      return aPreferred - bPreferred;
     });
 
-    if (buttons.length === 0) return false;
+    // Exclude buttons that are clearly not toggles
+    const EXCLUDE = ["search", "donate", "log in", "create account", "languages", "hide", "move", "toggle subsection"];
+    const candidates = sortedButtons.filter((n) => {
+      const name = n.name.toLowerCase();
+      return !EXCLUDE.some((ex) => name.includes(ex));
+    }).slice(0, 15);
 
-    // Try each button until the target appears
-    for (const btn of buttons.slice(0, 15)) { // limit to 15 to avoid excessive clicks
+    for (const btn of candidates) {
       try {
         await this.surface.act({ type: "click", target: btn });
         await this.surface.act({ type: "wait", value: "300" });
         const newState = await this.surface.observe();
 
-        // Check if radio/checkbox elements appeared that weren't there before
+        // Check if radio/checkbox elements appeared
         const hasRadios = newState.axTree.some((n) => n.role === "radio" || n.role === "checkbox");
         if (hasRadios) {
-          console.log(`  [Dropdown opened by: ${btn.role}:${btn.name}]`);
+          // Cache the toggle so we don't search again for subsequent radio clicks
+          this._dropdownToggleCache = { buttonRole: btn.role, buttonName: btn.name };
+          console.log(`  [Dropdown toggle found: ${btn.role}:${btn.name}]`);
           return true;
         }
       } catch {
-        // Click may have failed or navigated away — try next button
+        // Click failed — try next button
       }
     }
 
