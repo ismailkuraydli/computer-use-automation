@@ -1,10 +1,14 @@
 /**
- * Config — loads model/provider settings from cua.config.json.
+ * Config — loads model/provider settings from .env + cua.config.json.
  * Supports any OpenRouter-compatible model (Gemini, GPT-4o, Claude, etc.)
  */
 
 import { readFileSync, existsSync } from "fs";
 import path from "path";
+import dotenv from "dotenv";
+
+// Auto-load .env on import
+dotenv.config();
 
 export interface CuaConfig {
   provider: string;           // "openrouter", "openai", "anthropic", etc.
@@ -19,7 +23,7 @@ export interface CuaConfig {
 
 const DEFAULT_CONFIG: CuaConfig = {
   provider: "openrouter",
-  model: "google/gemini-2.0-flash-001",
+  model: "google/gemini-3.5-flash-lite",
   baseUrl: "https://openrouter.ai/api/v1/chat/completions",
   apiKeyEnvVar: "OPENROUTER_API_KEY",
   maxTokens: 1000,
@@ -49,9 +53,56 @@ export function getApiKey(config: CuaConfig): string {
   const key = process.env[config.apiKeyEnvVar];
   if (!key) {
     throw new Error(
-      `${config.apiKeyEnvVar} is not set. Set it with: export ${config.apiKeyEnvVar}=your-key\n` +
+      `${config.apiKeyEnvVar} is not set. Set it in .env or: export ${config.apiKeyEnvVar}=your-key\n` +
       `Or run discover with --mock-llm to use scripted responses (no real API calls).`
     );
   }
   return key;
+}
+
+/**
+ * Pre-flight check: verify the model is accessible before starting a run.
+ * Sends a minimal request to the LLM API and checks the response.
+ * Returns { ok: true } or { ok: false, error }.
+ */
+export async function checkModelAccessible(config: CuaConfig): Promise<{ ok: true } | { ok: false; error: string }> {
+  let apiKey: string;
+  try {
+    apiKey = getApiKey(config);
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+
+  try {
+    const response = await fetch(config.baseUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages: [{ role: "user", content: "ping" }],
+        max_tokens: 1,
+      }),
+    });
+
+    if (response.ok) {
+      return { ok: true };
+    }
+
+    const errorBody = await response.text().catch(() => "");
+    if (response.status === 401 || response.status === 403) {
+      return { ok: false, error: `API key invalid or unauthorized (${response.status}). Check ${config.apiKeyEnvVar} in .env.` };
+    }
+    if (response.status === 404) {
+      return { ok: false, error: `Model "${config.model}" not found. Check cua.config.json — available models: https://openrouter.ai/models` };
+    }
+    if (response.status === 429) {
+      return { ok: false, error: `Rate limited (429). Try again in a moment or use a different model.` };
+    }
+    return { ok: false, error: `API error ${response.status}: ${errorBody || response.statusText}` };
+  } catch (e) {
+    return { ok: false, error: `Cannot reach ${config.baseUrl}: ${String(e)}` };
+  }
 }

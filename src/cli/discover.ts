@@ -10,7 +10,7 @@ import { Recorder } from "../discovery/recorder.js";
 import { SafetyGuard } from "../safety/safety-guard.js";
 import { EvidenceCollector } from "../evidence/evidence-collector.js";
 import { ArtifactStore } from "../artifact/artifact-store.js";
-import { loadConfig, getApiKey } from "../config.js";
+import { loadConfig, getApiKey, checkModelAccessible } from "../config.js";
 import type { AllowlistConfig } from "../artifact/types.js";
 import { readFileSync } from "fs";
 
@@ -67,6 +67,21 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
   } else {
     const apiKey = getApiKey(config);
     console.log(`Using ${config.provider} / ${config.model}`);
+
+    // Pre-flight check: verify model is accessible before opening the browser
+    console.log("Checking model accessibility...");
+    const check = await checkModelAccessible(config);
+    if (!check.ok) {
+      console.error(`\nModel check failed: ${check.error}`);
+      console.error(`\nTo fix:`);
+      console.error(`  1. Check .env has the right API key in ${config.apiKeyEnvVar}`);
+      console.error(`  2. Check cua.config.json has a valid model name`);
+      console.error(`  3. Available models: https://openrouter.ai/models`);
+      console.error(`  4. Or run with --mock-llm to skip the real LLM entirely`);
+      process.exit(1);
+    }
+    console.log("Model accessible ✓");
+
     llmClient = new OpenRouterClient(apiKey, config);
   }
 

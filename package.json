@@ -17,17 +17,23 @@
     "replay": "tsx src/cli/index.ts replay",
     "escalate": "tsx src/cli/index.ts escalate"
   },
-  "keywords": ["computer-use", "automation", "playwright", "banking"],
+  "keywords": [
+    "computer-use",
+    "automation",
+    "playwright",
+    "banking"
+  ],
   "author": "Ismail Kuraydli",
   "license": "MIT",
   "devDependencies": {
-    "@types/node": "^22.0.0",
     "@types/express": "^4.17.21",
+    "@types/node": "^22.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
   },
   "dependencies": {
+    "dotenv": "^18.0.3",
     "express": "^4.21.0",
     "playwright": "^1.48.0"
   }
