@@ -249,7 +249,7 @@ export class AgentLoop {
         if (currentSubGoalIndex < allSubGoals.length - 1) {
           // Can't declare goal met — there are remaining sub-goals
           if (llmResponse.subGoalComplete) {
-            completedSubGoals.push(currentSubGoal.id);
+            if (currentSubGoal) completedSubGoals.push(currentSubGoal.id);
             currentSubGoalIndex++;
           }
           continue;
@@ -267,10 +267,12 @@ export class AgentLoop {
 
       // Check if current sub-goal is complete
       if (llmResponse.subGoalComplete) {
-        completedSubGoals.push(currentSubGoal.id);
+        if (currentSubGoal) {
+          completedSubGoals.push(currentSubGoal.id);
+        }
         currentSubGoalIndex++;
         if (currentSubGoalIndex < allSubGoals.length) {
-          console.log(`  [Sub-goal ${currentSubGoal.id} complete, advancing to ${allSubGoals[currentSubGoalIndex].id}]`);
+          console.log(`  [Sub-goal ${currentSubGoal?.id} complete, advancing to ${allSubGoals[currentSubGoalIndex].id}]`);
         }
       }
     }
