@@ -162,7 +162,7 @@ export class Recorder {
    */
   private _parameterizeSteps(_params: ParamSpec[]): void {
     for (const step of this.steps) {
-      // Replace concrete values in step.value
+      // Replace concrete values in step.value (case-sensitive — search text matters)
       if (step.value && typeof step.value === "string") {
         for (const [paramName, concreteValue] of Object.entries(this.paramValues)) {
           if (concreteValue && step.value.includes(concreteValue)) {
@@ -170,11 +170,19 @@ export class Recorder {
           }
         }
       }
-      // Replace concrete values in target name
+      // Replace concrete values in target name (case-insensitive — page titles
+      // may differ in case from the search term, e.g. "Banana" vs "bananas")
       if (step.target && step.target.primary.name && typeof step.target.primary.name === "string") {
         for (const [paramName, concreteValue] of Object.entries(this.paramValues)) {
-          if (concreteValue && step.target.primary.name.includes(concreteValue)) {
-            step.target.primary.name = step.target.primary.name.split(concreteValue).join(`{{${paramName}}}`);
+          if (concreteValue) {
+            const lowerName = step.target.primary.name.toLowerCase();
+            const lowerValue = concreteValue.toLowerCase();
+            if (lowerName.includes(lowerValue)) {
+              // Case-insensitive replacement: find the actual match in the original
+              // string and replace it with the template
+              const regex = new RegExp(concreteValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+              step.target.primary.name = step.target.primary.name.replace(regex, `{{${paramName}}}`);
+            }
           }
         }
       }

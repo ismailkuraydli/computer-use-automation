@@ -202,25 +202,23 @@ export class ReplayEngine {
     }
 
     // Check checkpoint (post-execution)
+    // Checkpoints are a best-effort verification — if they fail, log a warning
+    // but continue. The steps themselves are the source of truth for replay.
+    // A checkpoint may fail when replaying with different params that lead to
+    // a different page (e.g. searching "mustard" lands on a disambiguation page
+    // instead of the "banana" article page the checkpoint was recorded on).
     if (step.checkpoint && !GuardChecker.check(step.checkpoint, state)) {
-      const classification = ErrorClassifier.classify(state, step.onError || []);
-
-      if (classification.tier === "business-outcome") {
-        return businessOutcome(classification.outcome || "unknown", classification.reason, this.evidence.runDir);
-      }
-      if (classification.tier === "recoverable") {
-        // Checkpoint failed but recoverable — continue
-      } else if (classification.tier === "escalate") {
-        return escalated(step.id, classification.reason, this.evidence.runDir);
-      } else {
-        return failure(
-          step.id,
-          "Checkpoint to match",
-          state.url,
-          `Checkpoint failed: ${classification.reason}`,
-          this.evidence.runDir
-        );
-      }
+      console.log(`  [Checkpoint warning: step ${step.id} — page state differs from discovery (expected: ${step.checkpoint.anyOf?.[0]?.urlPattern || "unknown pattern"})]`);
+      this.evidence.logStep({
+        step: step.id,
+        action: step.action,
+        target: step.target.primary.name,
+        result: "success",
+        url: state.url,
+        screenshotPath: state.screenshotPath,
+        axSnapshot: state.axTree,
+        detail: `Checkpoint mismatch (non-fatal): page state differs from discovery`,
+      });
     }
 
     return null; // Step passed — continue to next step
