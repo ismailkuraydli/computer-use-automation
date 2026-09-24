@@ -124,8 +124,35 @@ Rules:
       const data = await response.json() as any;
       const content = data.choices?.[0]?.message?.content || "";
 
-      // Parse the LLM's response into an action
-      return this._parseResponse(content, request);
+      const result = this._parseResponse(content, request);
+      if (!result.ok) {
+        // Retry once with a simpler prompt asking for valid JSON
+        console.log(`  [LLM parse error, retrying: ${result.error}]`);
+        this._callCount++;
+        const retryResponse = await fetch(this.baseUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${this.apiKey}`,
+          },
+          body: JSON.stringify({
+            model: this.model,
+            messages: [
+              ...this._buildMessages(request),
+              { role: "assistant", content },
+              { role: "user", content: "Your previous response could not be parsed as JSON. Please respond with ONLY valid JSON, no extra text, no markdown. Escape any newlines or special characters in string values using \\n, \\t, etc." },
+            ],
+            max_tokens: this.maxTokens,
+          }),
+        });
+
+        if (retryResponse.ok) {
+          const retryData = await retryResponse.json() as any;
+          const retryContent = retryData.choices?.[0]?.message?.content || "";
+          return this._parseResponse(retryContent, request);
+        }
+      }
+      return result;
     } catch (e) {
       return { ok: false, error: `Request failed: ${String(e)}` };
     }
@@ -190,12 +217,25 @@ REMEMBER: Review the goal, sub-goals, and the actions above. Focus on the CURREN
       if (!jsonMatch) {
         return { ok: false, error: "No JSON found in LLM response" };
       }
-      const parsed = JSON.parse(jsonMatch[0]);
+
+      // Sanitize control characters that break JSON.parse
+      // LLMs sometimes include raw newlines/tabs inside string values
+      let jsonStr = jsonMatch[0];
+      // Replace raw control characters inside string literals
+      jsonStr = jsonStr.replace(/[\x00-\x1f]/g, (match) => {
+        if (match === "\n" || match === "\r" || match === "\t") {
+          return " ";
+        }
+        return "";
+      });
+
+      const parsed = JSON.parse(jsonStr);
       return {
         ok: true,
         action: parsed.action,
         reasoning: parsed.reasoning || "",
         goalMet: parsed.goalMet || false,
+        subGoalComplete: parsed.subGoalComplete === true,
       };
     } catch (e) {
       return { ok: false, error: `Failed to parse LLM response: ${String(e)}` };
