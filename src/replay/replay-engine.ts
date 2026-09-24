@@ -261,27 +261,58 @@ export class ReplayEngine {
    * Returns true if a button was found and clicked.
    */
   private async _tryOpenDropdown(state: ScreenState): Promise<boolean> {
-    const DROPDOWN_KEYWORDS = [
-      "appearance", "settings", "options", "menu", "toggle",
-      "show", "expand", "more", "filter", "view",
+    // Keywords in priority order — specific settings toggles first, generic last
+    const DROPDOWN_PRIORITY: Array<{ keywords: string[]; weight: number }> = [
+      { keywords: ["appearance"], weight: 10 },
+      { keywords: ["settings", "preferences"], weight: 9 },
+      { keywords: ["options", "config"], weight: 8 },
+      { keywords: ["filter", "sort"], weight: 7 },
+      { keywords: ["toggle", "expand"], weight: 6 },
+      { keywords: ["show", "more"], weight: 5 },
+      { keywords: ["view", "display"], weight: 4 },
+      { keywords: ["menu"], weight: 3 },
     ];
 
-    // Find a button that might be a dropdown toggle
-    const toggleButton = state.axTree.find((n) => {
-      if (n.role !== "button") return false;
-      const name = n.name.toLowerCase();
-      return DROPDOWN_KEYWORDS.some((kw) => name.includes(kw));
-    });
+    // Find all candidate buttons and score them
+    const candidates: Array<{ node: any; score: number }> = [];
+    for (const node of state.axTree) {
+      if (node.role !== "button") continue;
+      const name = node.name.toLowerCase();
+      let score = 0;
+      for (const { keywords, weight } of DROPDOWN_PRIORITY) {
+        if (keywords.some((kw) => name.includes(kw))) {
+          score = Math.max(score, weight);
+        }
+      }
+      if (score > 0) {
+        // Skip buttons that are clearly navigation, not settings toggles
+        if (name.includes("main menu") && !name.includes("appearance")) {
+          score = 0; // "Main menu" is navigation, not a settings toggle
+        }
+        if (name.includes("hide") || name.includes("close") || name.includes("move")) {
+          score = 0; // These are panel management buttons, not toggles
+        }
+        if (name.includes("donate") || name.includes("search")) {
+          score = 0;
+        }
+      }
+      if (score > 0) {
+        candidates.push({ node, score });
+      }
+    }
 
-    if (!toggleButton) return false;
+    // Sort by score (highest first)
+    candidates.sort((a, b) => b.score - a.score);
 
+    if (candidates.length === 0) return false;
+
+    const toggleButton = candidates[0].node;
     try {
       console.log(`  [Clicking dropdown toggle: ${toggleButton.role}:${toggleButton.name}]`);
       await this.surface.act({
         type: "click",
         target: toggleButton,
       });
-      // Wait for the dropdown to open
       await this.surface.act({ type: "wait", value: "500" });
       return true;
     } catch {
