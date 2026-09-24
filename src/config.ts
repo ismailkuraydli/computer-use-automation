@@ -26,9 +26,9 @@ const DEFAULT_CONFIG: CuaConfig = {
   model: "google/gemini-3.5-flash-lite",
   baseUrl: "https://openrouter.ai/api/v1/chat/completions",
   apiKeyEnvVar: "OPENROUTER_API_KEY",
-  maxTokens: 1000,
-  maxSteps: 15,
-  timeoutMs: 60000,
+  maxTokens: 2000,
+  maxSteps: 30,
+  timeoutMs: 120000,
   headless: true,
 };
 
