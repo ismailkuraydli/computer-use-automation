@@ -514,19 +514,31 @@ export class PlaywrightSurface implements Surface {
       // CDP may not be available
     }
 
-    // --- Supplement with JS scan for label/span settings elements ---
+    // --- Supplement with JS scan to add identity fields and missing elements ---
     // CDP's AX tree doesn't expose label/span elements without aria-label or
-    // explicit role attributes. These are common in settings panels (e.g.
-    // Wikipedia's appearance settings: Small/Standard/Large, Wide, Dark/Light).
-    // We scan for visible label/span/div elements with short text that aren't
-    // already captured by CDP.
+    // explicit role attributes, and CDP nodes don't have CSS selectors.
+    // We run the JS builder to:
+    // 1. Add CSS selectors, id, ariaLabel, text, href, dataTestId to existing CDP nodes
+    // 2. Add missing label/span/div elements that CDP doesn't expose
     try {
       const supplementNodes = await this.page.evaluate(BUILD_AX_TREE_JS) as any[];
-      const existingNames = new Set(result.map((n) => `${n.role}:${n.name}`));
+      const existingMap = new Map(result.map((n, i) => [`${n.role}:${n.name}`, i]));
       for (const node of supplementNodes) {
         const key = `${node.role}:${node.name}`;
-        if (!existingNames.has(key)) {
+        const existingIdx = existingMap.get(key);
+        if (existingIdx !== undefined) {
+          // Merge identity fields into existing CDP node
+          const existing = result[existingIdx];
+          if (node.cssSelector && !existing.cssSelector) existing.cssSelector = node.cssSelector;
+          if (node.id && !existing.id) existing.id = node.id;
+          if (node.ariaLabel && !existing.ariaLabel) existing.ariaLabel = node.ariaLabel;
+          if (node.text && !existing.text) existing.text = node.text;
+          if (node.href && !existing.href) existing.href = node.href;
+          if (node.dataTestId && !existing.dataTestId) existing.dataTestId = node.dataTestId;
+        } else {
+          // New element not in CDP tree — add it
           result.push({ ...node, framePath: [] as string[] });
+          existingMap.set(key, result.length - 1);
         }
       }
     } catch {
