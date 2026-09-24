@@ -38,10 +38,18 @@ const BUILD_AX_TREE_JS = `(() => {
   function getImplicitRole(el) {
     const tag = el.tagName.toLowerCase();
     const type = (el.getAttribute('type') || '').toLowerCase();
+    // Input elements: role depends on type attribute
+    if (tag === 'input') {
+      if (type === 'submit' || type === 'button' || type === 'reset') return 'button';
+      if (type === 'radio') return 'radio';
+      if (type === 'checkbox') return 'checkbox';
+      if (type === 'range') return 'slider';
+      if (type === 'search') return 'searchbox';
+      return 'textbox';
+    }
     const implicit = {
       'a': 'link',
       'button': 'button',
-      'input': type === 'submit' || type === 'button' || type === 'reset' ? 'button' : 'textbox',
       'select': 'combobox',
       'textarea': 'textbox',
       'img': 'image',
