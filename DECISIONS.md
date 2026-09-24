@@ -207,4 +207,34 @@ The fundamental problem: the JS builder was reimplementing what the browser alre
 
 **Rationale:** The browser's accessibility tree is the authoritative source — it's what screen readers use, it handles all element types, ARIA attributes, shadow DOM, and computed names. Reimplementing it in JS was a losing battle. CDP gives us the real tree for the main frame. Playwright's getByRole uses the same real AX tree for element interaction. The JS builder is kept only as a fallback for iframe content (CDP doesn't traverse frames automatically).
 
-**Consequences:** Eliminates the entire class of "AX tree builder can't see this element type" bugs. The LLM sees every accessible element on the page, including labels, spans, custom widgets, and role'd divs. act() uses Playwright's real AX tree for clicking/typing/extracting, with getByText as a last resort for elements that getByRole misses. Watch for: CDP AX tree node format differs from our AXNode type — needs a converter. CDP may include ignored/hidden nodes that should be filtered. On large pages (Wikipedia has 11000+ AX nodes), the LLM only sees a subset — interactive elements (buttons, links, radio buttons, labels, etc.) are prioritized over StaticText and generic containers so the LLM sees actionable controls first.
+**Consequences:** Eliminates the entire class of "AX tree builder can't see this element type" bugs. The LLM sees every accessible element on the page, including labels, spans, custom widgets, and role'd divs. act() uses Playwright's real AX tree for clicking/typing/extracting, with getByText as a last resort for elements that getByRole misses. Watch for: CDP AX tree node format differs from our AXNode type — needs a converter. CDP may include ignored/hidden nodes that should be filtered. On large pages (Wikipedia has 11000+ AX nodes), the LLM only sees a subset — interactive elements are prioritized over StaticText and generic containers, and elements matching the current sub-goal's keywords are boosted to the top so the LLM sees the most relevant controls first regardless of page size.
+
+---
+
+### ADR-012: Sub-goals and goal-aware AX prioritization
+
+**Context:** The LLM kept skipping steps in multi-step goals. For example, a goal like "find the page on flowers, set appearance to small/standard/large, set width, set color, then extract research text" — the LLM would do the search and immediately extract, skipping all 9+ setting changes. Two root causes:
+
+1. **No sub-goal tracking**: The LLM got one big goal string and decided for itself when it was "done." It declared goalMet=true prematurely because there was no structured tracking of what was completed.
+
+2. **Static AX prioritization**: The prioritizer put radio buttons first (good for settings) but if the current sub-goal was to search, the search box should be prioritized over radio buttons. The prioritization was not aware of what the LLM was currently trying to do.
+
+**Options considered:**
+- **Sub-goals only** — decompose the goal into ordered sub-goals, track completion, prevent goalMet until all are done. But the LLM still might not see the right elements if prioritization is static.
+- **Goal-aware prioritization only** — boost elements matching keywords in the goal. But without sub-goal tracking, the LLM still declares "done" prematurely.
+- **Both** — decompose into sub-goals with keywords, track completion, and boost AX elements matching the current sub-goal's keywords.
+
+**Decision:** Both — sub-goals from plan() + goal-aware AX prioritization.
+
+The plan() call now decomposes the goal into ordered sub-goals, each with:
+- `id`: sequential identifier
+- `description`: what to do for this sub-goal
+- `keywords`: words from the AX tree relevant to this sub-goal (e.g. "Search Wikipedia", "textbox" for a search sub-goal; "Appearance", "Small", "radio" for a settings sub-goal)
+
+The AgentLoop tracks completed sub-goals and prevents goalMet=true until all are done. The LLM can signal subGoalComplete=true to advance to the next sub-goal.
+
+The AX prioritizer boosts elements matching the current sub-goal's keywords to the top of the tree, so the LLM sees the most relevant elements first regardless of page size.
+
+**Rationale:** Sub-goals solve the "skipping steps" problem — the AgentLoop enforces completion order. Goal-aware prioritization solves the "can't see the right elements" problem — the LLM sees what's relevant to the current step, not a static ordering that may be wrong for different sub-goals.
+
+**Consequences:** The LLM is now guided through complex multi-step goals with explicit progress tracking. Each decide() call includes the full sub-goal list with completion status (DONE/CURRENT/PENDING), the current sub-goal description, and AX elements prioritized by the current sub-goal's keywords. This means a search sub-goal will show the search box first, and a settings sub-goal will show the radio buttons first — the prioritization adapts to what the LLM is doing. Watch for: the LLM may not correctly identify sub-goal boundaries — if it sets subGoalComplete too early or too late, the tracking will be wrong. The keywords come from the plan() LLM call, which may not perfectly match the actual AX tree element names.

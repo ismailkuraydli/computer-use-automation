@@ -437,6 +437,7 @@ See [DECISIONS.md](./DECISIONS.md) for the full ADR log. Summary:
 - ADR-009: Multi-Tenant Reuse via Base Artifact + Per-Tenant Overrides
 - ADR-010: LLM Isolation — Mock in Tests, Real Only for Manual Discovery
 - ADR-011: CDP AX Tree for observe(), Playwright getByRole/getByText for act()
+- ADR-012: Sub-goals and goal-aware AX prioritization
 
 ## Open Questions
 

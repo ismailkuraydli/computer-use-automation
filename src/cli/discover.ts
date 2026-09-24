@@ -105,6 +105,10 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
     console.log(`Capability: ${plan.capability}`);
     console.log(`Params: ${JSON.stringify(plan.params.map(p => p.name))}`);
     console.log(`Outputs: ${JSON.stringify(plan.outputs.map(o => o.name))}`);
+    if (plan.subGoals && plan.subGoals.length > 1) {
+      console.log(`Sub-goals:`);
+      plan.subGoals.forEach(sg => console.log(`  ${sg.id}: ${sg.description}${sg.keywords?.length ? ` (keywords: ${sg.keywords.join(", ")})` : ""}`));
+    }
   } else {
     console.error(`Plan failed: ${planResponse.error} — falling back to default`);
     const slug = goal.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().split(/\s+/).slice(0, 4).join("-");
@@ -147,7 +151,8 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
     target,
     plan.params,
     plan.outputs,
-    { outputsExtracted: true }
+    { outputsExtracted: true },
+    plan.subGoals || []
   );
 
   await surface.close();
