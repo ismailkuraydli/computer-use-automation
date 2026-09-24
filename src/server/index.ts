@@ -187,10 +187,9 @@ app.post("/api/discover", (req, res) => {
   ];
   if (headed) args.push("--headed");
 
-  const child = spawn("npx", ["tsx", ...args], {
+  const child = spawn(process.execPath, ["--import", "tsx", ...args], {
     cwd: process.cwd(),
     env: { ...process.env },
-    shell: true,
   });
 
   const sendSSE = (event: string, data: any) => {
@@ -220,11 +219,6 @@ app.post("/api/discover", (req, res) => {
   child.on("error", (err) => {
     sendSSE("error", { error: String(err) });
     res.end();
-  });
-
-  // Handle client disconnect
-  req.on("close", () => {
-    child.kill();
   });
 });
 
@@ -258,10 +252,9 @@ app.post("/api/replay", (req, res) => {
   }
   if (headed) args.push("--headed");
 
-  const child = spawn("npx", ["tsx", ...args], {
+  const child = spawn(process.execPath, ["--import", "tsx", ...args], {
     cwd: process.cwd(),
     env: { ...process.env },
-    shell: true,
   });
 
   const sendSSE = (event: string, data: any) => {
