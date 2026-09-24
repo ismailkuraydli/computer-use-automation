@@ -350,8 +350,16 @@
                 log.scrollTop = log.scrollHeight;
               } else if (eventType === 'done') {
                 const div = document.createElement('div');
-                div.className = data.exitCode === 0 ? 'success' : 'failure';
-                div.textContent = `\n--- Process exited with code ${data.exitCode} ---`;
+                if (data.exitCode === 0) {
+                  div.className = 'success';
+                  div.textContent = '\n--- Discovery completed successfully ---';
+                } else if (data.exitCode === null) {
+                  div.className = 'failure';
+                  div.textContent = '\n--- Discovery process was terminated (no exit code) ---\nThis usually means the process was killed or crashed before producing output.';
+                } else {
+                  div.className = 'failure';
+                  div.textContent = `\n--- Process exited with code ${data.exitCode} ---`;
+                }
                 log.appendChild(div);
               }
             }
@@ -569,8 +577,16 @@
                 log.scrollTop = log.scrollHeight;
               } else if (eventType === 'done') {
                 const div = document.createElement('div');
-                div.className = data.exitCode === 0 ? 'success' : 'failure';
-                div.textContent = `\n--- Process exited with code ${data.exitCode} ---`;
+                if (data.exitCode === 0) {
+                  div.className = 'success';
+                  div.textContent = '\n--- Replay completed successfully ---';
+                } else if (data.exitCode === null) {
+                  div.className = 'failure';
+                  div.textContent = '\n--- Replay process was terminated (no exit code) ---\nThis usually means the process was killed or crashed before producing output.';
+                } else {
+                  div.className = 'failure';
+                  div.textContent = `\n--- Process exited with code ${data.exitCode} ---`;
+                }
                 log.appendChild(div);
               }
             }

@@ -190,6 +190,7 @@ app.post("/api/discover", (req, res) => {
   const child = spawn("npx", ["tsx", ...args], {
     cwd: process.cwd(),
     env: { ...process.env },
+    shell: true,
   });
 
   const sendSSE = (event: string, data: any) => {
@@ -260,6 +261,7 @@ app.post("/api/replay", (req, res) => {
   const child = spawn("npx", ["tsx", ...args], {
     cwd: process.cwd(),
     env: { ...process.env },
+    shell: true,
   });
 
   const sendSSE = (event: string, data: any) => {
