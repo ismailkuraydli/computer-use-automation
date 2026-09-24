@@ -33,7 +33,7 @@ export interface ScreenState {
 
 // --- Actions (input to act()) ---
 
-export type ActionType = "navigate" | "click" | "type" | "extract" | "wait" | "submit";
+export type ActionType = "navigate" | "click" | "type" | "extract" | "wait" | "submit" | "scroll" | "read_page_text";
 
 export interface Action {
   type: ActionType;

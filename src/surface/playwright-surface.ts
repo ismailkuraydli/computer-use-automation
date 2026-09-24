@@ -231,6 +231,12 @@ export class PlaywrightSurface implements Surface {
       case "wait":
         return this._wait(action.value ? parseInt(action.value, 10) : 1000);
 
+      case "scroll":
+        return this._scroll(action.value || "down");
+
+      case "read_page_text":
+        return this._readPageText();
+
       default:
         return { ok: false, error: `Unknown action type: ${action.type}` };
     }
@@ -313,6 +319,36 @@ export class PlaywrightSurface implements Surface {
   private async _wait(ms: number): Promise<ActionResult> {
     await new Promise((resolve) => setTimeout(resolve, ms));
     return { ok: true };
+  }
+
+  private async _scroll(direction: string): Promise<ActionResult> {
+    if (!this.page) throw new Error("Surface not started");
+    try {
+      const delta = direction === "up" ? -720 : 720;
+      await this.page.mouse.wheel(0, delta);
+      await this.page.waitForTimeout(500); // Let content load after scroll
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: "scroll-failed", detail: String(e) };
+    }
+  }
+
+  private async _readPageText(): Promise<ActionResult> {
+    if (!this.page) throw new Error("Surface not started");
+    try {
+      const text = await this.page.evaluate(() => {
+        // Get all visible text content, limited to a reasonable size
+        const body = document.body;
+        if (!body) return "";
+        // Use innerText to get only visible text (not hidden, not script/style)
+        const text = body.innerText || "";
+        // Limit to first 5000 chars to avoid overwhelming the LLM
+        return text.substring(0, 5000);
+      });
+      return { ok: true, extractedValue: text };
+    } catch (e) {
+      return { ok: false, error: "read-page-text-failed", detail: String(e) };
+    }
   }
 
   /**

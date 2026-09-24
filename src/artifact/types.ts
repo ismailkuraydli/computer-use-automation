@@ -6,7 +6,7 @@
 
 import type { AXLocator } from "../locator/types.js";
 
-export type ActionType = "navigate" | "click" | "type" | "extract" | "wait" | "submit";
+export type ActionType = "navigate" | "click" | "type" | "extract" | "wait" | "submit" | "scroll" | "read_page_text";
 
 export interface ParamSpec {
   name: string;

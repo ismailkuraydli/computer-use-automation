@@ -30,7 +30,7 @@ export interface ActionHistoryEntry {
 }
 
 export type LLMResponse =
-  | { ok: true; action: Action; reasoning: string; goalMet: boolean; subGoalComplete?: boolean }
+  | { ok: true; action: Action; reasoning: string; goalMet: boolean; subGoalComplete?: boolean; outputComplete?: boolean }
   | { ok: false; error: string };
 
 export interface CapabilityPlan {

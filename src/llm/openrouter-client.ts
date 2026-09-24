@@ -167,6 +167,8 @@ Available actions:
 - click: { type: "click", target: { role: "<role>", name: "<name>" } }
 - type: { type: "type", target: { role: "<role>", name: "<name>" }, value: "<text>" }
 - extract: { type: "extract", target: { role: "<role>", name: "<name>" }, output: "<outputName>" }
+- scroll: { type: "scroll", value: "down" } or { type: "scroll", value: "up" } — scroll the page to see more content
+- read_page_text: { type: "read_page_text" } — read all visible text on the page (use when you need to see content that is not in the AX tree)
 - wait: { type: "wait", value: "<ms>" }
 - submit: { type: "submit", target: { role: "<role>", name: "<name>" } }
 
@@ -175,15 +177,17 @@ Critical rules:
 - Before each action, review what you have already done (from the history) and what sub-goals remain. Do NOT skip any sub-goal.
 - Set subGoalComplete to true when the current sub-goal is done, so the system can advance to the next sub-goal.
 - Only set goalMet to true when ALL sub-goals are complete.
+- After extracting output, set outputComplete to true ONLY if the extracted value fully satisfies what the goal asked for. If the output is incomplete (e.g. only got the title instead of the full article), set outputComplete to false and continue with more actions (scroll down, read_page_text, extract from another element).
 - extract reads the TEXT CONTENT of the targeted element. If you extract a link, you get the link's label text (e.g. "References"), NOT the content of the page it links to.
 - To extract article/research content, target a paragraph (role: "paragraph"), article (role: "article"), or the main content region (role: "main"). These contain the actual text. Do NOT target a heading (which gives just the title) or a link (which gives just the label).
+- If the content is too long for a single extract, use scroll to see more content, then extract again. Or use read_page_text to get all visible text at once.
 - If you need the full article text, extract from the first paragraph or the main content area — these contain the actual research text, not just the title.
-- Do NOT set goalMet to true until ALL sub-goals are complete AND you have extracted meaningful data using the extract action.
+- Do NOT set goalMet to true until ALL sub-goals are complete AND you have extracted meaningful data using the extract action AND outputComplete is true.
 - If you need to click a link or button to reach a sub-task's target, do that FIRST, then perform the sub-task on the NEXT step.
 - Use the exact role and name from the AX tree for targets.
 
 Respond with JSON only:
-{ "action": <action>, "reasoning": "<why>", "goalMet": <true|false>, "subGoalComplete": <true|false> }`;
+{ "action": <action>, "reasoning": "<why>", "goalMet": <true|false>, "subGoalComplete": <true|false>, "outputComplete": <true|false> }`;
 
     const stateDesc = `Goal: ${request.goal}
 Step: ${request.stepNumber}
@@ -200,10 +204,11 @@ ${request.history.map(h => {
   const target = a.target ? `${a.target.role}:${a.target.name}` : "";
   const val = a.value ? ` value="${a.value}"` : "";
   const out = a.output ? ` output=${a.output}` : "";
-  return `Step ${h.step}: ${a.type} ${target}${val}${out} -> ${h.result}`;
+  const obs = h.observation ? ` → ${h.observation.substring(0, 100)}` : "";
+  return `Step ${h.step}: ${a.type} ${target}${val}${out} -> ${h.result}${obs}`;
 }).join("\n") || "None"}
 
-REMEMBER: Review the goal, sub-goals, and the actions above. Focus on the CURRENT sub-goal. If the goal has multiple sub-goals, identify which ones are NOT yet done and do them next. Do NOT skip sub-goals. Do NOT set goalMet=true until ALL sub-goals are complete.`;
+REMEMBER: Review the goal, sub-goals, and the actions above. Focus on the CURRENT sub-goal. If the goal has multiple sub-goals, identify which ones are NOT yet done and do them next. Do NOT skip sub-goals. Do NOT set goalMet=true until ALL sub-goals are complete AND outputComplete=true.`;
 
     return [
       { role: "system", content: systemPrompt },
@@ -236,6 +241,7 @@ REMEMBER: Review the goal, sub-goals, and the actions above. Focus on the CURREN
         reasoning: parsed.reasoning || "",
         goalMet: parsed.goalMet || false,
         subGoalComplete: parsed.subGoalComplete === true,
+        outputComplete: parsed.outputComplete === true,
       };
     } catch (e) {
       return { ok: false, error: `Failed to parse LLM response: ${String(e)}` };
