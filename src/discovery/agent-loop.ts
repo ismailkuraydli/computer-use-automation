@@ -103,6 +103,7 @@ export class AgentLoop {
         history,
         stepNumber: stepNumber + 1,
         outputNames: outputs.map(o => o.name),
+        paramNames: params.map(p => p.name),
         subGoals: allSubGoals,
         completedSubGoals,
         currentSubGoal: currentSubGoal?.id,

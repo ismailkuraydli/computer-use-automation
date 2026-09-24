@@ -11,9 +11,10 @@ export interface LLMRequest {
   history: ActionHistoryEntry[];
   stepNumber: number;
   outputNames?: string[];
-  subGoals?: SubGoal[];        // ordered sub-goals to complete
-  completedSubGoals?: string[]; // IDs of completed sub-goals
-  currentSubGoal?: string;      // ID of the current sub-goal
+  paramNames?: string[];      // available input parameter names
+  subGoals?: SubGoal[];
+  completedSubGoals?: string[];
+  currentSubGoal?: string;
 }
 
 export interface SubGoal {
