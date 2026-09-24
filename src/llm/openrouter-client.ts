@@ -176,8 +176,8 @@ Critical rules:
 - Set subGoalComplete to true when the current sub-goal is done, so the system can advance to the next sub-goal.
 - Only set goalMet to true when ALL sub-goals are complete.
 - extract reads the TEXT CONTENT of the targeted element. If you extract a link, you get the link's label text (e.g. "References"), NOT the content of the page it links to.
-- To extract paragraph content, target the paragraph element (role: "paragraph") or a heading whose text IS the content you want.
-- To get article/research text, navigate to the page with the content, then extract from the element that CONTAINS the text (e.g. a paragraph, article, or region element — NOT a link to that content).
+- To extract article/research content, target a paragraph (role: "paragraph"), article (role: "article"), or the main content region (role: "main"). These contain the actual text. Do NOT target a heading (which gives just the title) or a link (which gives just the label).
+- If you need the full article text, extract from the first paragraph or the main content area — these contain the actual research text, not just the title.
 - Do NOT set goalMet to true until ALL sub-goals are complete AND you have extracted meaningful data using the extract action.
 - If you need to click a link or button to reach a sub-task's target, do that FIRST, then perform the sub-task on the NEXT step.
 - Use the exact role and name from the AX tree for targets.
@@ -268,9 +268,12 @@ REMEMBER: Review the goal, sub-goals, and the actions above. Focus on the CURREN
     const INPUT_ROLES = new Set(["textbox", "searchbox", "listbox"]);
     const LABEL_ROLES = new Set(["label"]);
     const HEADING_ROLES = new Set(["heading"]);
+    // Content roles — paragraphs, articles, regions contain the actual text content
+    // the LLM needs for extract actions. Prioritize these over links.
+    const CONTENT_ROLES = new Set(["paragraph", "article", "region", "contentinfo", "main", "document"]);
 
-    // Normalize keywords for matching
-    const normKeywords = (keywords || []).map(k => k.toLowerCase());
+    // Normalize keywords for matching — only match whole words, not substrings
+    const normKeywords = (keywords || []).map(k => k.toLowerCase()).filter(k => k.length >= 3);
 
     const keywordMatched: any[] = [];
     const controls: any[] = [];
@@ -278,6 +281,7 @@ REMEMBER: Review the goal, sub-goals, and the actions above. Focus on the CURREN
     const inputs: any[] = [];
     const labels: any[] = [];
     const headings: any[] = [];
+    const content: any[] = [];
     const links: any[] = [];
     const other: any[] = [];
     const seen = new Set<string>();
@@ -290,10 +294,11 @@ REMEMBER: Review the goal, sub-goals, and the actions above. Focus on the CURREN
       if (seen.has(key)) continue;
       seen.add(key);
 
-      // Check if this node matches any focus keywords
+      // Check if this node matches any focus keywords — use exact word matching
       const nodeName = (node.name || "").toLowerCase();
       const matchesKeyword = normKeywords.length > 0 && normKeywords.some(kw =>
-        nodeName.includes(kw) || kw.includes(nodeName)
+        nodeName === kw || nodeName.startsWith(kw + " ") || nodeName.endsWith(" " + kw) ||
+        (nodeName.includes(" " + kw + " "))
       );
 
       if (matchesKeyword) {
@@ -308,6 +313,8 @@ REMEMBER: Review the goal, sub-goals, and the actions above. Focus on the CURREN
         labels.push(node);
       } else if (HEADING_ROLES.has(node.role)) {
         headings.push(node);
+      } else if (CONTENT_ROLES.has(node.role)) {
+        content.push(node);
       } else if (node.role === "link") {
         links.push(node);
       } else {
@@ -315,8 +322,9 @@ REMEMBER: Review the goal, sub-goals, and the actions above. Focus on the CURREN
       }
     }
 
-    // Keyword-matched elements first, then the rest by priority
-    const result = [...keywordMatched, ...controls, ...buttons, ...inputs, ...labels, ...headings, ...links, ...other];
+    // Keyword-matched first, then controls, buttons, inputs, labels, headings,
+    // content (paragraphs/articles), then links last
+    const result = [...keywordMatched, ...controls, ...buttons, ...inputs, ...labels, ...headings, ...content, ...links, ...other];
     return result.slice(0, limit);
   }
 }
