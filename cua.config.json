@@ -1,0 +1,10 @@
+{
+  "provider": "openrouter",
+  "model": "google/gemini-2.0-flash-001",
+  "baseUrl": "https://openrouter.ai/api/v1/chat/completions",
+  "apiKeyEnvVar": "OPENROUTER_API_KEY",
+  "maxTokens": 1000,
+  "maxSteps": 15,
+  "timeoutMs": 60000,
+  "headless": true
+}

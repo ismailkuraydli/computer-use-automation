@@ -1,18 +1,25 @@
 /**
- * OpenRouterClient — real Claude via OpenRouter for manual discovery runs.
+ * OpenRouterClient — real LLM client for manual discovery runs.
  * Per ADR-010: NEVER used in automated tests. Manual use only.
+ *
+ * Supports any OpenRouter-compatible model via cua.config.json.
  */
 
 import type { LLMClient, LLMRequest, LLMResponse } from "./types.js";
+import type { CuaConfig } from "../config.js";
 
 export class OpenRouterClient implements LLMClient {
   private apiKey: string;
   private model: string;
+  private baseUrl: string;
+  private maxTokens: number;
   private _callCount = 0;
 
-  constructor(apiKey: string, model = "anthropic/claude-3.5-sonnet") {
+  constructor(apiKey: string, config: CuaConfig) {
     this.apiKey = apiKey;
-    this.model = model;
+    this.model = config.model;
+    this.baseUrl = config.baseUrl;
+    this.maxTokens = config.maxTokens;
   }
 
   get callCount(): number {
@@ -23,7 +30,7 @@ export class OpenRouterClient implements LLMClient {
     this._callCount++;
 
     try {
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      const response = await fetch(this.baseUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -32,12 +39,13 @@ export class OpenRouterClient implements LLMClient {
         body: JSON.stringify({
           model: this.model,
           messages: this._buildMessages(request),
-          max_tokens: 1000,
+          max_tokens: this.maxTokens,
         }),
       });
 
       if (!response.ok) {
-        return { ok: false, error: `OpenRouter API error: ${response.status} ${response.statusText}` };
+        const errorBody = await response.text().catch(() => "");
+        return { ok: false, error: `API error ${response.status}: ${errorBody || response.statusText}` };
       }
 
       const data = await response.json() as any;
@@ -46,7 +54,7 @@ export class OpenRouterClient implements LLMClient {
       // Parse the LLM's response into an action
       return this._parseResponse(content, request);
     } catch (e) {
-      return { ok: false, error: `OpenRouter request failed: ${String(e)}` };
+      return { ok: false, error: `Request failed: ${String(e)}` };
     }
   }
 
