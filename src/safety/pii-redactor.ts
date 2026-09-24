@@ -19,8 +19,10 @@ const CREDIT_CARD_PATTERN = /\b(?:\d{4}\s?){3}\d{4}\b/g;
 
 /**
  * Redact all known PII patterns from a string, replacing them with [REDACTED].
+ * If the input is not a string, returns it as-is.
  */
 export function redactPII(text: string): string {
+  if (typeof text !== "string") return text;
   let result = text;
 
   // Redact credit cards first (16 digits with optional spaces)

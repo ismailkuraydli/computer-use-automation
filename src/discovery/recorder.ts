@@ -167,13 +167,13 @@ export class Recorder {
     // paramValueMap is already populated during recordAction() calls
     // Replace concrete values with {{paramName}} in all steps
     for (const step of this.steps) {
-      if (step.value) {
+      if (step.value && typeof step.value === "string") {
         for (const [concreteValue, paramName] of this.paramValueMap) {
           step.value = step.value.split(concreteValue).join(`{{${paramName}}}`);
         }
       }
       // Also parameterize the target name for navigate steps (RootWebArea name = URL)
-      if (step.target && step.target.primary.name) {
+      if (step.target && step.target.primary.name && typeof step.target.primary.name === "string") {
         for (const [concreteValue, paramName] of this.paramValueMap) {
           step.target.primary.name = step.target.primary.name.split(concreteValue).join(`{{${paramName}}}`);
         }
