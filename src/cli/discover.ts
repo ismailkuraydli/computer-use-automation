@@ -10,6 +10,7 @@ import { Recorder } from "../discovery/recorder.js";
 import { SafetyGuard } from "../safety/safety-guard.js";
 import { EvidenceCollector } from "../evidence/evidence-collector.js";
 import { ArtifactStore } from "../artifact/artifact-store.js";
+import { loadConfig, getApiKey } from "../config.js";
 import type { AllowlistConfig } from "../artifact/types.js";
 import { readFileSync } from "fs";
 
@@ -26,12 +27,16 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
   const target = opts.target as string;
   const outputPath = opts.output as string;
   const useMockLLM = opts["mock-llm"] as boolean;
+  const headed = opts.headed as boolean;
 
   if (!goal) {
     console.error("Error: --goal is required for discover");
     console.error('Example: cua discover --goal "Look up member 12345 and read their savings balance"');
     process.exit(1);
   }
+
+  // Load config
+  const config = loadConfig(opts.config);
 
   // Determine LLM client
   let llmClient;
@@ -60,15 +65,9 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
       },
     ]);
   } else {
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey) {
-      console.error("Error: OPENROUTER_API_KEY is not set.");
-      console.error("Set it with: export OPENROUTER_API_KEY=your-key");
-      console.error("Or run with --mock-llm to use scripted responses (no real API calls).");
-      process.exit(1);
-    }
-    console.log("Using OpenRouterClient (Claude via OpenRouter)");
-    llmClient = new OpenRouterClient(apiKey);
+    const apiKey = getApiKey(config);
+    console.log(`Using ${config.provider} / ${config.model}`);
+    llmClient = new OpenRouterClient(apiKey, config);
   }
 
   // Load allowlist
@@ -82,8 +81,11 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
     }
   }
 
-  // Set up components
-  const surface = new PlaywrightSurface({ headless: true, screenshotDir: "./evidence/screenshots" });
+  // Set up components — --headed overrides config headless
+  const headless = headed ? false : config.headless;
+  console.log(`Browser: ${headless ? "headless" : "headed (visible)"}`);
+
+  const surface = new PlaywrightSurface({ headless, screenshotDir: "./evidence/screenshots" });
   await surface._start(target);
 
   const evidence = new EvidenceCollector("./evidence");
@@ -98,8 +100,8 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
     safetyGuard,
     evidenceCollector: evidence,
     recorder,
-    maxSteps: 15,
-    timeoutMs: 60000,
+    maxSteps: config.maxSteps,
+    timeoutMs: config.timeoutMs,
   });
 
   console.log(`\nGoal: ${goal}`);

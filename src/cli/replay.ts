@@ -5,18 +5,23 @@
 import { PlaywrightSurface } from "../surface/playwright-surface.js";
 import { ReplayEngine } from "../replay/replay-engine.js";
 import { EvidenceCollector } from "../evidence/evidence-collector.js";
+import { loadConfig } from "../config.js";
 import { readFileSync } from "fs";
 
 export async function runReplay(opts: Record<string, any>): Promise<void> {
   const artifactPath = opts.artifact as string;
   const target = opts.target as string;
   const paramsStr = opts.params as string;
+  const headed = opts.headed as boolean;
 
   if (!artifactPath) {
     console.error("Error: --artifact is required for replay");
     console.error('Example: cua replay --artifact ./artifacts/lookup-member-balance/v1.json --params \'{"memberId":"12345"}\'');
     process.exit(1);
   }
+
+  // Load config
+  const config = loadConfig(opts.config);
 
   // Load artifact
   let artifact;
@@ -37,8 +42,11 @@ export async function runReplay(opts: Record<string, any>): Promise<void> {
     process.exit(1);
   }
 
-  // Set up components
-  const surface = new PlaywrightSurface({ headless: true, screenshotDir: "./evidence/screenshots" });
+  // Set up components — --headed overrides config headless
+  const headless = headed ? false : config.headless;
+  console.log(`Browser: ${headless ? "headless" : "headed (visible)"}`);
+
+  const surface = new PlaywrightSurface({ headless, screenshotDir: "./evidence/screenshots" });
   await surface._start(target);
 
   const evidence = new EvidenceCollector("./evidence");

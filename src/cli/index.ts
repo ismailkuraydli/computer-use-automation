@@ -16,6 +16,8 @@ const { values, positionals } = parseArgs({
     artifact: { type: "string" },
     params: { type: "string", default: "{}" },
     "mock-llm": { type: "boolean", default: false },
+    headed: { type: "boolean", default: false },
+    config: { type: "string" },
     allowlist: { type: "string" },
     help: { type: "boolean", default: false },
   },
@@ -38,11 +40,17 @@ Options:
   --artifact   Path to saved artifact JSON (replay)
   --params     JSON string of input parameters (replay)
   --mock-llm   Use MockLLMClient instead of real LLM (discover)
+  --headed     Show the browser window (discover, replay)
+  --config     Path to cua.config.json (default: ./cua.config.json)
   --allowlist  Path to allowlist JSON file (discover)
   --help       Show this help
 
+Config (cua.config.json):
+  provider, model, baseUrl, apiKeyEnvVar, maxTokens, maxSteps, timeoutMs, headless
+
 Environment:
-  OPENROUTER_API_KEY  Required for real LLM discovery runs (unless --mock-llm)
+  OPENROUTER_API_KEY  Required for real LLM discovery (unless --mock-llm)
+                      Set via the apiKeyEnvVar in cua.config.json
 `);
   process.exit(0);
 }
