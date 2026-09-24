@@ -120,7 +120,9 @@ describe("AgentLoop", () => {
   });
 
   it("detects repeated actions (dead-end loop)", async () => {
-    const script = Array(4).fill({
+    // Need 6 entries: 3 repeats triggers read_page_text intervention,
+    // which resets the counter, then 3 more repeats triggers the actual dead-end
+    const script = Array(7).fill({
       action: { type: "navigate" as const, value: `${MOCK_APP_URL}/search` },
       reasoning: "Navigate to search",
       goalMet: false,

@@ -59,6 +59,7 @@ export class AgentLoop {
     let stepNumber = 0;
     let lastAction: Action | null = null;
     let repeatCount = 0;
+    let pageTextRead = false;
 
     // Sub-goal tracking
     const completedSubGoals: string[] = [];
@@ -131,6 +132,8 @@ export class AgentLoop {
           } : undefined,
           reasoning: llmResponse.ok ? llmResponse.reasoning : undefined,
           goalMet: llmResponse.ok ? llmResponse.goalMet : undefined,
+          subGoalComplete: llmResponse.ok ? llmResponse.subGoalComplete : undefined,
+          outputComplete: llmResponse.ok ? llmResponse.outputComplete : undefined,
           error: llmResponse.ok ? undefined : llmResponse.error,
         },
         timestamp: new Date().toISOString(),
@@ -158,6 +161,23 @@ export class AgentLoop {
       if (lastAction && this._actionsEqual(lastAction, action)) {
         repeatCount++;
         if (repeatCount >= 3) {
+          // Before giving up, try read_page_text once to give the LLM more context
+          if (action.type !== "read_page_text" && !pageTextRead) {
+            console.log(`  [Dead-end detected — reading page text for more context]`);
+            pageTextRead = true;
+            const readResult = await this.opts.surface.act({ type: "read_page_text" });
+            if (readResult.ok && "extractedValue" in readResult) {
+              history.push({
+                step: stepNumber + 1,
+                action: { type: "read_page_text" },
+                result: "success",
+                observation: `Page text: ${(readResult as any).extractedValue?.substring(0, 500) || ""}`,
+              });
+              repeatCount = 0; // Reset — give the LLM another chance with more context
+              stepNumber++;
+              continue;
+            }
+          }
           return this._finish(false, stepNumber, "dead-end: repeated same action 3 times", recorder, params, outputs, checkpoint, extractedOutputs);
         }
       } else {
