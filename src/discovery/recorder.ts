@@ -26,22 +26,27 @@ export class Recorder {
   private steps: ArtifactStep[] = [];
   private stepCounter = 0;
   private baseUrl: string = "";
+  private knownParams: ParamSpec[];
   private knownOutputs: OutputSpec[];
   private paramValues: Record<string, string>; // paramName → concrete value used during discovery
+  private goal: string; // goal text — used to infer paramValues from LLM actions
 
   constructor(
     capability: string,
     description: string,
     allowlist: AllowlistConfig,
-    _params: ParamSpec[] = [],
+    params: ParamSpec[] = [],
     outputs: OutputSpec[] = [],
-    paramValues: Record<string, string> = {}
+    paramValues: Record<string, string> = {},
+    goal: string = ""
   ) {
     this.capability = capability;
     this.description = description;
     this.allowlist = allowlist;
+    this.knownParams = params;
     this.knownOutputs = outputs;
     this.paramValues = paramValues;
+    this.goal = goal;
   }
 
   recordAction(
@@ -51,6 +56,23 @@ export class Recorder {
     _result: "success" | "failure"
   ): void {
     this.stepCounter++;
+
+    // Infer paramValues from LLM type actions: if the LLM types a value that
+    // appears in the goal text, map it to a declared param. This handles the
+    // case where the LLM plan didn't return paramValues explicitly.
+    if (action.type === "type" && action.value && this.goal) {
+      const goalLower = this.goal.toLowerCase();
+      const valueLower = action.value.toLowerCase();
+      if (goalLower.includes(valueLower) && valueLower.length >= 3) {
+        // Find a param that doesn't already have a value
+        for (const param of this.knownParams) {
+          if (!(param.name in this.paramValues)) {
+            this.paramValues[param.name] = action.value;
+            break;
+          }
+        }
+      }
+    }
 
     // Extract baseUrl from first navigation
     if (this.stepCounter === 1 && action.type === "navigate" && action.value) {
