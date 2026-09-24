@@ -178,11 +178,58 @@ export class Recorder {
             const lowerName = step.target.primary.name.toLowerCase();
             const lowerValue = concreteValue.toLowerCase();
             if (lowerName.includes(lowerValue)) {
-              // Case-insensitive replacement: find the actual match in the original
-              // string and replace it with the template
               const regex = new RegExp(concreteValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
               step.target.primary.name = step.target.primary.name.replace(regex, `{{${paramName}}}`);
             }
+          }
+        }
+      }
+      // Replace concrete values in guard URL patterns and AX element names
+      if (step.guard) {
+        this._parameterizeStateGuard(step.guard);
+      }
+      // Replace concrete values in checkpoint URL patterns and AX element names
+      if (step.checkpoint) {
+        this._parameterizeStateGuard(step.checkpoint);
+      }
+    }
+  }
+
+  /**
+   * Replace concrete param values with {{paramName}} in a StateGuard's
+   * URL patterns and AX element names. Case-insensitive for URLs.
+   */
+  private _parameterizeStateGuard(guard: StateGuard): void {
+    if (!guard.anyOf) return;
+    for (const sig of guard.anyOf) {
+      // Parameterize URL pattern (case-insensitive)
+      if (sig.urlPattern) {
+        for (const [paramName, concreteValue] of Object.entries(this.paramValues)) {
+          if (concreteValue) {
+            const regex = new RegExp(concreteValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+            sig.urlPattern = sig.urlPattern.replace(regex, `{{${paramName}}}`);
+          }
+        }
+      }
+      // Parameterize AX element names (case-insensitive)
+      if (sig.axContains) {
+        for (const ax of sig.axContains) {
+          if (ax.name) {
+            for (const [paramName, concreteValue] of Object.entries(this.paramValues)) {
+              if (concreteValue) {
+                const regex = new RegExp(concreteValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+                ax.name = ax.name.replace(regex, `{{${paramName}}}`);
+              }
+            }
+          }
+        }
+      }
+      // Parameterize textContains
+      if (sig.textContains) {
+        for (const [paramName, concreteValue] of Object.entries(this.paramValues)) {
+          if (concreteValue) {
+            const regex = new RegExp(concreteValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+            sig.textContains = sig.textContains.replace(regex, `{{${paramName}}}`);
           }
         }
       }
