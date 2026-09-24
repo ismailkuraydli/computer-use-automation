@@ -238,3 +238,29 @@ The AX prioritizer boosts elements matching the current sub-goal's keywords to t
 **Rationale:** Sub-goals solve the "skipping steps" problem — the AgentLoop enforces completion order. Goal-aware prioritization solves the "can't see the right elements" problem — the LLM sees what's relevant to the current step, not a static ordering that may be wrong for different sub-goals.
 
 **Consequences:** The LLM is now guided through complex multi-step goals with explicit progress tracking. Each decide() call includes the full sub-goal list with completion status (DONE/CURRENT/PENDING), the current sub-goal description, and AX elements prioritized by the current sub-goal's keywords. This means a search sub-goal will show the search box first, and a settings sub-goal will show the radio buttons first — the prioritization adapts to what the LLM is doing. Watch for: the LLM may not correctly identify sub-goal boundaries — if it sets subGoalComplete too early or too late, the tracking will be wrong. The keywords come from the plan() LLM call, which may not perfectly match the actual AX tree element names.
+
+---
+
+### ADR-013: Output verification + new action types (scroll, read_page_text)
+
+**Context:** The LLM extracted "Flower" (the page title heading) instead of the actual research text. It declared goalMet=true without verifying that the output matched what the user asked for. The LLM also had no way to scroll the page or read all visible text — it was limited to the AX tree's first 100 elements.
+
+**Options considered:**
+- **Native function calling** — use the model's tool-use API for scroll/read_page_text. More structured but requires different API formats per model.
+- **Prompt-based tools** — add scroll and read_page_text as new Action types. The LLM returns them as actions, the Surface executes them. Simpler, works with any model.
+
+**Decision:** Prompt-based tools + output verification.
+
+**New action types:**
+- `scroll` — scrolls the page down or up (720px per scroll). Use when content is below the fold.
+- `read_page_text` — reads all visible text on the page (using `document.body.innerText`, limited to 5000 chars). Use when the AX tree doesn't show the content the LLM needs.
+
+**Output verification:**
+- The LLM response now includes `outputComplete: true|false`
+- After extracting a value, the extracted text is shown in the history ("Extracted: '...'") so the LLM can review it
+- The AgentLoop prevents `goalMet=true` if `outputComplete === false` — the LLM must confirm the output satisfies the goal
+- If the LLM says `outputComplete: false`, the run continues — the LLM can scroll down, read more content, or extract from another element
+
+**Rationale:** The LLM needs both the ability to access more content (scroll, read_page_text) and the judgment to verify its output. Prompt-based tools work with any OpenRouter model without API format changes. Output verification prevents the recurring problem of the LLM extracting a title or link label and declaring success.
+
+**Consequences:** The LLM can now scroll pages, read all visible text, and verify its output before declaring success. This should prevent the "extracted 'Flower' instead of the research text" problem. Watch for: scroll and read_page_text are not recorded in the artifact (they're discovery-only tools, not replayable steps — replay uses the locators from the recorded steps). The outputComplete signal is per-extract — if the LLM extracts multiple outputs, each must be verified.

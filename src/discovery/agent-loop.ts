@@ -208,34 +208,59 @@ export class AgentLoop {
 
       // Capture extracted output — normalize the output name to match declared outputs
       if (action.type === "extract" && actResult.ok && "extractedValue" in actResult && action.output) {
-        // Try to match the LLM's output name to a known output (case-insensitive, ignoring underscores)
         const normalize = (s: string) => s.toLowerCase().replace(/[-_]/g, "");
         const knownOutput = outputs.find(o => normalize(o.name) === normalize(action.output!));
         const outputName = knownOutput ? knownOutput.name : action.output;
         extractedOutputs[outputName] = (actResult as any).extractedValue || "";
       }
 
-      // Add to history
+      // Capture read_page_text result as observation in history (not as an output, but available for the LLM)
+      if (action.type === "read_page_text" && actResult.ok && "extractedValue" in actResult) {
+        // The page text is available in the next observe() — the LLM can see it in the AX tree
+        // But also store it so the LLM can reference it via history
+        const pageText = (actResult as any).extractedValue || "";
+        history.push({
+          step: stepNumber + 1,
+          action,
+          result: "success",
+          observation: `Page text (first 200 chars): ${pageText.substring(0, 200)}`,
+        });
+        stepNumber++;
+        continue;
+      }
+
+      // Add to history with extracted value if available (for output verification)
+      const historyObservation = (action.type === "extract" && actResult.ok && "extractedValue" in actResult)
+        ? `Extracted: "${((actResult as any).extractedValue || "").substring(0, 200)}"`
+        : undefined;
+
       history.push({
         step: stepNumber + 1,
         action,
         result: actResult.ok ? "success" : "failure",
+        observation: historyObservation,
       });
 
       stepNumber++;
 
-      // Check if goal is met — only if all sub-goals are complete
+      // Check if goal is met — only if all sub-goals are complete AND output is verified
       if (llmResponse.goalMet) {
         if (currentSubGoalIndex < allSubGoals.length - 1) {
           // Can't declare goal met — there are remaining sub-goals
-          // Mark current sub-goal complete and advance
           if (llmResponse.subGoalComplete) {
             completedSubGoals.push(currentSubGoal.id);
             currentSubGoalIndex++;
           }
-          // Override goalMet — not all sub-goals are done
           continue;
         }
+
+        // All sub-goals complete — check output verification
+        if (outputs.length > 0 && llmResponse.outputComplete === false) {
+          // Output not complete — LLM says the extracted value doesn't satisfy the goal
+          console.log(`  [Output not complete — continuing to extract more]`);
+          continue;
+        }
+
         return this._finish(true, stepNumber, "goal met", recorder, params, outputs, checkpoint, extractedOutputs);
       }
 

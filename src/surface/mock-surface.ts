@@ -59,6 +59,16 @@ export class MockSurface implements Surface {
       }
     }
 
+    // Simulate scroll
+    if (action.type === "scroll") {
+      return { ok: true };
+    }
+
+    // Simulate read_page_text
+    if (action.type === "read_page_text") {
+      return { ok: true, extractedValue: "Mock page text content" };
+    }
+
     return { ok: true };
   }
 
