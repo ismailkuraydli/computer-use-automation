@@ -163,7 +163,12 @@ const BUILD_AX_TREE_JS = `(() => {
     var role = el.getAttribute('role') || getImplicitRole(el);
     if (!role) continue;
     var name = getAccessibleName(el);
-    if (!name || name.length === 0) continue;
+    // For structural elements (main, article, section, region), allow empty
+    // names — they're used for extraction targets and can be found by role alone
+    var allowEmptyName = (role === 'main' || role === 'article' || role === 'region' || role === 'contentinfo' || role === 'document');
+    if (!name || name.length === 0) {
+      if (!allowEmptyName) continue;
+    }
     if (role === 'none' || role === 'presentation' || role === 'LayoutTable' || role === 'LayoutTableRow' || role === 'LayoutTableCell') continue;
     result.push({
       role: role,
@@ -308,6 +313,9 @@ export class PlaywrightSurface implements Surface {
     if (!this.page) throw new Error("Surface not started");
     try {
       await this.page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
+      // Wait for network activity to settle — dynamic content (settings panels,
+      // SPA widgets, lazy-loaded elements) may not be in the DOM at domcontentloaded.
+      await this.page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       return { ok: true };
     } catch (e) {
       return { ok: false, error: "navigation-failed", detail: String(e) };
@@ -423,6 +431,20 @@ export class PlaywrightSurface implements Surface {
    * 5. getByLabel / getByText fallbacks
    */
   private async _findElementByAX(target: AXNode): Promise<ReturnType<Page["locator"]> | null> {
+    if (!this.page) return null;
+
+    // Try to find the element. If not found immediately, wait 1 second and
+    // retry — dynamic content (settings panels, SPA widgets, lazy-loaded
+    // elements) may not be in the DOM immediately after navigation.
+    const result = await this._tryFindElement(target);
+    if (result) return result;
+
+    // Wait and retry
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    return this._tryFindElement(target);
+  }
+
+  private async _tryFindElement(target: AXNode): Promise<ReturnType<Page["locator"]> | null> {
     if (!this.page) return null;
 
     // Determine which frame to search in
@@ -550,13 +572,23 @@ export class PlaywrightSurface implements Surface {
     // 2. Add missing label/span/div elements that CDP doesn't expose
     try {
       const supplementNodes = await this.page.evaluate(BUILD_AX_TREE_JS) as any[];
-      const existingMap = new Map(result.map((n, i) => [`${n.role}:${n.name}`, i]));
+      // Track which CDP nodes have already been merged (by index) to handle
+      // duplicate role:name pairs correctly (e.g. two "radio:Standard" elements)
+      const mergedCdpIndices = new Set<number>();
       for (const node of supplementNodes) {
-        const key = `${node.role}:${node.name}`;
-        const existingIdx = existingMap.get(key);
-        if (existingIdx !== undefined) {
+        // Find the first CDP node that matches by role:name and hasn't been merged yet
+        let matchIdx = -1;
+        for (let i = 0; i < result.length; i++) {
+          if (mergedCdpIndices.has(i)) continue;
+          if (result[i].role === node.role && result[i].name === node.name) {
+            matchIdx = i;
+            break;
+          }
+        }
+        if (matchIdx >= 0) {
           // Merge identity fields into existing CDP node
-          const existing = result[existingIdx];
+          const existing = result[matchIdx];
+          mergedCdpIndices.add(matchIdx);
           if (node.cssSelector && !existing.cssSelector) existing.cssSelector = node.cssSelector;
           if (node.id && !existing.id) existing.id = node.id;
           if (node.ariaLabel && !existing.ariaLabel) existing.ariaLabel = node.ariaLabel;
@@ -566,7 +598,6 @@ export class PlaywrightSurface implements Surface {
         } else {
           // New element not in CDP tree — add it
           result.push({ ...node, framePath: [] as string[] });
-          existingMap.set(key, result.length - 1);
         }
       }
     } catch {
@@ -607,9 +638,9 @@ export class PlaywrightSurface implements Surface {
 
     for (const node of nodes) {
       const role = node.role?.value;
-      const name = node.name?.value;
+      const name = node.name?.value || "";
 
-      if (!role || !name) continue;
+      if (!role) continue;
 
       // Skip layout/ignored roles
       if (role === "none" || role === "presentation" ||
@@ -619,8 +650,11 @@ export class PlaywrightSurface implements Surface {
         continue;
       }
 
-      // Skip empty names
-      if (!name || name.trim().length === 0) continue;
+      // Skip empty names — unless it's a structural element used for extraction
+      if (!name || name.trim().length === 0) {
+        const structuralRoles = new Set(["main", "article", "region", "contentinfo", "document"]);
+        if (!structuralRoles.has(role)) continue;
+      }
 
       // Skip very long names (likely content, not interactive elements)
       if (name.length > 200) continue;

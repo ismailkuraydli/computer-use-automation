@@ -225,22 +225,52 @@ export class ReplayEngine {
 
     // For click/type/extract/submit — resolve the locator to an AX node
     const resolveResult = resolveLocator(resolvedTarget, state.axTree);
-    if (!resolveResult.ok) {
-      return null;
+    if (resolveResult.ok) {
+      // Element found in the AX tree — use the resolved node
+      const target: AXNode = {
+        ...resolveResult.node,
+        framePath: step.target.framePath,
+      };
+
+      const action: Action = {
+        type: step.action,
+        target,
+        value: resolvedValue,
+        output: step.output,
+      };
+
+      return action;
     }
 
-    const target: AXNode = {
-      ...resolveResult.node,
-      framePath: step.target.framePath,
-    };
+    // AX tree resolution failed — the element may be hidden (e.g. inside a
+    // collapsed dropdown). If the artifact has identity fields (cssSelector,
+    // id, etc.), build the Action directly from them. The PlaywrightSurface
+    // will use these to find the element via CSS selector, which works even
+    // for hidden elements.
+    if (resolvedTarget.primary.cssSelector || resolvedTarget.primary.id || resolvedTarget.primary.dataTestId) {
+      const target: AXNode = {
+        role: resolvedTarget.primary.role,
+        name: resolvedTarget.primary.name,
+        cssSelector: resolvedTarget.primary.cssSelector,
+        id: resolvedTarget.primary.id,
+        dataTestId: resolvedTarget.primary.dataTestId,
+        ariaLabel: resolvedTarget.primary.ariaLabel,
+        text: resolvedTarget.primary.text,
+        href: resolvedTarget.primary.href,
+        framePath: step.target.framePath,
+      };
 
-    const action: Action = {
-      type: step.action,
-      target,
-      value: resolvedValue,
-      output: step.output,
-    };
+      const action: Action = {
+        type: step.action,
+        target,
+        value: resolvedValue,
+        output: step.output,
+      };
 
-    return action;
+      return action;
+    }
+
+    // No identity fields and not in AX tree — can't resolve
+    return null;
   }
 }

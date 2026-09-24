@@ -137,7 +137,7 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
   // value before executing actions (safety net in case the LLM uses templates).
   const paramValues = plan.paramValues || {};
 
-  const recorder = new Recorder(plan.capability, plan.description, allowlist, plan.params, plan.outputs, paramValues);
+  const recorder = new Recorder(plan.capability, plan.description, allowlist, plan.params, plan.outputs, paramValues, goal);
   const safetyGuard = new SafetyGuard(allowlist);
 
   const loop = new AgentLoop({
