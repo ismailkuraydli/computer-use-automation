@@ -26,16 +26,22 @@ export class Recorder {
   private steps: ArtifactStep[] = [];
   private stepCounter = 0;
   private baseUrl: string = "";
-  private paramValueMap: Map<string, string> = new Map(); // concreteValue → paramName
-  private knownParams: ParamSpec[];
   private knownOutputs: OutputSpec[];
+  private paramValues: Record<string, string>; // paramName → concrete value used during discovery
 
-  constructor(capability: string, description: string, allowlist: AllowlistConfig, params: ParamSpec[] = [], outputs: OutputSpec[] = []) {
+  constructor(
+    capability: string,
+    description: string,
+    allowlist: AllowlistConfig,
+    _params: ParamSpec[] = [],
+    outputs: OutputSpec[] = [],
+    paramValues: Record<string, string> = {}
+  ) {
     this.capability = capability;
     this.description = description;
     this.allowlist = allowlist;
-    this.knownParams = params;
     this.knownOutputs = outputs;
+    this.paramValues = paramValues;
   }
 
   recordAction(
@@ -45,18 +51,6 @@ export class Recorder {
     _result: "success" | "failure"
   ): void {
     this.stepCounter++;
-
-        // Track param value mappings for canonicalization
-        if (action.type === "type" && action.value && action.target) {
-          const targetName = action.target.name.toLowerCase().replace(/[\s_-]+/g, "");
-          for (const param of this.knownParams) {
-            const paramName = param.name.toLowerCase().replace(/[\s_-]+/g, "");
-            if (targetName.includes(paramName) || paramName.includes(targetName)) {
-              this.paramValueMap.set(action.value, param.name);
-              break;
-            }
-          }
-        }
 
     // Extract baseUrl from first navigation
     if (this.stepCounter === 1 && action.type === "navigate" && action.value) {
@@ -156,32 +150,38 @@ export class Recorder {
   }
 
   /**
-   * Canonicalize steps: replace concrete param values with {{paramName}} references.
-   * This is the core of the cross-tenant reuse design (ADR-009).
+   * Parameterize steps: replace concrete param values with {{paramName}}.
    *
-   * Strategy: for each `type` action, if the target's name matches a param name
-   * (case-insensitive, ignoring spaces), record the mapping from concrete value → paramName.
-   * Then replace all occurrences of concrete values in step values (including navigate URLs).
+   * Uses the paramValues map (paramName → concrete value from discovery).
+   * For each step, replaces all occurrences of the concrete value with
+   * {{paramName}} in step.value and step.target.primary.name.
+   *
+   * This is simple string replacement — no name matching needed. If the
+   * LLM typed "bananas" and paramValues is {"topic": "bananas"}, then
+   * "bananas" becomes "{{topic}}" everywhere in the artifact.
    */
   private _parameterizeSteps(_params: ParamSpec[]): void {
-    // paramValueMap is already populated during recordAction() calls
-    // Replace concrete values with {{paramName}} in all steps
     for (const step of this.steps) {
+      // Replace concrete values in step.value
       if (step.value && typeof step.value === "string") {
-        for (const [concreteValue, paramName] of this.paramValueMap) {
-          step.value = step.value.split(concreteValue).join(`{{${paramName}}}`);
+        for (const [paramName, concreteValue] of Object.entries(this.paramValues)) {
+          if (concreteValue && step.value.includes(concreteValue)) {
+            step.value = step.value.split(concreteValue).join(`{{${paramName}}}`);
+          }
         }
       }
-      // Also parameterize the target name for navigate steps (RootWebArea name = URL)
+      // Replace concrete values in target name
       if (step.target && step.target.primary.name && typeof step.target.primary.name === "string") {
-        for (const [concreteValue, paramName] of this.paramValueMap) {
-          step.target.primary.name = step.target.primary.name.split(concreteValue).join(`{{${paramName}}}`);
+        for (const [paramName, concreteValue] of Object.entries(this.paramValues)) {
+          if (concreteValue && step.target.primary.name.includes(concreteValue)) {
+            step.target.primary.name = step.target.primary.name.split(concreteValue).join(`{{${paramName}}}`);
+          }
         }
       }
     }
   }
 
-  private _buildLocator(action: Action, _state: ScreenState): LocatorSpec {
+  private _buildLocator(action: Action, state: ScreenState): LocatorSpec {
     // If the action has a target (click, type, extract, submit), build from it
     if (action.target) {
       const loc: LocatorSpec = {
@@ -190,6 +190,32 @@ export class Recorder {
           name: action.target.name,
         },
       };
+
+      // Capture exact element identity from the AX tree for replay reliability.
+      // Look up the action's target in the before-state AX tree and copy all
+      // identifying fields (CSS selector, id, aria-label, text, href, data-testid).
+      // This is like a Playwright test selector — the replay engine uses these
+      // to find the exact element without guessing.
+      const axNode = state.axTree.find(
+        (n) => n.role === action.target!.role && n.name === action.target!.name
+      );
+      if (axNode) {
+        if (axNode.cssSelector) loc.primary.cssSelector = axNode.cssSelector;
+        if (axNode.id) loc.primary.id = axNode.id;
+        if (axNode.ariaLabel) loc.primary.ariaLabel = axNode.ariaLabel;
+        if (axNode.text) loc.primary.text = axNode.text;
+        if (axNode.href) loc.primary.href = axNode.href;
+        if (axNode.dataTestId) loc.primary.dataTestId = axNode.dataTestId;
+      }
+
+      // Also capture DOM fallback if we have a CSS selector
+      if (axNode?.cssSelector) {
+        loc.fallback = {
+          selector: axNode.cssSelector,
+          text: axNode.text,
+        };
+      }
+
       if (action.target.framePath && action.target.framePath.length > 0) {
         loc.framePath = action.target.framePath;
       }
@@ -234,12 +260,12 @@ export class Recorder {
   private _buildCheckpoint(state: ScreenState, _action: Action): StateGuard | undefined {
     // Build a checkpoint from the key elements in the after-state
     // Exclude elements whose names contain param values (they're data-dependent)
-    const paramValues = Array.from(this.paramValueMap.keys());
+    const paramConcreteValues = Object.values(this.paramValues).filter(v => v.length > 0);
     const keyElements = state.axTree
       .filter((n) => ["textbox", "button", "link", "heading", "table"].includes(n.role))
       .filter((n) => {
         // Skip elements whose name contains a param concrete value (data-dependent)
-        return !paramValues.some((pv) => n.name.includes(pv));
+        return !paramConcreteValues.some((pv) => n.name.includes(pv));
       })
       .slice(0, 3);
 

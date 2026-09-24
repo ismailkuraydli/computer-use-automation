@@ -49,6 +49,7 @@ Respond with JSON only:
   "description": "<one sentence describing what this capability does>",
   "params": [{"name": "<paramName>", "type": "string", "required": true, "description": "<what this input is>"}],
   "outputs": [{"name": "<outputName>", "type": "string", "description": "<what this output contains>"}],
+  "paramValues": {"<paramName>": "<concrete value from the goal text to use during discovery>"},
   "subGoals": [
     {"id": "1", "description": "<what to do first>", "keywords": ["search", "textbox", "<element labels to find>"]},
     {"id": "2", "description": "<what to do second>", "keywords": ["<element labels relevant to this step>"]},
@@ -62,6 +63,7 @@ Rules:
 - Outputs are the data extracted from the page that the caller needs back
 - If the goal involves searching for something, the search term is a param
 - If the goal involves reading information, the information is an output
+- paramValues: for each param, extract the concrete value mentioned in the goal text. For example, if the goal says "try bananas" and the param is "topic", then paramValues should be {"topic": "bananas"}. If the goal mentions a specific value for a param, use it. If no concrete value is mentioned, omit paramValues.
 - Keep it minimal: 1-3 params, 1-2 outputs
 - Sub-goals are ordered steps decomposed from the goal. Each sub-goal should be a single action or a small group of related actions.
 - Keywords are words that appear in the AX tree elements relevant to this sub-goal (e.g. if the sub-goal is to search, keywords might be "search", "Search Wikipedia", "textbox". If the sub-goal is to change a setting, keywords might be "Appearance", "Small", "Standard", "Large", "radio")
@@ -195,7 +197,7 @@ URL: ${request.screenState.url}
 Title: ${request.screenState.title}
 ${request.outputNames && request.outputNames.length > 0 ? `\nOutputs to extract: ${request.outputNames.join(", ")}\nYou MUST use the extract action to read these values from the page before setting goalMet to true.\n` : ""}
 ${request.subGoals && request.subGoals.length > 0 ? `\nSub-goals:\n${request.subGoals.map(sg => `  [${request.completedSubGoals?.includes(sg.id) ? "DONE" : request.currentSubGoal === sg.id ? "CURRENT" : "PENDING"}] ${sg.id}: ${sg.description}`).join("\n")}\n\nCurrent sub-goal: ${request.subGoals.find(sg => sg.id === request.currentSubGoal)?.description || "none"}\nFocus on completing the CURRENT sub-goal. When it is done, set subGoalComplete=true.\n` : ""}
-${request.paramNames && request.paramNames.length > 0 ? `\nInput parameters available: ${request.paramNames.join(", ")}\nWhen typing into a search box, input field, or query field, use the parameter name in double curly braces as the value (e.g. type "{{${request.paramNames[0]}}}" not the actual value). This makes the flow reusable with different inputs.\n` : ""}
+${request.paramNames && request.paramNames.length > 0 ? `\nInput parameters available: ${request.paramNames.join(", ")}\n` : ""}
 AX Tree (${request.screenState.axTree.length} total elements, showing most relevant):
 ${JSON.stringify(this._prioritizeAXTree(request.screenState.axTree, 100, request.subGoals?.find(sg => sg.id === request.currentSubGoal)?.keywords), null, 2)}
 

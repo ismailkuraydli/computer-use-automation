@@ -31,6 +31,8 @@ export interface PlaywrightSurfaceOptions {
 
 // JavaScript that runs in the browser to build an AX-like tree
 // from aria-label, role attributes, and implicit semantics.
+// Also captures exact element identity (CSS selector, id, aria-label, text, href)
+// so the Recorder can store it in the artifact for precise replay.
 // Wrapped as an IIFE so page.evaluate() executes it immediately.
 const BUILD_AX_TREE_JS = `(() => {
   function getImplicitRole(el) {
@@ -61,54 +63,42 @@ const BUILD_AX_TREE_JS = `(() => {
   }
 
   function getAccessibleName(el) {
-    // aria-label takes precedence
     if (el.getAttribute('aria-label')) return el.getAttribute('aria-label');
-    // aria-labelledby
     const labelledby = el.getAttribute('aria-labelledby');
     if (labelledby) {
       const labelEl = document.getElementById(labelledby);
       if (labelEl) return labelEl.textContent.trim();
     }
-    // <label for="id"> association
     if (el.id) {
       const label = document.querySelector('label[for="' + el.id + '"]');
       if (label) return label.textContent.trim();
     }
-    // Wrapping <label>
     if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') {
       const parent = el.closest('label');
       if (parent) return parent.textContent.trim();
     }
-    // For buttons and links: text content
     if (el.tagName === 'BUTTON' || el.tagName === 'A' || el.tagName === 'INPUT' && (el.type === 'submit' || el.type === 'button')) {
       return (el.textContent || el.value || '').trim();
     }
-    // For headings: text content
     if (/^H[1-6]$/.test(el.tagName)) {
       return (el.textContent || '').trim();
     }
-    // For cells: text content (first 100 chars)
     if (el.tagName === 'TD' || el.tagName === 'TH') {
       const text = (el.textContent || '').trim();
       return text.length > 0 ? text.substring(0, 100) : '';
     }
-    // For label elements: text content
     if (el.tagName === 'LABEL') {
       return (el.textContent || '').trim();
     }
-    // For elements with role attribute (e.g. div role="button"): use text content
-    // if it's short enough to be a label (< 80 chars) and the element is visible
     if (el.getAttribute('role') && el.offsetParent !== null) {
       const text = (el.textContent || '').trim();
       if (text.length > 0 && text.length <= 80) {
         return text;
       }
     }
-    // For span elements with short text inside a form/fieldset (settings, options)
     if (el.tagName === 'SPAN' && el.offsetParent !== null) {
       const text = (el.textContent || '').trim();
       if (text.length > 0 && text.length <= 40) {
-        // Only include if parent is a label, form, or has a role
         const parent = el.parentElement;
         if (parent && (parent.tagName === 'LABEL' || parent.tagName === 'FORM' || parent.getAttribute('role'))) {
           return text;
@@ -118,24 +108,66 @@ const BUILD_AX_TREE_JS = `(() => {
     return '';
   }
 
-  const result = [];
-  const walker = document.createTreeWalker(document.body || document.documentElement, NodeFilter.SHOW_ELEMENT);
-  const seen = new Set();
+  function getCssSelector(el) {
+    // If element has an id, use it (most reliable)
+    if (el.id) return '#' + CSS.escape(el.id);
+
+    // Build a path from tag, classes, and nth-child
+    var parts = [];
+    var current = el;
+    var depth = 0;
+    while (current && current !== document.body && depth < 10) {
+      var part = current.tagName.toLowerCase();
+      // Add classes for specificity
+      if (current.className && typeof current.className === 'string') {
+        var classes = current.className.trim().split(/\\s+/).filter(function(c) { return c.length > 0; });
+        if (classes.length > 0) {
+          part += '.' + classes.slice(0, 2).map(function(c) { return CSS.escape(c); }).join('.');
+        }
+      }
+      // Add aria-label if present (very specific)
+      if (current.getAttribute('aria-label')) {
+        part += '[aria-label="' + CSS.escape(current.getAttribute('aria-label')) + '"]';
+      }
+      // Add nth-child for disambiguation
+      var parent = current.parentElement;
+      if (parent) {
+        var siblings = Array.from(parent.children).filter(function(s) { return s.tagName === current.tagName; });
+        if (siblings.length > 1) {
+          var idx = siblings.indexOf(current) + 1;
+          part += ':nth-of-type(' + idx + ')';
+        }
+      }
+      parts.unshift(part);
+      current = current.parentElement;
+      depth++;
+    }
+    return parts.join(' > ');
+  }
+
+  var result = [];
+  var walker = document.createTreeWalker(document.body || document.documentElement, NodeFilter.SHOW_ELEMENT);
+  var seen = new Set();
   while (walker.nextNode()) {
-    const el = walker.currentNode;
+    var el = walker.currentNode;
     if (seen.has(el)) continue;
     seen.add(el);
-    const role = el.getAttribute('role') || getImplicitRole(el);
+    var role = el.getAttribute('role') || getImplicitRole(el);
     if (!role) continue;
-    const name = getAccessibleName(el);
+    var name = getAccessibleName(el);
     if (!name || name.length === 0) continue;
-    // Skip layout-only roles
     if (role === 'none' || role === 'presentation' || role === 'LayoutTable' || role === 'LayoutTableRow' || role === 'LayoutTableCell') continue;
     result.push({
       role: role,
       name: name.substring(0, 200),
       value: (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') ? (el.value || '') : undefined,
       children: [],
+      cssSelector: getCssSelector(el),
+      id: el.id || undefined,
+      ariaLabel: el.getAttribute('aria-label') || undefined,
+      text: ((el.textContent || '').trim()).substring(0, 100),
+      href: el.tagName === 'A' ? (el.getAttribute('href') || undefined) : undefined,
+      dataTestId: el.getAttribute('data-testid') || el.getAttribute('data-test-id') || undefined,
     });
   }
   return result;
@@ -354,6 +386,13 @@ export class PlaywrightSurface implements Surface {
   /**
    * Find an element by AX role and name using Playwright's native getByRole.
    * Searches the appropriate frame based on the target's framePath.
+   *
+   * Resolution order (Change 3):
+   * 1. CSS selector (if available) — most reliable, like a Playwright test selector
+   * 2. data-testid (if available)
+   * 3. id (if available)
+   * 4. getByRole + name (existing AX-based resolution)
+   * 5. getByLabel / getByText fallbacks
    */
   private async _findElementByAX(target: AXNode): Promise<ReturnType<Page["locator"]> | null> {
     if (!this.page) return null;
@@ -371,7 +410,42 @@ export class PlaywrightSurface implements Surface {
       }
     }
 
-    // Use Playwright's native getByRole (uses the browser's real AX tree)
+    // 1. CSS selector (most reliable)
+    if (target.cssSelector) {
+      try {
+        const locator = frame.locator(target.cssSelector);
+        const count = await locator.count();
+        if (count > 0) return locator.first();
+      } catch {
+        // Invalid selector or element not found — fall through
+      }
+    }
+
+    // 2. data-testid
+    if (target.dataTestId) {
+      try {
+        const locator = frame.getByTestId(target.dataTestId);
+        const count = await locator.count();
+        if (count > 0) return locator.first();
+      } catch {
+        // fall through
+      }
+    }
+
+    // 3. id
+    if (target.id) {
+      try {
+        // Escape the id for CSS selector (simple escape — handle special chars)
+        const escapedId = target.id.replace(/[^a-zA-Z0-9_-]/g, (c) => '\\' + c);
+        const locator = frame.locator(`#${escapedId}`);
+        const count = await locator.count();
+        if (count > 0) return locator.first();
+      } catch {
+        // fall through
+      }
+    }
+
+    // 4. getByRole (uses the browser's real AX tree)
     try {
       const locator = frame.getByRole(target.role as any, { name: target.name, exact: true });
       const count = await locator.count();
@@ -382,7 +456,7 @@ export class PlaywrightSurface implements Surface {
       // getByRole may fail for non-standard roles — fall through to fallbacks
     }
 
-    // Fallback: try getByLabel for textboxes
+    // 5. Fallback: try getByLabel for textboxes
     try {
       if (target.role === "textbox" || target.role === "combobox" || target.role === "searchbox") {
         const labelLocator = frame.getByLabel(target.name, { exact: true });
@@ -403,7 +477,7 @@ export class PlaywrightSurface implements Surface {
       // ignore
     }
 
-    // Last resort: try getByText for any role (settings labels, spans, etc.)
+    // 6. Last resort: try getByText for any role (settings labels, spans, etc.)
     try {
       const textLocator = frame.getByText(target.name, { exact: true });
       const count = await textLocator.count();

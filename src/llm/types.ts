@@ -40,6 +40,7 @@ export interface CapabilityPlan {
   params: Array<{ name: string; type: "string" | "number" | "boolean"; required: boolean; description?: string }>;
   outputs: Array<{ name: string; type: "string" | "number" | "object"; description?: string }>;
   subGoals: SubGoal[];   // ordered sub-goals decomposed from the goal
+  paramValues?: Record<string, string>;  // concrete values to use during discovery (e.g. {"topic": "bananas"})
 }
 
 export type PlanResponse =

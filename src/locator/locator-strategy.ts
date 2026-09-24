@@ -31,14 +31,33 @@ function flattenAXTree(nodes: AXNode[]): AXNode[] {
 
 /**
  * Check if a node matches an AX locator spec.
+ * Tries CSS selector first (most reliable), then id, then role+name.
  */
 function matchesAXLocator(node: AXNode, spec: LocatorSpec): boolean {
+  // 1. CSS selector match (most reliable — like a Playwright test selector)
+  if (spec.primary.cssSelector && node.cssSelector) {
+    if (node.cssSelector === spec.primary.cssSelector) return true;
+  }
+
+  // 2. id match
+  if (spec.primary.id && node.id) {
+    if (node.id === spec.primary.id) return true;
+  }
+
+  // 3. data-testid match
+  if (spec.primary.dataTestId && node.dataTestId) {
+    if (node.dataTestId === spec.primary.dataTestId) return true;
+  }
+
+  // 4. role + name match (existing AX-based resolution)
   if (node.role !== spec.primary.role) return false;
   if (node.name !== spec.primary.name) return false;
+
   // If description is specified, match it too (for disambiguation)
   if (spec.primary.description !== undefined) {
     if (node.description !== spec.primary.description) return false;
   }
+
   // Match frame path if specified
   if (spec.framePath !== undefined) {
     const nodeFrame = node.framePath || [];

@@ -130,49 +130,33 @@ export class ReplayEngine {
     // Resolve locator and build action
     let action = await this._buildAction(step, resolvedValue, state, params);
     if (!action) {
-      // Locator could not be resolved — try opening a dropdown panel first.
-      // Radio buttons and checkboxes are often inside dropdown panels that
-      // close after each click. Look for a button that might be the dropdown
-      // toggle (e.g., "Appearance", "Settings", "Options") and click it.
-      if (step.target.primary.role === "radio" || step.target.primary.role === "checkbox") {
-        console.log(`  [Locator not found — trying to open dropdown panel]`);
-        const opened = await this._tryOpenDropdown(state);
-        if (opened) {
-          // Re-observe and retry
-          state = await this.surface.observe();
-          action = await this._buildAction(step, resolvedValue, state, params);
-        }
+      // Still can't find it — check error handlers before declaring hard failure
+      const classification = ErrorClassifier.classify(state, step.onError || []);
+
+      this.evidence.logStep({
+        step: step.id,
+        action: step.action,
+        target: this._substituteParams(step.target.primary.name, params) || step.target.primary.name,
+        result: "failure",
+        url: state.url,
+        axSnapshot: state.axTree,
+        detail: `Could not resolve locator for ${step.target.primary.role} "${this._substituteParams(step.target.primary.name, params) || step.target.primary.name}"`,
+      });
+
+      if (classification.tier === "business-outcome") {
+        return businessOutcome(classification.outcome || "unknown", classification.reason, this.evidence.runDir);
+      }
+      if (classification.tier === "escalate") {
+        return escalated(step.id, classification.reason, this.evidence.runDir);
       }
 
-      if (!action) {
-        // Still can't find it — check error handlers before declaring hard failure
-        const classification = ErrorClassifier.classify(state, step.onError || []);
-
-        this.evidence.logStep({
-          step: step.id,
-          action: step.action,
-          target: this._substituteParams(step.target.primary.name, params) || step.target.primary.name,
-          result: "failure",
-          url: state.url,
-          axSnapshot: state.axTree,
-          detail: `Could not resolve locator for ${step.target.primary.role} "${this._substituteParams(step.target.primary.name, params) || step.target.primary.name}"`,
-        });
-
-        if (classification.tier === "business-outcome") {
-          return businessOutcome(classification.outcome || "unknown", classification.reason, this.evidence.runDir);
-        }
-        if (classification.tier === "escalate") {
-          return escalated(step.id, classification.reason, this.evidence.runDir);
-        }
-
-        return failure(
-          step.id,
-          `${step.target.primary.role} "${this._substituteParams(step.target.primary.name, params) || step.target.primary.name}" to be present`,
-          `Element not found on page`,
-          `Locator unresolvable`,
-          this.evidence.runDir
-        );
-      }
+      return failure(
+        step.id,
+        `${step.target.primary.role} "${this._substituteParams(step.target.primary.name, params) || step.target.primary.name}" to be present`,
+        `Element not found on page`,
+        `Locator unresolvable`,
+        this.evidence.runDir
+      );
     }
 
     // Execute the action
@@ -249,78 +233,6 @@ export class ReplayEngine {
       result = result.replace(`{{${key}}}`, val);
     }
     return result;
-  }
-
-  /**
-   * When a radio/checkbox can't be found during replay, the dropdown panel
-   * it lives in is likely closed. The artifact may not have recorded a
-   * "click to open dropdown" step if the dropdown was already open during
-   * discovery.
-   *
-   * Strategy: find the button that opens the dropdown by looking at the
-   * current page's AX tree. Try buttons that are likely toggles (Appearance,
-   * Settings, etc.) first, then any remaining buttons. After clicking,
-   * check if radio/checkbox elements appeared. Cache the result so we don't
-   * search again for subsequent radio clicks in the same dropdown.
-   */
-  private _dropdownToggleCache: { buttonRole: string; buttonName: string } | null = null;
-
-  private async _tryOpenDropdown(state: ScreenState): Promise<boolean> {
-    // If we already found the toggle button, just click it again
-    if (this._dropdownToggleCache) {
-      const cached = this._dropdownToggleCache;
-      const cachedButton = state.axTree.find(
-        (n) => n.role === cached.buttonRole && n.name === cached.buttonName
-      );
-      if (cachedButton) {
-        try {
-          await this.surface.act({ type: "click", target: cachedButton });
-          await this.surface.act({ type: "wait", value: "300" });
-          return true;
-        } catch {
-          // Cached button may have changed — fall through to search
-        }
-      }
-    }
-
-    // Search for the toggle: try buttons likely to be settings toggles first
-    const PREFERRED_NAMES = ["appearance", "settings", "preferences", "options", "display", "theme"];
-    const allButtons = state.axTree.filter((n) => n.role === "button");
-    
-    // Sort: preferred buttons first, then the rest
-    const sortedButtons = [...allButtons].sort((a, b) => {
-      const aPreferred = PREFERRED_NAMES.some((kw) => a.name.toLowerCase().includes(kw)) ? 0 : 1;
-      const bPreferred = PREFERRED_NAMES.some((kw) => b.name.toLowerCase().includes(kw)) ? 0 : 1;
-      return aPreferred - bPreferred;
-    });
-
-    // Exclude buttons that are clearly not toggles
-    const EXCLUDE = ["search", "donate", "log in", "create account", "languages", "hide", "move", "toggle subsection"];
-    const candidates = sortedButtons.filter((n) => {
-      const name = n.name.toLowerCase();
-      return !EXCLUDE.some((ex) => name.includes(ex));
-    }).slice(0, 15);
-
-    for (const btn of candidates) {
-      try {
-        await this.surface.act({ type: "click", target: btn });
-        await this.surface.act({ type: "wait", value: "300" });
-        const newState = await this.surface.observe();
-
-        // Check if radio/checkbox elements appeared
-        const hasRadios = newState.axTree.some((n) => n.role === "radio" || n.role === "checkbox");
-        if (hasRadios) {
-          // Cache the toggle so we don't search again for subsequent radio clicks
-          this._dropdownToggleCache = { buttonRole: btn.role, buttonName: btn.name };
-          console.log(`  [Dropdown toggle found: ${btn.role}:${btn.name}]`);
-          return true;
-        }
-      } catch {
-        // Click failed — try next button
-      }
-    }
-
-    return false;
   }
 
   private async _buildAction(

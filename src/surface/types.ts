@@ -18,6 +18,13 @@ export interface AXNode {
   // In PlaywrightSurface, this is the element handle — but the type is generic
   // so it doesn't leak Playwright types into the interface.
   backendNodeId?: number;
+  // Exact element identity captured during discovery (Change 3)
+  cssSelector?: string;   // unique CSS selector for the element
+  id?: string;            // element's id attribute
+  ariaLabel?: string;     // element's aria-label attribute
+  text?: string;          // trimmed text content (first 100 chars)
+  href?: string;          // for links
+  dataTestId?: string;    // any data-testid attribute
 }
 
 // --- Screen State (output of observe()) ---

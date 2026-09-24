@@ -16,9 +16,11 @@ import type { AllowlistConfig } from "../artifact/types.js";
 import { readFileSync } from "fs";
 
 const DEFAULT_ALLOWLIST: AllowlistConfig = {
-  permittedDomains: ["localhost"],
-  permittedUrlPatterns: ["/search*", "/detail*", "/new-account*", "/new-account-confirm", "/timeout", "/"],
-  permittedActions: ["navigate", "click", "type", "extract", "wait", "submit"],
+  // Permissive defaults for discovery — the agent needs to explore freely.
+  // Replay can use a stricter allowlist via --allowlist flag.
+  permittedDomains: [],
+  permittedUrlPatterns: [],
+  permittedActions: ["navigate", "click", "type", "extract", "wait", "submit", "scroll", "read_page_text"],
   riskyActions: ["submit"],
   irreversibleActions: [],
 };
@@ -130,7 +132,12 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
   const surface = new PlaywrightSurface({ headless, screenshotDir: evidence.screenshotDir });
   await surface._start(target);
 
-  const recorder = new Recorder(plan.capability, plan.description, allowlist, plan.params, plan.outputs);
+  // Pass paramValues to the Recorder so it can parameterize concrete values
+  // after discovery. The AgentLoop uses these to substitute {{param}} → concrete
+  // value before executing actions (safety net in case the LLM uses templates).
+  const paramValues = plan.paramValues || {};
+
+  const recorder = new Recorder(plan.capability, plan.description, allowlist, plan.params, plan.outputs, paramValues);
   const safetyGuard = new SafetyGuard(allowlist);
 
   const loop = new AgentLoop({
