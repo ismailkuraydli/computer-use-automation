@@ -321,8 +321,21 @@ export class PlaywrightSurface implements Surface {
       if (!locator) {
         return { ok: false, error: "element-not-found", detail: `Could not find ${target.role} "${target.name}"` };
       }
-      await locator.click({ timeout: 5000 });
-      return { ok: true };
+      // Try normal click first (waits for element to be visible and actionable)
+      try {
+        await locator.click({ timeout: 3000 });
+        return { ok: true };
+      } catch {
+        // Element may be hidden inside a collapsed dropdown panel.
+        // Radio buttons and checkboxes are often in the DOM but not visible
+        // when the dropdown is closed. Force-click works because the element's
+        // onclick handler fires even when hidden.
+        if (target.role === "radio" || target.role === "checkbox" || target.role === "button") {
+          await locator.click({ force: true, timeout: 3000 });
+          return { ok: true };
+        }
+        throw new Error("Element not visible and not a radio/checkbox/button — cannot force-click");
+      }
     } catch (e) {
       return { ok: false, error: "click-failed", detail: String(e) };
     }
@@ -335,8 +348,15 @@ export class PlaywrightSurface implements Surface {
       if (!locator) {
         return { ok: false, error: "element-not-found", detail: `Could not find ${target.role} "${target.name}"` };
       }
-      await locator.fill(value, { timeout: 5000 });
-      return { ok: true };
+      // Try normal fill first
+      try {
+        await locator.fill(value, { timeout: 5000 });
+        return { ok: true };
+      } catch {
+        // Element may be hidden — try filling with force
+        await locator.fill(value, { force: true, timeout: 3000 });
+        return { ok: true };
+      }
     } catch (e) {
       return { ok: false, error: "type-failed", detail: String(e) };
     }
