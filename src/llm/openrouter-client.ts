@@ -199,7 +199,7 @@ ${request.outputNames && request.outputNames.length > 0 ? `\nOutputs to extract:
 ${request.subGoals && request.subGoals.length > 0 ? `\nSub-goals:\n${request.subGoals.map(sg => `  [${request.completedSubGoals?.includes(sg.id) ? "DONE" : request.currentSubGoal === sg.id ? "CURRENT" : "PENDING"}] ${sg.id}: ${sg.description}`).join("\n")}\n\nCurrent sub-goal: ${request.subGoals.find(sg => sg.id === request.currentSubGoal)?.description || "none"}\nFocus on completing the CURRENT sub-goal. When it is done, set subGoalComplete=true.\n` : ""}
 ${request.paramNames && request.paramNames.length > 0 ? `\nInput parameters available: ${request.paramNames.join(", ")}\n` : ""}
 AX Tree (${request.screenState.axTree.length} total elements, showing most relevant):
-${JSON.stringify(this._prioritizeAXTree(request.screenState.axTree, 100, request.subGoals?.find(sg => sg.id === request.currentSubGoal)?.keywords), null, 2)}
+${JSON.stringify(this._prioritizeAXTree(request.screenState.axTree, 100, request.subGoals?.find(sg => sg.id === request.currentSubGoal)?.keywords).map(n => ({ role: n.role, name: n.name, value: n.value })), null, 2)}
 
 Previous actions:
 ${request.history.map(h => {
