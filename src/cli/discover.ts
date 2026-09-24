@@ -1,5 +1,6 @@
 /**
  * discover command — runs the LLM-driven agent loop and saves an artifact.
+ * The LLM plans the capability (name, params, outputs) from the goal.
  */
 
 import { PlaywrightSurface } from "../surface/playwright-surface.js";
@@ -68,7 +69,6 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
     const apiKey = getApiKey(config);
     console.log(`Using ${config.provider} / ${config.model}`);
 
-    // Pre-flight check: verify model is accessible before opening the browser
     console.log("Checking model accessibility...");
     const check = await checkModelAccessible(config);
     if (!check.ok) {
@@ -96,19 +96,37 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
     }
   }
 
+  // --- Planning phase: ask the LLM to declare capability name, params, outputs ---
+  console.log(`\nPlanning capability from goal...`);
+  const planResponse = await llmClient.plan(goal);
+  let plan;
+  if (planResponse.ok) {
+    plan = planResponse.plan;
+    console.log(`Capability: ${plan.capability}`);
+    console.log(`Params: ${JSON.stringify(plan.params.map(p => p.name))}`);
+    console.log(`Outputs: ${JSON.stringify(plan.outputs.map(o => o.name))}`);
+  } else {
+    console.error(`Plan failed: ${planResponse.error} — falling back to default`);
+    const slug = goal.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().split(/\s+/).slice(0, 4).join("-");
+    plan = {
+      capability: slug,
+      description: goal,
+      params: [{ name: "searchQuery", type: "string" as const, required: true }],
+      outputs: [{ name: "result", type: "string" as const }],
+    };
+    console.log(`Capability: ${plan.capability} (fallback)`);
+  }
+
   // Set up components — create evidence collector first so screenshots go in the run dir
   const headless = headed ? false : config.headless;
-  console.log(`Browser: ${headless ? "headless" : "headed (visible)"}`);
+  console.log(`\nBrowser: ${headless ? "headless" : "headed (visible)"}`);
 
   const evidence = new EvidenceCollector("./evidence");
 
   const surface = new PlaywrightSurface({ headless, screenshotDir: evidence.screenshotDir });
   await surface._start(target);
-  const recorder = new Recorder("lookup-member-balance", goal, allowlist, [
-    { name: "memberId", type: "string", required: true },
-  ], [
-    { name: "memberName", type: "string" },
-  ]);
+
+  const recorder = new Recorder(plan.capability, plan.description, allowlist, plan.params, plan.outputs);
   const safetyGuard = new SafetyGuard(allowlist);
 
   const loop = new AgentLoop({
@@ -127,8 +145,8 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
   const result = await loop.run(
     goal,
     target,
-    [{ name: "memberId", type: "string", required: true }],
-    [{ name: "memberName", type: "string" }],
+    plan.params,
+    plan.outputs,
     { outputsExtracted: true }
   );
 
@@ -138,10 +156,12 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
   console.log(`Success: ${result.success}`);
   console.log(`Steps executed: ${result.stepsExecuted}`);
   console.log(`Reason: ${result.reason || "goal met"}`);
+  if (result.outputs && Object.keys(result.outputs).length > 0) {
+    console.log(`Outputs: ${JSON.stringify(result.outputs, null, 2)}`);
+  }
   console.log(`Evidence: ${evidence.runDir}`);
 
   if (result.success) {
-    // Save artifact
     const store = new ArtifactStore(outputPath.includes(".json") ? "./artifacts" : outputPath);
     const savedPath = store.save(result.artifact);
     console.log(`Artifact saved: ${savedPath}`);

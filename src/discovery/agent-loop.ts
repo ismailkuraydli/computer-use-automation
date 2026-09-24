@@ -194,9 +194,13 @@ export class AgentLoop {
         detail: safety.flagged ? `Flagged as risky: ${safety.classification}` : undefined,
       });
 
-      // Capture extracted values
+      // Capture extracted output — normalize the output name to match declared outputs
       if (action.type === "extract" && actResult.ok && "extractedValue" in actResult && action.output) {
-        extractedOutputs[action.output] = actResult.extractedValue || "";
+        // Try to match the LLM's output name to a known output (case-insensitive, ignoring underscores)
+        const normalize = (s: string) => s.toLowerCase().replace(/[-_]/g, "");
+        const knownOutput = outputs.find(o => normalize(o.name) === normalize(action.output!));
+        const outputName = knownOutput ? knownOutput.name : action.output;
+        extractedOutputs[outputName] = (actResult as any).extractedValue || "";
       }
 
       // Add to history

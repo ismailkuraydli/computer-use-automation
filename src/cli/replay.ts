@@ -57,8 +57,19 @@ export async function runReplay(opts: Record<string, any>): Promise<void> {
   });
 
   console.log(`\nReplaying artifact: ${artifact.capability}`);
-  console.log(`Params: ${JSON.stringify(params)}`);
+  console.log(`Params expected: ${JSON.stringify(artifact.params.map((p: any) => p.name))}`);
+  console.log(`Params provided: ${JSON.stringify(params)}`);
   console.log(`Target: ${target}\n`);
+
+  // Normalize param keys: if the caller provides params with different casing/hyphens,
+  // match them to the artifact's declared param names
+  const normalize = (s: string) => s.toLowerCase().replace(/[-_]/g, "");
+  const normalizedParams: Record<string, string> = {};
+  for (const [key, val] of Object.entries(params)) {
+    const match = artifact.params.find((p: any) => normalize(p.name) === normalize(key));
+    normalizedParams[match ? match.name : key] = val;
+  }
+  params = normalizedParams;
 
   const result = await engine.run(artifact, params);
 
