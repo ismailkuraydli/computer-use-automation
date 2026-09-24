@@ -11,7 +11,7 @@
  * repeated actions).
  */
 
-import type { LLMClient, LLMRequest, ActionHistoryEntry } from "../llm/types.js";
+import type { LLMClient, LLMRequest, ActionHistoryEntry, SubGoal } from "../llm/types.js";
 import type { Surface, Action, ScreenState } from "../surface/types.js";
 import type { SafetyGuard } from "../safety/safety-guard.js";
 import type { EvidenceCollector } from "../evidence/evidence-collector.js";
@@ -48,7 +48,8 @@ export class AgentLoop {
     targetUrl: string,
     params: ParamSpec[] = [],
     outputs: OutputSpec[] = [],
-    checkpoint: SuccessCondition = { outputsExtracted: true }
+    checkpoint: SuccessCondition = { outputsExtracted: true },
+    subGoals: SubGoal[] = []
   ): Promise<AgentLoopResult> {
     const { llmClient, surface, safetyGuard, evidenceCollector, recorder } = this.opts;
 
@@ -58,6 +59,11 @@ export class AgentLoop {
     let stepNumber = 0;
     let lastAction: Action | null = null;
     let repeatCount = 0;
+
+    // Sub-goal tracking
+    const completedSubGoals: string[] = [];
+    let currentSubGoalIndex = 0;
+    const allSubGoals = subGoals.length > 0 ? subGoals : [{ id: "1", description: goal, keywords: [] as string[] }];
 
     // Initial navigation to target URL
     const initialAction: Action = { type: "navigate", value: targetUrl };
@@ -89,12 +95,17 @@ export class AgentLoop {
       const screenState: ScreenState = await surface.observe();
 
       // Ask LLM for next action
+      const currentSubGoal = allSubGoals[currentSubGoalIndex];
+
       const llmRequest: LLMRequest = {
         goal,
         screenState,
         history,
         stepNumber: stepNumber + 1,
         outputNames: outputs.map(o => o.name),
+        subGoals: allSubGoals,
+        completedSubGoals,
+        currentSubGoal: currentSubGoal?.id,
       };
 
       const llmResponse = await llmClient.decide(llmRequest);
@@ -213,9 +224,28 @@ export class AgentLoop {
 
       stepNumber++;
 
-      // Check if goal is met
+      // Check if goal is met — only if all sub-goals are complete
       if (llmResponse.goalMet) {
+        if (currentSubGoalIndex < allSubGoals.length - 1) {
+          // Can't declare goal met — there are remaining sub-goals
+          // Mark current sub-goal complete and advance
+          if (llmResponse.subGoalComplete) {
+            completedSubGoals.push(currentSubGoal.id);
+            currentSubGoalIndex++;
+          }
+          // Override goalMet — not all sub-goals are done
+          continue;
+        }
         return this._finish(true, stepNumber, "goal met", recorder, params, outputs, checkpoint, extractedOutputs);
+      }
+
+      // Check if current sub-goal is complete
+      if (llmResponse.subGoalComplete) {
+        completedSubGoals.push(currentSubGoal.id);
+        currentSubGoalIndex++;
+        if (currentSubGoalIndex < allSubGoals.length) {
+          console.log(`  [Sub-goal ${currentSubGoal.id} complete, advancing to ${allSubGoals[currentSubGoalIndex].id}]`);
+        }
       }
     }
 

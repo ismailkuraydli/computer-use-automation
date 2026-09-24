@@ -10,7 +10,16 @@ export interface LLMRequest {
   screenState: ScreenState;
   history: ActionHistoryEntry[];
   stepNumber: number;
-  outputNames?: string[];  // declared output names the LLM should extract
+  outputNames?: string[];
+  subGoals?: SubGoal[];        // ordered sub-goals to complete
+  completedSubGoals?: string[]; // IDs of completed sub-goals
+  currentSubGoal?: string;      // ID of the current sub-goal
+}
+
+export interface SubGoal {
+  id: string;           // e.g. "1", "2", "3"
+  description: string;  // e.g. "Navigate to the flowers page"
+  keywords?: string[];  // keywords to prioritize in AX tree, e.g. ["search", "flower", "Search Wikipedia"]
 }
 
 export interface ActionHistoryEntry {
@@ -21,14 +30,15 @@ export interface ActionHistoryEntry {
 }
 
 export type LLMResponse =
-  | { ok: true; action: Action; reasoning: string; goalMet: boolean }
+  | { ok: true; action: Action; reasoning: string; goalMet: boolean; subGoalComplete?: boolean }
   | { ok: false; error: string };
 
 export interface CapabilityPlan {
-  capability: string;       // slug, e.g. "search-wikipedia"
-  description: string;      // human-readable, derived from the goal
+  capability: string;
+  description: string;
   params: Array<{ name: string; type: "string" | "number" | "boolean"; required: boolean; description?: string }>;
   outputs: Array<{ name: string; type: "string" | "number" | "object"; description?: string }>;
+  subGoals: SubGoal[];   // ordered sub-goals decomposed from the goal
 }
 
 export type PlanResponse =

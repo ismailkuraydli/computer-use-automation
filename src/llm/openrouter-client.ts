@@ -41,14 +41,19 @@ export class OpenRouterClient implements LLMClient {
           messages: [
             {
               role: "system",
-              content: `You are a computer-use agent planner. Given a natural-language goal, you analyze it and declare the capability's name, input parameters, and expected outputs.
+              content: `You are a computer-use agent planner. Given a natural-language goal, you analyze it and declare the capability's name, input parameters, expected outputs, AND decompose the goal into ordered sub-goals.
 
 Respond with JSON only:
 {
   "capability": "<short-kebab-case-name>",
   "description": "<one sentence describing what this capability does>",
   "params": [{"name": "<paramName>", "type": "string", "required": true, "description": "<what this input is>"}],
-  "outputs": [{"name": "<outputName>", "type": "string", "description": "<what this output contains>"}]
+  "outputs": [{"name": "<outputName>", "type": "string", "description": "<what this output contains>"}],
+  "subGoals": [
+    {"id": "1", "description": "<what to do first>", "keywords": ["search", "textbox", "<element labels to find>"]},
+    {"id": "2", "description": "<what to do second>", "keywords": ["<element labels relevant to this step>"]},
+    {"id": "3", "description": "<what to do third>", "keywords": ["<element labels>"]}
+  ]
 }
 
 Rules:
@@ -57,11 +62,15 @@ Rules:
 - Outputs are the data extracted from the page that the caller needs back
 - If the goal involves searching for something, the search term is a param
 - If the goal involves reading information, the information is an output
-- Keep it minimal: 1-3 params, 1-2 outputs`,
+- Keep it minimal: 1-3 params, 1-2 outputs
+- Sub-goals are ordered steps decomposed from the goal. Each sub-goal should be a single action or a small group of related actions.
+- Keywords are words that appear in the AX tree elements relevant to this sub-goal (e.g. if the sub-goal is to search, keywords might be "search", "Search Wikipedia", "textbox". If the sub-goal is to change a setting, keywords might be "Appearance", "Small", "Standard", "Large", "radio")
+- Keywords help the system prioritize which elements to show the LLM at each step
+- Every sub-goal must be completed before the overall goal is considered met`,
             },
             { role: "user", content: `Goal: ${goal}` },
           ],
-          max_tokens: 500,
+          max_tokens: 1000,
         }),
       });
 
@@ -78,6 +87,12 @@ Rules:
         return { ok: false, error: "No JSON found in plan response" };
       }
       const parsed = JSON.parse(jsonMatch[0]) as CapabilityPlan;
+
+      // Ensure subGoals exists (fallback if LLM didn't include them)
+      if (!parsed.subGoals || parsed.subGoals.length === 0) {
+        parsed.subGoals = [{ id: "1", description: goal, keywords: [] }];
+      }
+
       return { ok: true, plan: parsed };
     } catch (e) {
       return { ok: false, error: `Plan request failed: ${String(e)}` };
@@ -129,25 +144,28 @@ Available actions:
 - submit: { type: "submit", target: { role: "<role>", name: "<name>" } }
 
 Critical rules:
-- Goals may have MULTIPLE sequential sub-tasks (e.g. "do A then B then C"). You must complete EVERY sub-task in order before setting goalMet to true.
-- Before each action, review what you have already done (from the history) and what sub-tasks remain. Do NOT skip any sub-task.
+- Goals may have MULTIPLE sequential sub-goals (e.g. "do A then B then C"). You must complete EVERY sub-goal in order before setting goalMet to true.
+- Before each action, review what you have already done (from the history) and what sub-goals remain. Do NOT skip any sub-goal.
+- Set subGoalComplete to true when the current sub-goal is done, so the system can advance to the next sub-goal.
+- Only set goalMet to true when ALL sub-goals are complete.
 - extract reads the TEXT CONTENT of the targeted element. If you extract a link, you get the link's label text (e.g. "References"), NOT the content of the page it links to.
 - To extract paragraph content, target the paragraph element (role: "paragraph") or a heading whose text IS the content you want.
 - To get article/research text, navigate to the page with the content, then extract from the element that CONTAINS the text (e.g. a paragraph, article, or region element — NOT a link to that content).
-- Do NOT set goalMet to true until ALL sub-tasks are complete AND you have extracted meaningful data using the extract action.
+- Do NOT set goalMet to true until ALL sub-goals are complete AND you have extracted meaningful data using the extract action.
 - If you need to click a link or button to reach a sub-task's target, do that FIRST, then perform the sub-task on the NEXT step.
 - Use the exact role and name from the AX tree for targets.
 
 Respond with JSON only:
-{ "action": <action>, "reasoning": "<why>", "goalMet": <true|false> }`;
+{ "action": <action>, "reasoning": "<why>", "goalMet": <true|false>, "subGoalComplete": <true|false> }`;
 
     const stateDesc = `Goal: ${request.goal}
 Step: ${request.stepNumber}
 URL: ${request.screenState.url}
 Title: ${request.screenState.title}
 ${request.outputNames && request.outputNames.length > 0 ? `\nOutputs to extract: ${request.outputNames.join(", ")}\nYou MUST use the extract action to read these values from the page before setting goalMet to true.\n` : ""}
+${request.subGoals && request.subGoals.length > 0 ? `\nSub-goals:\n${request.subGoals.map(sg => `  [${request.completedSubGoals?.includes(sg.id) ? "DONE" : request.currentSubGoal === sg.id ? "CURRENT" : "PENDING"}] ${sg.id}: ${sg.description}`).join("\n")}\n\nCurrent sub-goal: ${request.subGoals.find(sg => sg.id === request.currentSubGoal)?.description || "none"}\nFocus on completing the CURRENT sub-goal. When it is done, set subGoalComplete=true.\n` : ""}
 AX Tree (${request.screenState.axTree.length} total elements, showing most relevant):
-${JSON.stringify(this._prioritizeAXTree(request.screenState.axTree, 100), null, 2)}
+${JSON.stringify(this._prioritizeAXTree(request.screenState.axTree, 100, request.subGoals?.find(sg => sg.id === request.currentSubGoal)?.keywords), null, 2)}
 
 Previous actions:
 ${request.history.map(h => {
@@ -158,7 +176,7 @@ ${request.history.map(h => {
   return `Step ${h.step}: ${a.type} ${target}${val}${out} -> ${h.result}`;
 }).join("\n") || "None"}
 
-REMEMBER: Review the goal and the actions above. If the goal has multiple sub-tasks, identify which ones are NOT yet done and do them next. Do NOT skip sub-tasks. Do NOT set goalMet=true until everything is complete.`;
+REMEMBER: Review the goal, sub-goals, and the actions above. Focus on the CURRENT sub-goal. If the goal has multiple sub-goals, identify which ones are NOT yet done and do them next. Do NOT skip sub-goals. Do NOT set goalMet=true until ALL sub-goals are complete.`;
 
     return [
       { role: "system", content: systemPrompt },
@@ -201,7 +219,7 @@ REMEMBER: Review the goal and the actions above. If the goal has multiple sub-ta
    * Also deduplicates by role+name (keep first occurrence only).
    * Filters out StaticText, InlineTextBox, GenericContainer, Section.
    */
-  private _prioritizeAXTree(axTree: any[], limit: number = 100): any[] {
+  private _prioritizeAXTree(axTree: any[], limit: number = 100, keywords?: string[]): any[] {
     const CONTROL_ROLES = new Set([
       "radio", "checkbox", "switch", "slider", "combobox", "tab",
       "menuitem", "menuitemcheckbox", "menuitemradio", "option", "spinbutton",
@@ -211,6 +229,10 @@ REMEMBER: Review the goal and the actions above. If the goal has multiple sub-ta
     const LABEL_ROLES = new Set(["label"]);
     const HEADING_ROLES = new Set(["heading"]);
 
+    // Normalize keywords for matching
+    const normKeywords = (keywords || []).map(k => k.toLowerCase());
+
+    const keywordMatched: any[] = [];
     const controls: any[] = [];
     const buttons: any[] = [];
     const inputs: any[] = [];
@@ -221,16 +243,22 @@ REMEMBER: Review the goal and the actions above. If the goal has multiple sub-ta
     const seen = new Set<string>();
 
     for (const node of axTree) {
-      // Skip non-actionable content
       if (node.role === "StaticText" || node.role === "InlineTextBox") continue;
       if (node.role === "GenericContainer" || node.role === "Section") continue;
 
-      // Deduplicate
       const key = `${node.role}:${node.name}`;
       if (seen.has(key)) continue;
       seen.add(key);
 
-      if (CONTROL_ROLES.has(node.role)) {
+      // Check if this node matches any focus keywords
+      const nodeName = (node.name || "").toLowerCase();
+      const matchesKeyword = normKeywords.length > 0 && normKeywords.some(kw =>
+        nodeName.includes(kw) || kw.includes(nodeName)
+      );
+
+      if (matchesKeyword) {
+        keywordMatched.push(node);
+      } else if (CONTROL_ROLES.has(node.role)) {
         controls.push(node);
       } else if (BUTTON_ROLES.has(node.role)) {
         buttons.push(node);
@@ -247,9 +275,8 @@ REMEMBER: Review the goal and the actions above. If the goal has multiple sub-ta
       }
     }
 
-    // Combine in priority order — controls and buttons first, then inputs,
-    // labels, headings, and links last (there are usually hundreds of links)
-    const result = [...controls, ...buttons, ...inputs, ...labels, ...headings, ...links, ...other];
+    // Keyword-matched elements first, then the rest by priority
+    const result = [...keywordMatched, ...controls, ...buttons, ...inputs, ...labels, ...headings, ...links, ...other];
     return result.slice(0, limit);
   }
 }

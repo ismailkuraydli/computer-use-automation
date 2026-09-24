@@ -55,6 +55,7 @@ export class MockLLMClient implements LLMClient {
         description: goal,
         params: [{ name: "searchQuery", type: "string", required: true, description: "The search query" }],
         outputs: [{ name: "result", type: "string", description: "The extracted result" }],
+        subGoals: [{ id: "1", description: goal, keywords: [] }],
       },
     };
   }
