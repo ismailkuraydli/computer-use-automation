@@ -318,6 +318,21 @@ const server = app.listen(PORT, () => {
   console.log(`║  Computer-Use Automation UI              ║`);
   console.log(`║  http://localhost:${PORT}                    ║`);
   console.log(`╚══════════════════════════════════════════╝\n`);
+  console.log(`  Press Ctrl+C to stop\n`);
 });
+
+// Graceful shutdown — release the port on SIGINT/SIGTERM
+const shutdown = () => {
+  console.log("\nShutting down...");
+  server.close(() => {
+    process.exit(0);
+  });
+  // Force exit after 2s if server.close hangs
+  setTimeout(() => process.exit(0), 2000);
+};
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
+process.on("exit", () => server.close());
 
 export { app, server };
