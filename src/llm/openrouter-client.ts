@@ -185,46 +185,71 @@ REMEMBER: Review the goal and the actions above. If the goal has multiple sub-ta
   }
 
   /**
-   * Prioritize interactive elements in the AX tree so the LLM sees buttons,
-   * links, radio buttons, checkboxes, textboxes, labels, and comboboxes first.
-   * On large pages (e.g. Wikipedia with 11000+ elements), the first 80 elements
-   * are all navigation links — the actual interactive controls (settings, forms)
-   * are buried deep and never reach the LLM's view.
+   * Prioritize interactive elements in the AX tree so the LLM sees the most
+   * actionable controls first. On large pages (e.g. Wikipedia with 11000+ AX
+   * elements and 2000+ interactive links), the settings radio buttons would
+   * be buried among hundreds of article citation links.
    *
-   * Strategy: sort by priority (interactive > headings > text), take top N.
+   * Priority order within interactive elements:
+   * 1. Controls: radio, checkbox, switch, slider, combobox, tab, menuitem,
+   *    option, spinbutton (user-facing settings/toggles)
+   * 2. Buttons: button, submit (actionable buttons)
+   * 3. Text inputs: textbox, searchbox (form fields)
+   * 4. Labels: label (associated with settings/controls)
+   * 5. Links: link (navigation — deprioritize, there are usually hundreds)
+   *
+   * Also deduplicates by role+name (keep first occurrence only).
+   * Filters out StaticText, InlineTextBox, GenericContainer, Section.
    */
   private _prioritizeAXTree(axTree: any[], limit: number = 100): any[] {
-    const INTERACTIVE_ROLES = new Set([
-      "button", "link", "textbox", "radio", "checkbox", "combobox",
-      "menuitem", "menuitemcheckbox", "menuitemradio", "tab",
-      "switch", "slider", "searchbox", "spinbutton", "listbox",
-      "option", "label",
+    const CONTROL_ROLES = new Set([
+      "radio", "checkbox", "switch", "slider", "combobox", "tab",
+      "menuitem", "menuitemcheckbox", "menuitemradio", "option", "spinbutton",
     ]);
-
+    const BUTTON_ROLES = new Set(["button", "submit"]);
+    const INPUT_ROLES = new Set(["textbox", "searchbox", "listbox"]);
+    const LABEL_ROLES = new Set(["label"]);
     const HEADING_ROLES = new Set(["heading"]);
 
-    // Split into priority groups
-    const interactive: any[] = [];
+    const controls: any[] = [];
+    const buttons: any[] = [];
+    const inputs: any[] = [];
+    const labels: any[] = [];
     const headings: any[] = [];
+    const links: any[] = [];
     const other: any[] = [];
+    const seen = new Set<string>();
 
     for (const node of axTree) {
-      // Skip StaticText and InlineTextBox (article content, not interactive)
+      // Skip non-actionable content
       if (node.role === "StaticText" || node.role === "InlineTextBox") continue;
-      // Skip generic containers
       if (node.role === "GenericContainer" || node.role === "Section") continue;
 
-      if (INTERACTIVE_ROLES.has(node.role)) {
-        interactive.push(node);
+      // Deduplicate
+      const key = `${node.role}:${node.name}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      if (CONTROL_ROLES.has(node.role)) {
+        controls.push(node);
+      } else if (BUTTON_ROLES.has(node.role)) {
+        buttons.push(node);
+      } else if (INPUT_ROLES.has(node.role)) {
+        inputs.push(node);
+      } else if (LABEL_ROLES.has(node.role)) {
+        labels.push(node);
       } else if (HEADING_ROLES.has(node.role)) {
         headings.push(node);
+      } else if (node.role === "link") {
+        links.push(node);
       } else {
         other.push(node);
       }
     }
 
-    // Combine: interactive first, then headings, then other — up to limit
-    const result = [...interactive, ...headings, ...other];
+    // Combine in priority order — controls and buttons first, then inputs,
+    // labels, headings, and links last (there are usually hundreds of links)
+    const result = [...controls, ...buttons, ...inputs, ...labels, ...headings, ...links, ...other];
     return result.slice(0, limit);
   }
 }
