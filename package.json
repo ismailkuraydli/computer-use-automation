@@ -1,7 +1,7 @@
 {
   "name": "computer-use-automation",
   "version": "0.1.0",
-  "description": "Computer-use automation system for bank back-office applications — LLM discovery, deterministic replay, human-in-the-loop escalation.",
+  "description": "Computer-use automation system for bank back-office applications \u2014 LLM discovery, deterministic replay, human-in-the-loop escalation.",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -15,7 +15,8 @@
     "build": "tsc",
     "discover": "tsx src/cli/index.ts discover",
     "replay": "tsx src/cli/index.ts replay",
-    "escalate": "tsx src/cli/index.ts escalate"
+    "escalate": "tsx src/cli/index.ts escalate",
+    "ui": "tsx src/server/index.ts"
   },
   "keywords": [
     "computer-use",
