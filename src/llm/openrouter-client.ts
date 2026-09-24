@@ -146,8 +146,8 @@ Step: ${request.stepNumber}
 URL: ${request.screenState.url}
 Title: ${request.screenState.title}
 ${request.outputNames && request.outputNames.length > 0 ? `\nOutputs to extract: ${request.outputNames.join(", ")}\nYou MUST use the extract action to read these values from the page before setting goalMet to true.\n` : ""}
-AX Tree (accessible elements — ${request.screenState.axTree.length} total, showing first 80):
-${JSON.stringify(request.screenState.axTree.slice(0, 80), null, 2)}
+AX Tree (${request.screenState.axTree.length} total elements, showing most relevant):
+${JSON.stringify(this._prioritizeAXTree(request.screenState.axTree, 100), null, 2)}
 
 Previous actions:
 ${request.history.map(h => {
@@ -168,7 +168,6 @@ REMEMBER: Review the goal and the actions above. If the goal has multiple sub-ta
 
   private _parseResponse(content: string, _request: LLMRequest): LLMResponse {
     try {
-      // Extract JSON from the response
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         return { ok: false, error: "No JSON found in LLM response" };
@@ -183,5 +182,49 @@ REMEMBER: Review the goal and the actions above. If the goal has multiple sub-ta
     } catch (e) {
       return { ok: false, error: `Failed to parse LLM response: ${String(e)}` };
     }
+  }
+
+  /**
+   * Prioritize interactive elements in the AX tree so the LLM sees buttons,
+   * links, radio buttons, checkboxes, textboxes, labels, and comboboxes first.
+   * On large pages (e.g. Wikipedia with 11000+ elements), the first 80 elements
+   * are all navigation links — the actual interactive controls (settings, forms)
+   * are buried deep and never reach the LLM's view.
+   *
+   * Strategy: sort by priority (interactive > headings > text), take top N.
+   */
+  private _prioritizeAXTree(axTree: any[], limit: number = 100): any[] {
+    const INTERACTIVE_ROLES = new Set([
+      "button", "link", "textbox", "radio", "checkbox", "combobox",
+      "menuitem", "menuitemcheckbox", "menuitemradio", "tab",
+      "switch", "slider", "searchbox", "spinbutton", "listbox",
+      "option", "label",
+    ]);
+
+    const HEADING_ROLES = new Set(["heading"]);
+
+    // Split into priority groups
+    const interactive: any[] = [];
+    const headings: any[] = [];
+    const other: any[] = [];
+
+    for (const node of axTree) {
+      // Skip StaticText and InlineTextBox (article content, not interactive)
+      if (node.role === "StaticText" || node.role === "InlineTextBox") continue;
+      // Skip generic containers
+      if (node.role === "GenericContainer" || node.role === "Section") continue;
+
+      if (INTERACTIVE_ROLES.has(node.role)) {
+        interactive.push(node);
+      } else if (HEADING_ROLES.has(node.role)) {
+        headings.push(node);
+      } else {
+        other.push(node);
+      }
+    }
+
+    // Combine: interactive first, then headings, then other — up to limit
+    const result = [...interactive, ...headings, ...other];
+    return result.slice(0, limit);
   }
 }
