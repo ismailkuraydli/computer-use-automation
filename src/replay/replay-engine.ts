@@ -128,35 +128,51 @@ export class ReplayEngine {
     }
 
     // Resolve locator and build action
-    const action = await this._buildAction(step, resolvedValue, state, params);
+    let action = await this._buildAction(step, resolvedValue, state, params);
     if (!action) {
-      // Locator could not be resolved — check error handlers before declaring hard failure
-      const classification = ErrorClassifier.classify(state, step.onError || []);
-
-      this.evidence.logStep({
-        step: step.id,
-        action: step.action,
-        target: this._substituteParams(step.target.primary.name, params) || step.target.primary.name,
-        result: "failure",
-        url: state.url,
-        axSnapshot: state.axTree,
-        detail: `Could not resolve locator for ${step.target.primary.role} "${this._substituteParams(step.target.primary.name, params) || step.target.primary.name}"`,
-      });
-
-      if (classification.tier === "business-outcome") {
-        return businessOutcome(classification.outcome || "unknown", classification.reason, this.evidence.runDir);
-      }
-      if (classification.tier === "escalate") {
-        return escalated(step.id, classification.reason, this.evidence.runDir);
+      // Locator could not be resolved — try opening a dropdown panel first.
+      // Radio buttons and checkboxes are often inside dropdown panels that
+      // close after each click. Look for a button that might be the dropdown
+      // toggle (e.g., "Appearance", "Settings", "Options") and click it.
+      if (step.target.primary.role === "radio" || step.target.primary.role === "checkbox") {
+        console.log(`  [Locator not found — trying to open dropdown panel]`);
+        const opened = await this._tryOpenDropdown(state);
+        if (opened) {
+          // Re-observe and retry
+          state = await this.surface.observe();
+          action = await this._buildAction(step, resolvedValue, state, params);
+        }
       }
 
-      return failure(
-        step.id,
-        `${step.target.primary.role} "${this._substituteParams(step.target.primary.name, params) || step.target.primary.name}" to be present`,
-        `Element not found on page`,
-        `Locator unresolvable`,
-        this.evidence.runDir
-      );
+      if (!action) {
+        // Still can't find it — check error handlers before declaring hard failure
+        const classification = ErrorClassifier.classify(state, step.onError || []);
+
+        this.evidence.logStep({
+          step: step.id,
+          action: step.action,
+          target: this._substituteParams(step.target.primary.name, params) || step.target.primary.name,
+          result: "failure",
+          url: state.url,
+          axSnapshot: state.axTree,
+          detail: `Could not resolve locator for ${step.target.primary.role} "${this._substituteParams(step.target.primary.name, params) || step.target.primary.name}"`,
+        });
+
+        if (classification.tier === "business-outcome") {
+          return businessOutcome(classification.outcome || "unknown", classification.reason, this.evidence.runDir);
+        }
+        if (classification.tier === "escalate") {
+          return escalated(step.id, classification.reason, this.evidence.runDir);
+        }
+
+        return failure(
+          step.id,
+          `${step.target.primary.role} "${this._substituteParams(step.target.primary.name, params) || step.target.primary.name}" to be present`,
+          `Element not found on page`,
+          `Locator unresolvable`,
+          this.evidence.runDir
+        );
+      }
     }
 
     // Execute the action
@@ -233,6 +249,44 @@ export class ReplayEngine {
       result = result.replace(`{{${key}}}`, val);
     }
     return result;
+  }
+
+  /**
+   * Try to open a dropdown panel by looking for a button that might be a toggle.
+   * This handles the common pattern where radio buttons/checkboxes are inside a
+   * dropdown that closes after each click (e.g., Wikipedia's Appearance settings).
+   *
+   * Strategy: look for buttons with names like "Appearance", "Settings", "Options",
+   * "Menu", "Toggle" in the current AX tree and click the first one found.
+   * Returns true if a button was found and clicked.
+   */
+  private async _tryOpenDropdown(state: ScreenState): Promise<boolean> {
+    const DROPDOWN_KEYWORDS = [
+      "appearance", "settings", "options", "menu", "toggle",
+      "show", "expand", "more", "filter", "view",
+    ];
+
+    // Find a button that might be a dropdown toggle
+    const toggleButton = state.axTree.find((n) => {
+      if (n.role !== "button") return false;
+      const name = n.name.toLowerCase();
+      return DROPDOWN_KEYWORDS.some((kw) => name.includes(kw));
+    });
+
+    if (!toggleButton) return false;
+
+    try {
+      console.log(`  [Clicking dropdown toggle: ${toggleButton.role}:${toggleButton.name}]`);
+      await this.surface.act({
+        type: "click",
+        target: toggleButton,
+      });
+      // Wait for the dropdown to open
+      await this.surface.act({ type: "wait", value: "500" });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private async _buildAction(
