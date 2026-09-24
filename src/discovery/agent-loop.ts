@@ -98,11 +98,48 @@ export class AgentLoop {
 
       const llmResponse = await llmClient.decide(llmRequest);
 
+      // Log the LLM call for debugging
+      evidenceCollector.logLLMCall({
+        step: stepNumber + 1,
+        request: {
+          goal,
+          screenStateUrl: screenState.url,
+          screenStateAxTree: screenState.axTree,
+          history: history.map(h => ({ step: h.step, actionType: h.action.type, result: h.result })),
+          stepNumber: stepNumber + 1,
+        },
+        response: {
+          ok: llmResponse.ok,
+          action: llmResponse.ok ? {
+            type: llmResponse.action.type,
+            targetRole: llmResponse.action.target?.role,
+            targetName: llmResponse.action.target?.name,
+            value: llmResponse.action.value,
+          } : undefined,
+          reasoning: llmResponse.ok ? llmResponse.reasoning : undefined,
+          goalMet: llmResponse.ok ? llmResponse.goalMet : undefined,
+          error: llmResponse.ok ? undefined : llmResponse.error,
+        },
+        timestamp: new Date().toISOString(),
+      });
+
       if (!llmResponse.ok) {
         return this._finish(false, stepNumber, `LLM error: ${llmResponse.error}`, recorder, params, outputs, checkpoint, extractedOutputs);
       }
 
       const action = llmResponse.action;
+
+      // Enrich action with framePath from the AX tree — the LLM doesn't know
+      // about frames, but the AX tree has framePath on each node. Look up the
+      // target element and copy its framePath into the action.
+      if (action.target && screenState.axTree.length > 0) {
+        const match = screenState.axTree.find(
+          (n) => n.role === action.target!.role && n.name === action.target!.name
+        );
+        if (match && match.framePath && match.framePath.length > 0) {
+          action.target = { ...action.target, framePath: match.framePath };
+        }
+      }
 
       // Check for repeated actions (dead-end detection)
       if (lastAction && this._actionsEqual(lastAction, action)) {
