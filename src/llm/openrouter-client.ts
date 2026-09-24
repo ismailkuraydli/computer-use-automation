@@ -128,11 +128,13 @@ Available actions:
 - wait: { type: "wait", value: "<ms>" }
 - submit: { type: "submit", target: { role: "<role>", name: "<name>" } }
 
-Important rules:
-- Use the exact role and name from the AX tree for targets
-- When you have reached the goal and extracted the needed information, use an extract action with the output name and set goalMet to true
-- Always extract the information the goal asks for — do not just navigate to the page, actually read the data using extract
-- If you see the data you need on the page, use extract with the appropriate output name
+Critical rules:
+- extract reads the TEXT CONTENT of the targeted element. If you extract a link, you get the link's label text (e.g. "References"), NOT the content of the page it links to.
+- To extract paragraph content, target the paragraph element (role: "paragraph") or a heading whose text IS the content you want.
+- To get article/research text, navigate to the page with the content, then extract from the element that CONTAINS the text (e.g. a paragraph, article, or region element — NOT a link to that content).
+- Do NOT set goalMet to true until you have actually extracted meaningful data using the extract action.
+- If you need to click a link to reach the content page, do that FIRST, then extract on the NEXT step.
+- Use the exact role and name from the AX tree for targets.
 
 Respond with JSON only:
 { "action": <action>, "reasoning": "<why>", "goalMet": <true|false> }`;
@@ -141,9 +143,9 @@ Respond with JSON only:
 Step: ${request.stepNumber}
 URL: ${request.screenState.url}
 Title: ${request.screenState.title}
-
-AX Tree (accessible elements):
-${JSON.stringify(request.screenState.axTree, null, 2)}
+${request.outputNames && request.outputNames.length > 0 ? `\nOutputs to extract: ${request.outputNames.join(", ")}\nYou MUST use the extract action to read these values from the page before setting goalMet to true.\n` : ""}
+AX Tree (accessible elements — ${request.screenState.axTree.length} total, showing first 80):
+${JSON.stringify(request.screenState.axTree.slice(0, 80), null, 2)}
 
 Previous actions:
 ${request.history.map(h => `Step ${h.step}: ${h.action.type} -> ${h.result}`).join("\n") || "None"}`;
