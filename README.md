@@ -136,3 +136,10 @@ npm run typecheck # TypeScript compilation check
 **102 tests** covering: PII redaction, locator strategy, PlaywrightSurface, locator spike, SafetyGuard, EvidenceCollector, ArtifactStore, Recorder, AgentLoop, GuardChecker, ErrorClassifier, ReplayEngine, ControlState, HumanActionRecorder, EscalationManager.
 
 Zero real API calls in tests — `MockLLMClient` provides scripted responses (ADR-010).
+
+## Limitations
+
+- **CAPTCHAs and bot detection** — the system uses Playwright with a real Chromium browser, but many online applications employ CAPTCHAs, Cloudflare bot protection, or similar anti-automation measures. The system has no built-in mechanism to solve or bypass these. When a CAPTCHA is encountered during discovery, the LLM will see it in the AX tree but cannot interact with it — the run will likely hit a dead-end or timeout. For production use against real sites, you would need to either: (a) use the `--headed` flag and solve CAPTCHAs manually during discovery (the human-in-the-loop escalation path supports this), (b) use a proxy service that handles CAPTCHA solving, or (c) target internal/sandbox environments that don't have bot protection.
+- **No anti-detection stealth** — Playwright's default browser fingerprint is detectable by bot protection services. No stealth plugins (e.g. playwright-extra, puppeteer-stealth) are included.
+- **Single browser session** — no concurrent sessions, no session pooling. Each discover/replay run opens and closes its own browser.
+- **Local only** — the system runs as a single process. No remote execution, no queuing, no horizontal scaling.
