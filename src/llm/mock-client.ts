@@ -3,7 +3,7 @@
  * Per ADR-010: zero token cost, deterministic, no real API calls.
  */
 
-import type { LLMClient, LLMRequest, LLMResponse } from "./types.js";
+import type { LLMClient, LLMRequest, LLMResponse, PlanResponse, CapabilityPlan } from "./types.js";
 import type { Action } from "../surface/types.js";
 
 export interface ScriptedStep {
@@ -12,17 +12,51 @@ export interface ScriptedStep {
   goalMet: boolean;
 }
 
+export interface MockLLMOptions {
+  script: ScriptedStep[];
+  plan?: CapabilityPlan;
+}
+
 export class MockLLMClient implements LLMClient {
   private script: ScriptedStep[];
+  private mockPlan: CapabilityPlan | null;
   private stepIndex = 0;
   private _callCount = 0;
 
-  constructor(script: ScriptedStep[]) {
-    this.script = script;
+  constructor(opts: ScriptedStep[] | MockLLMOptions) {
+    if (Array.isArray(opts)) {
+      this.script = opts;
+      this.mockPlan = null;
+    } else {
+      this.script = opts.script;
+      this.mockPlan = opts.plan || null;
+    }
   }
 
   get callCount(): number {
     return this._callCount;
+  }
+
+  async plan(goal: string): Promise<PlanResponse> {
+    if (this.mockPlan) {
+      return { ok: true, plan: this.mockPlan };
+    }
+    // Auto-generate a basic plan from the goal
+    const slug = goal.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, "")
+      .trim()
+      .split(/\s+/)
+      .slice(0, 4)
+      .join("-");
+    return {
+      ok: true,
+      plan: {
+        capability: slug,
+        description: goal,
+        params: [{ name: "searchQuery", type: "string", required: true, description: "The search query" }],
+        outputs: [{ name: "result", type: "string", description: "The extracted result" }],
+      },
+    };
   }
 
   async decide(_request: LLMRequest): Promise<LLMResponse> {

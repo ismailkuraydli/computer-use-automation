@@ -46,17 +46,17 @@ export class Recorder {
   ): void {
     this.stepCounter++;
 
-    // Track param value mappings for canonicalization
-    if (action.type === "type" && action.value && action.target) {
-      const targetName = action.target.name.toLowerCase().replace(/\s+/g, "");
-      for (const param of this.knownParams) {
-        const paramName = param.name.toLowerCase().replace(/\s+/g, "");
-        if (targetName.includes(paramName) || paramName.includes(targetName)) {
-          this.paramValueMap.set(action.value, param.name);
-          break;
+        // Track param value mappings for canonicalization
+        if (action.type === "type" && action.value && action.target) {
+          const targetName = action.target.name.toLowerCase().replace(/[\s_-]+/g, "");
+          for (const param of this.knownParams) {
+            const paramName = param.name.toLowerCase().replace(/[\s_-]+/g, "");
+            if (targetName.includes(paramName) || paramName.includes(targetName)) {
+              this.paramValueMap.set(action.value, param.name);
+              break;
+            }
+          }
         }
-      }
-    }
 
     // Extract baseUrl from first navigation
     if (this.stepCounter === 1 && action.type === "navigate" && action.value) {
@@ -89,8 +89,18 @@ export class Recorder {
     };
 
     // If extract action has no output name, assign from known outputs
-    if (action.type === "extract" && !step.output && this.knownOutputs.length > 0) {
-      step.output = this.knownOutputs[0].name;
+    if (action.type === "extract" && this.knownOutputs.length > 0) {
+      if (!step.output) {
+        step.output = this.knownOutputs[0].name;
+      } else {
+        // Normalize: if the LLM's output name doesn't exactly match a declared output,
+        // find the closest match (case-insensitive, ignoring underscores/hyphens)
+        const normalize = (s: string) => s.toLowerCase().replace(/[-_]/g, "");
+        const match = this.knownOutputs.find(o => normalize(o.name) === normalize(step.output!));
+        if (match) {
+          step.output = match.name;
+        }
+      }
     }
 
     // Add default "not found" handler for click steps that follow a search/type action

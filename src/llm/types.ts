@@ -23,7 +23,21 @@ export type LLMResponse =
   | { ok: true; action: Action; reasoning: string; goalMet: boolean }
   | { ok: false; error: string };
 
+export interface CapabilityPlan {
+  capability: string;       // slug, e.g. "search-wikipedia"
+  description: string;      // human-readable, derived from the goal
+  params: Array<{ name: string; type: "string" | "number" | "boolean"; required: boolean; description?: string }>;
+  outputs: Array<{ name: string; type: "string" | "number" | "object"; description?: string }>;
+}
+
+export type PlanResponse =
+  | { ok: true; plan: CapabilityPlan }
+  | { ok: false; error: string };
+
 export interface LLMClient {
+  /** Ask the LLM to plan the capability: name, params, outputs from the goal. */
+  plan(goal: string): Promise<PlanResponse>;
+
   /** Ask the LLM to decide the next action given the current state. */
   decide(request: LLMRequest): Promise<LLMResponse>;
 
