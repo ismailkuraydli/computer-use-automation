@@ -94,6 +94,7 @@ export class AgentLoop {
         screenState,
         history,
         stepNumber: stepNumber + 1,
+        outputNames: outputs.map(o => o.name),
       };
 
       const llmResponse = await llmClient.decide(llmRequest);

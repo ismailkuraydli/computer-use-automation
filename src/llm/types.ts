@@ -10,6 +10,7 @@ export interface LLMRequest {
   screenState: ScreenState;
   history: ActionHistoryEntry[];
   stepNumber: number;
+  outputNames?: string[];  // declared output names the LLM should extract
 }
 
 export interface ActionHistoryEntry {
