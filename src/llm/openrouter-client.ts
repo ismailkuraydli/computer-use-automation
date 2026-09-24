@@ -129,11 +129,13 @@ Available actions:
 - submit: { type: "submit", target: { role: "<role>", name: "<name>" } }
 
 Critical rules:
+- Goals may have MULTIPLE sequential sub-tasks (e.g. "do A then B then C"). You must complete EVERY sub-task in order before setting goalMet to true.
+- Before each action, review what you have already done (from the history) and what sub-tasks remain. Do NOT skip any sub-task.
 - extract reads the TEXT CONTENT of the targeted element. If you extract a link, you get the link's label text (e.g. "References"), NOT the content of the page it links to.
 - To extract paragraph content, target the paragraph element (role: "paragraph") or a heading whose text IS the content you want.
 - To get article/research text, navigate to the page with the content, then extract from the element that CONTAINS the text (e.g. a paragraph, article, or region element — NOT a link to that content).
-- Do NOT set goalMet to true until you have actually extracted meaningful data using the extract action.
-- If you need to click a link to reach the content page, do that FIRST, then extract on the NEXT step.
+- Do NOT set goalMet to true until ALL sub-tasks are complete AND you have extracted meaningful data using the extract action.
+- If you need to click a link or button to reach a sub-task's target, do that FIRST, then perform the sub-task on the NEXT step.
 - Use the exact role and name from the AX tree for targets.
 
 Respond with JSON only:
@@ -148,7 +150,15 @@ AX Tree (accessible elements — ${request.screenState.axTree.length} total, sho
 ${JSON.stringify(request.screenState.axTree.slice(0, 80), null, 2)}
 
 Previous actions:
-${request.history.map(h => `Step ${h.step}: ${h.action.type} -> ${h.result}`).join("\n") || "None"}`;
+${request.history.map(h => {
+  const a = h.action;
+  const target = a.target ? `${a.target.role}:${a.target.name}` : "";
+  const val = a.value ? ` value="${a.value}"` : "";
+  const out = a.output ? ` output=${a.output}` : "";
+  return `Step ${h.step}: ${a.type} ${target}${val}${out} -> ${h.result}`;
+}).join("\n") || "None"}
+
+REMEMBER: Review the goal and the actions above. If the goal has multiple sub-tasks, identify which ones are NOT yet done and do them next. Do NOT skip sub-tasks. Do NOT set goalMet=true until everything is complete.`;
 
     return [
       { role: "system", content: systemPrompt },

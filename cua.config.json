@@ -4,7 +4,7 @@
   "baseUrl": "https://openrouter.ai/api/v1/chat/completions",
   "apiKeyEnvVar": "OPENROUTER_API_KEY",
   "maxTokens": 2000,
-  "maxSteps": 15,
-  "timeoutMs": 60000,
+  "maxSteps": 30,
+  "timeoutMs": 120000,
   "headless": true
 }
