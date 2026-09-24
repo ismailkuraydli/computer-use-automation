@@ -377,8 +377,37 @@ export class PlaywrightSurface implements Surface {
       if (!locator) {
         return { ok: false, error: "element-not-found", detail: `Could not find ${target.role} "${target.name}"` };
       }
-      const text = await locator.textContent({ timeout: 5000 });
-      return { ok: true, extractedValue: text?.trim() ?? "" };
+      // Try textContent first
+      let text = await locator.textContent({ timeout: 5000 });
+      text = text?.trim() ?? "";
+
+      // If empty (e.g. link wrapping an image), try innerText, then aria-label, then alt text
+      if (!text) {
+        try {
+          text = await locator.innerText({ timeout: 3000 });
+          text = text.trim();
+        } catch { /* not visible */ }
+      }
+      if (!text) {
+        // Try aria-label attribute
+        try {
+          const ariaLabel = await locator.getAttribute("aria-label", { timeout: 3000 });
+          if (ariaLabel) text = ariaLabel.trim();
+        } catch { /* ignore */ }
+      }
+      if (!text) {
+        // Try alt text from child images
+        try {
+          const alt = await locator.locator("img").first().getAttribute("alt", { timeout: 3000 });
+          if (alt) text = alt.trim();
+        } catch { /* no img */ }
+      }
+      // If still empty, use the target name from the AX tree (it was found by name, so it has one)
+      if (!text && target.name) {
+        text = target.name;
+      }
+
+      return { ok: true, extractedValue: text };
     } catch (e) {
       return { ok: false, error: "extract-failed", detail: String(e) };
     }

@@ -232,7 +232,13 @@ export class AgentLoop {
         const normalize = (s: string) => s.toLowerCase().replace(/[-_]/g, "");
         const knownOutput = outputs.find(o => normalize(o.name) === normalize(action.output!));
         const outputName = knownOutput ? knownOutput.name : action.output;
-        extractedOutputs[outputName] = (actResult as any).extractedValue || "";
+        const extractedValue = (actResult as any).extractedValue || "";
+        // If the output already has a value, append (e.g. extracting multiple books into one output)
+        if (extractedOutputs[outputName]) {
+          extractedOutputs[outputName] += "\n" + extractedValue;
+        } else {
+          extractedOutputs[outputName] = extractedValue;
+        }
       }
 
       // Capture read_page_text result as observation in history (not as an output, but available for the LLM)
