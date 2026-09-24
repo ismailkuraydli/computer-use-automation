@@ -252,72 +252,59 @@ export class ReplayEngine {
   }
 
   /**
-   * Try to open a dropdown panel by looking for a button that might be a toggle.
-   * This handles the common pattern where radio buttons/checkboxes are inside a
-   * dropdown that closes after each click (e.g., Wikipedia's Appearance settings).
+   * Try to open a dropdown panel so a hidden radio/checkbox becomes visible.
    *
-   * Strategy: look for buttons with names like "Appearance", "Settings", "Options",
-   * "Menu", "Toggle" in the current AX tree and click the first one found.
-   * Returns true if a button was found and clicked.
+   * Strategy: instead of guessing which button is the toggle by keyword
+   * matching (fragile — keeps picking wrong buttons), try clicking each
+   * visible button on the page one by one. After each click, re-observe
+   * and check if the target element appeared. Stop when found or all
+   * buttons exhausted.
+   *
+   * This is slower but handles ANY dropdown UI pattern:
+   * - Wikipedia Appearance settings
+   * - Gmail settings menus
+   * - Custom JS widgets
+   * - Collapsible panels
+   *
+   * Excludes buttons we know aren't toggles (search, donate, language switcher)
+   * to avoid side effects.
    */
   private async _tryOpenDropdown(state: ScreenState): Promise<boolean> {
-    // Keywords in priority order — specific settings toggles first, generic last
-    const DROPDOWN_PRIORITY: Array<{ keywords: string[]; weight: number }> = [
-      { keywords: ["appearance"], weight: 10 },
-      { keywords: ["settings", "preferences"], weight: 9 },
-      { keywords: ["options", "config"], weight: 8 },
-      { keywords: ["filter", "sort"], weight: 7 },
-      { keywords: ["toggle", "expand"], weight: 6 },
-      { keywords: ["show", "more"], weight: 5 },
-      { keywords: ["view", "display"], weight: 4 },
-      { keywords: ["menu"], weight: 3 },
-    ];
-
-    // Find all candidate buttons and score them
-    const candidates: Array<{ node: any; score: number }> = [];
-    for (const node of state.axTree) {
-      if (node.role !== "button") continue;
-      const name = node.name.toLowerCase();
-      let score = 0;
-      for (const { keywords, weight } of DROPDOWN_PRIORITY) {
-        if (keywords.some((kw) => name.includes(kw))) {
-          score = Math.max(score, weight);
-        }
-      }
-      if (score > 0) {
-        // Skip buttons that are clearly navigation, not settings toggles
-        if (name.includes("main menu") && !name.includes("appearance")) {
-          score = 0; // "Main menu" is navigation, not a settings toggle
-        }
-        if (name.includes("hide") || name.includes("close") || name.includes("move")) {
-          score = 0; // These are panel management buttons, not toggles
-        }
-        if (name.includes("donate") || name.includes("search")) {
-          score = 0;
-        }
-      }
-      if (score > 0) {
-        candidates.push({ node, score });
-      }
-    }
-
-    // Sort by score (highest first)
-    candidates.sort((a, b) => b.score - a.score);
-
-    if (candidates.length === 0) return false;
-
-    const toggleButton = candidates[0].node;
-    try {
-      console.log(`  [Clicking dropdown toggle: ${toggleButton.role}:${toggleButton.name}]`);
-      await this.surface.act({
-        type: "click",
-        target: toggleButton,
-      });
-      await this.surface.act({ type: "wait", value: "500" });
+    // Collect all visible buttons from the AX tree
+    const EXCLUDE_NAMES = ["search", "donate", "log in", "create account", "languages"];
+    const buttons = state.axTree.filter((n) => {
+      if (n.role !== "button") return false;
+      const name = n.name.toLowerCase();
+      // Skip buttons that are clearly not dropdown toggles
+      if (EXCLUDE_NAMES.some((ex) => name.includes(ex))) return false;
+      // Skip "hide", "move" — these are panel management, not openers
+      if (name.includes("hide") || name.includes("move")) return false;
+      // Skip toggle subsection buttons (table of contents)
+      if (name.includes("toggle") && name.includes("subsection")) return false;
       return true;
-    } catch {
-      return false;
+    });
+
+    if (buttons.length === 0) return false;
+
+    // Try each button until the target appears
+    for (const btn of buttons.slice(0, 15)) { // limit to 15 to avoid excessive clicks
+      try {
+        await this.surface.act({ type: "click", target: btn });
+        await this.surface.act({ type: "wait", value: "300" });
+        const newState = await this.surface.observe();
+
+        // Check if radio/checkbox elements appeared that weren't there before
+        const hasRadios = newState.axTree.some((n) => n.role === "radio" || n.role === "checkbox");
+        if (hasRadios) {
+          console.log(`  [Dropdown opened by: ${btn.role}:${btn.name}]`);
+          return true;
+        }
+      } catch {
+        // Click may have failed or navigated away — try next button
+      }
     }
+
+    return false;
   }
 
   private async _buildAction(
