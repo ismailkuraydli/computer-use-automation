@@ -9,6 +9,14 @@ export interface AXLocator {
   role: string;       // "textbox", "button", "cell", "link"
   name: string;      // accessible name
   description?: string;
+  // Exact element identity (Change 3) — captured during discovery,
+  // used by replay for precise element resolution
+  cssSelector?: string;   // unique CSS selector
+  id?: string;            // element id attribute
+  ariaLabel?: string;     // aria-label attribute
+  text?: string;          // trimmed text content (first 100 chars)
+  href?: string;          // for links
+  dataTestId?: string;    // data-testid attribute
 }
 
 export interface DOMLocator {
