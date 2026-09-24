@@ -28,12 +28,14 @@ export class Recorder {
   private baseUrl: string = "";
   private paramValueMap: Map<string, string> = new Map(); // concreteValue → paramName
   private knownParams: ParamSpec[];
+  private knownOutputs: OutputSpec[];
 
-  constructor(capability: string, description: string, allowlist: AllowlistConfig, params: ParamSpec[] = []) {
+  constructor(capability: string, description: string, allowlist: AllowlistConfig, params: ParamSpec[] = [], outputs: OutputSpec[] = []) {
     this.capability = capability;
     this.description = description;
     this.allowlist = allowlist;
     this.knownParams = params;
+    this.knownOutputs = outputs;
   }
 
   recordAction(
@@ -86,20 +88,28 @@ export class Recorder {
       onError: this._generateErrorHandlers(afterState),
     };
 
-    // Add default "not found" handler for navigate steps to detail pages
-    if (action.type === "navigate" && action.value && action.value.includes("detail")) {
+    // If extract action has no output name, assign from known outputs
+    if (action.type === "extract" && !step.output && this.knownOutputs.length > 0) {
+      step.output = this.knownOutputs[0].name;
+    }
+
+    // Add default "not found" handler for click steps that follow a search/type action
+    // (these steps might encounter "no results" if the search returns nothing)
+    if (action.type === "click" && this.stepCounter > 1) {
       if (!step.onError) step.onError = [];
       step.onError.push({
         when: {
           anyOf: [{
             textContains: "not found",
           }, {
-            textContains: "Member not found",
+            textContains: "No records found",
+          }, {
+            textContains: "No results",
           }],
         },
         handler: "fail",
-        outcome: "member-not-found",
-        description: "Member not found — legitimate business outcome",
+        outcome: "not-found",
+        description: "No results found for the search query",
       });
     }
 

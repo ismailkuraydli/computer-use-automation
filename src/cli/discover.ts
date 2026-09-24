@@ -96,16 +96,18 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
     }
   }
 
-  // Set up components — --headed overrides config headless
+  // Set up components — create evidence collector first so screenshots go in the run dir
   const headless = headed ? false : config.headless;
   console.log(`Browser: ${headless ? "headless" : "headed (visible)"}`);
 
-  const surface = new PlaywrightSurface({ headless, screenshotDir: "./evidence/screenshots" });
-  await surface._start(target);
-
   const evidence = new EvidenceCollector("./evidence");
+
+  const surface = new PlaywrightSurface({ headless, screenshotDir: evidence.screenshotDir });
+  await surface._start(target);
   const recorder = new Recorder("lookup-member-balance", goal, allowlist, [
     { name: "memberId", type: "string", required: true },
+  ], [
+    { name: "memberName", type: "string" },
   ]);
   const safetyGuard = new SafetyGuard(allowlist);
 
