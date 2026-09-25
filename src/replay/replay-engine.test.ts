@@ -6,6 +6,29 @@ import { EvidenceCollector } from "../evidence/evidence-collector.js";
 import type { Surface, ScreenState, Action, ActionResult } from "../surface/types.js";
 import type { CapabilityArtifact, ArtifactStep } from "../artifact/types.js";
 import type { AppProfile } from "../artifact/profile-types.js";
+import type { EscalationResult, HandoffRequest, OperatorSignal } from "../escalation/escalation-manager.js";
+
+/** A fake operator: optionally changes the screen, then signals. */
+class FakeHandoff {
+  readonly requests: HandoffRequest[] = [];
+  constructor(
+    private surface: ScriptedSurface,
+    private signal: OperatorSignal,
+    private afterHuman?: ScreenState,
+    private checkpointPassed = false
+  ) {}
+
+  async handoff(request: HandoffRequest): Promise<EscalationResult> {
+    this.requests.push(request);
+    if (this.afterHuman) this.surface.setScreen(this.afterHuman);
+    return {
+      signal: this.signal,
+      humanActions: [{ action: "click", target: 'button "Close"', timestamp: "t", result: "success" }],
+      checkpointPassed: this.checkpointPassed,
+      escalated: true,
+    };
+  }
+}
 
 const TEST_EVIDENCE_DIR = path.join(process.cwd(), "test-evidence-replay");
 const FAST_CHECKPOINT_MS = 50;
@@ -29,6 +52,10 @@ class ScriptedSurface implements Surface {
     if (!next) throw new Error(`Unscripted action: ${action.type}`);
     this.current = next.state;
     return next.result;
+  }
+
+  setScreen(state: ScreenState): void {
+    this.current = state;
   }
 
   async navigate(): Promise<ActionResult> {
@@ -112,12 +139,13 @@ function artifact(steps: ArtifactStep[], overrides: Partial<CapabilityArtifact> 
   };
 }
 
-function engine(surface: Surface): ReplayEngine {
+function engine(surface: Surface, handoff?: FakeHandoff): ReplayEngine {
   return new ReplayEngine({
     surface,
     evidenceCollector: new EvidenceCollector(TEST_EVIDENCE_DIR),
     profile: PROFILE,
     checkpointTimeoutMs: FAST_CHECKPOINT_MS,
+    handoff,
   });
 }
 
@@ -311,5 +339,78 @@ describe("ReplayEngine", () => {
 
     expect(result).toMatchObject({ status: "escalated" });
     expect(surface.actions).toHaveLength(1);
+  });
+
+  describe("handoff to a human on the live session", () => {
+    const BLOCKED: ActionResult = { ok: false, error: "blocked", detail: "covered by <div id=promo>" };
+    const noOutputs = { outputs: [], checkpoint: {} };
+
+    it("continues after the human completes the step and its checkpoint holds", async () => {
+      const surface = new ScriptedSurface([{ result: BLOCKED, state: SEARCH }]);
+      const human = new FakeHandoff(surface, "done", RESULTS, true);
+
+      const result = await engine(surface, human).run(artifact([SEARCH_CLICK], noOutputs), { memberId: "12345" });
+
+      expect(result).toMatchObject({ status: "success", humanActions: [{ action: "click" }] });
+      expect(human.requests[0]).toMatchObject({ capability: "lookup-member", stepId: 3 });
+      expect(human.requests[0].checkpoint).toEqual({ anyOf: [{ axContains: [{ role: "link", name: "12345" }] }] });
+      expect(surface.actions).toHaveLength(1);
+    });
+
+    it("re-runs the step after the human clears the blocker", async () => {
+      const surface = new ScriptedSurface([
+        { result: BLOCKED, state: SEARCH },
+        { result: OK, state: RESULTS },
+      ]);
+      const human = new FakeHandoff(surface, "done", SEARCH, false);
+
+      const result = await engine(surface, human).run(artifact([SEARCH_CLICK], noOutputs), { memberId: "12345" });
+
+      expect(result.status).toBe("success");
+      expect(surface.actions.map((a) => a.target?.name)).toEqual(["Search", "Search"]);
+    });
+
+    it("ends the run when the human finishes the task themselves", async () => {
+      const surface = new ScriptedSurface([{ result: BLOCKED, state: SEARCH }]);
+
+      const result = await engine(surface, new FakeHandoff(surface, "complete")).run(artifact([SEARCH_CLICK], noOutputs), { memberId: "12345" });
+
+      expect(result).toMatchObject({ status: "escalated", resolution: "completed-by-human", humanActions: [{ action: "click" }] });
+    });
+
+    it("ends the run when the human aborts", async () => {
+      const surface = new ScriptedSurface([{ result: BLOCKED, state: SEARCH }]);
+
+      const result = await engine(surface, new FakeHandoff(surface, "abort")).run(artifact([SEARCH_CLICK], noOutputs), { memberId: "12345" });
+
+      expect(result).toMatchObject({ status: "escalated", resolution: "aborted" });
+    });
+
+    it("lets a human approve an unconfirmed irreversible step", async () => {
+      const submit: ArtifactStep = { id: 1, action: "submit", target: { role: "button", name: "Continue" }, classification: "irreversible" };
+      const surface = new ScriptedSurface([{ result: OK, state: SEARCH }]);
+      const human = new FakeHandoff(surface, "done");
+
+      const result = await engine(surface, human).run(artifact([submit], noOutputs), { memberId: "1" });
+
+      expect(result.status).toBe("success");
+      expect(human.requests[0].reason).toMatch(/irreversible/);
+      expect(human.requests[0].checkpoint).toBeUndefined();
+      expect(surface.actions).toHaveLength(1);
+    });
+
+    it("stops handing off after the per-step limit", async () => {
+      const surface = new ScriptedSurface([
+        { result: BLOCKED, state: SEARCH },
+        { result: BLOCKED, state: SEARCH },
+        { result: BLOCKED, state: SEARCH },
+      ]);
+      const human = new FakeHandoff(surface, "done", SEARCH, false);
+
+      const result = await engine(surface, human).run(artifact([SEARCH_CLICK], noOutputs), { memberId: "12345" });
+
+      expect(result).toMatchObject({ status: "escalated", resolution: "unresolved" });
+      expect(human.requests).toHaveLength(2);
+    });
   });
 });

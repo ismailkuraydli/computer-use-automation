@@ -158,4 +158,17 @@ describe.skipIf(!shouldRun)("PlaywrightSurface", () => {
     const result = await surface.act({ type: "select", target: { role: "combobox", name: "Account Type" }, value: "certificate of deposit" });
     expect(result.ok).toBe(true);
   });
+
+  it("captures what a human does during a handoff, without typed values", async () => {
+    await surface.act({ type: "navigate", value: `${MOCK_APP_URL}/new-account?id=12345` });
+    await surface.startHumanCapture();
+    await surface.act({ type: "type", target: { role: "textbox", name: "Initial Deposit" }, value: "999.99" });
+    await surface.act({ type: "select", target: { role: "combobox", name: "Account Type" }, value: "Checking" });
+    await surface.act({ type: "click", target: { role: "button", name: "Cancel" } });
+    const actions = await surface.stopHumanCapture();
+
+    expect(actions.map((a) => a.action)).toEqual(expect.arrayContaining(["type", "select", "click"]));
+    expect(actions.find((a) => a.action === "type")?.target).toBe('textbox "Initial Deposit"');
+    expect(JSON.stringify(actions)).not.toContain("999.99");
+  });
 });

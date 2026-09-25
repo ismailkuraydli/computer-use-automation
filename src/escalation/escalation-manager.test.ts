@@ -249,6 +249,7 @@ describe("EscalationManager", () => {
     const result = await manager.processSignal("done", checkpoint);
 
     expect(result.checkpointPassed).toBe(false);
-    expect(manager.state).toBe("done");
+    // Automation takes control back and re-runs the step
+    expect(manager.state).toBe("automation");
   });
 });

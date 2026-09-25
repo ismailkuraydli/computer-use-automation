@@ -1,10 +1,13 @@
 /**
- * EscalationManager — pause automation, expose live session, resume after human intervention.
- * Per ADR-006: CDP endpoint exposure + control-state machine.
+ * EscalationManager — pause automation, hand the live session to a human,
+ * take it back.
  *
- * The operator UI is mocked (CLI prints CDP URL), but the control-transfer mechanism
- * is real: the state machine enforces transitions, the CDP endpoint exposes the live
- * browser session, and human actions are recorded.
+ * The control-transfer model is real: the state machine says who is in
+ * control (automation → paused → human → resuming → automation | done), the
+ * human works on the SAME browser session the automation was using, and the
+ * surface records what they do. Only the operator UI is minimal: an
+ * OperatorChannel (terminal prompt by default) carries the request and the
+ * operator's signal.
  */
 
 import { ControlState } from "./control-state.js";
@@ -14,6 +17,15 @@ import type { Surface } from "../surface/types.js";
 import type { StateGuard } from "../artifact/types.js";
 import type { EvidenceCollector } from "../evidence/evidence-collector.js";
 import { GuardChecker } from "../replay/guard-checker.js";
+import type { OperatorChannel } from "./operator-channel.js";
+
+export interface HandoffRequest {
+  capability: string;
+  stepId: number;
+  reason: string;
+  /** Verified after the operator signals "done". */
+  checkpoint?: StateGuard;
+}
 
 export type OperatorSignal = "done" | "complete" | "abort";
 
@@ -31,11 +43,37 @@ export class EscalationManager {
   private evidence: EvidenceCollector;
   private currentRequest: EscalationRequest | null = null;
 
-  constructor(surface: Surface, evidence: EvidenceCollector) {
+  private channel?: OperatorChannel;
+
+  constructor(surface: Surface, evidence: EvidenceCollector, channel?: OperatorChannel) {
     this.controlState = new ControlState();
     this.actionRecorder = new HumanActionRecorder();
     this.surface = surface;
     this.evidence = evidence;
+    this.channel = channel;
+  }
+
+  /**
+   * One full handoff on the live session: pause, deliver the request, let the
+   * human operate while their actions are captured, then verify and hand
+   * control back (signal "done") or end the run ("complete" / "abort").
+   */
+  async handoff(request: HandoffRequest): Promise<EscalationResult> {
+    if (!this.channel) throw new Error("No operator channel configured for handoff");
+
+    this.actionRecorder.clear();
+    const escalation = await this.escalate(request.capability, request.stepId, request.reason);
+    this.operatorConnected();
+    await this.surface.startHumanCapture?.();
+
+    let signal: OperatorSignal;
+    try {
+      signal = await this.channel.requestIntervention(escalation);
+    } finally {
+      const captured = (await this.surface.stopHumanCapture?.()) ?? [];
+      for (const a of captured) this.actionRecorder.record(a.action, a.target, a.result);
+    }
+    return this.processSignal(signal, request.checkpoint);
   }
 
   get state(): string {
@@ -67,8 +105,8 @@ export class EscalationManager {
     const request = createEscalationRequest(capability, stepId, screenState, reason);
 
     // Expose CDP endpoint if the surface supports it
-    if (this.surface.exposeSession) {
-      const session = await this.surface.exposeSession();
+    const session = await this.surface.exposeSession?.();
+    if (session) {
       request.cdpEndpoint = session.endpoint;
       request.token = session.token;
     }
@@ -142,21 +180,13 @@ export class EscalationManager {
       };
     }
 
-    // Signal: done — verify checkpoint and resume
-    // Transition: human → resuming
+    // Signal: done — verify the checkpoint, then automation takes control
+    // back either way: it continues if the checkpoint holds, otherwise it
+    // re-runs the step the human unblocked.
     this.controlState.transition("resuming");
-
-    // Verify current state against checkpoint
     const currentState = await this.surface.observe();
     const checkpointPassed = checkpoint ? GuardChecker.check(checkpoint, currentState) : true;
-
-    if (checkpointPassed) {
-      // Transition: resuming → automation
-      this.controlState.transition("automation");
-    } else {
-      // Transition: resuming → done (checkpoint failed)
-      this.controlState.transition("done");
-    }
+    this.controlState.transition("automation");
 
     this._logEscalationEvidence(signal, humanActions, checkpointPassed);
 
@@ -180,11 +210,16 @@ export class EscalationManager {
     humanActions: HumanAction[],
     checkpointPassed: boolean
   ): void {
-    this.evidence.writeSummary({
-      goal: `Escalation resolved with signal: ${signal}`,
-      totalSteps: humanActions.length,
-      success: checkpointPassed,
-      error: checkpointPassed ? undefined : `Checkpoint failed after human intervention`,
+    this.evidence.logStep({
+      step: this.currentRequest?.stepId ?? 0,
+      action: "handoff",
+      target: this.currentRequest?.reason ?? "",
+      result: checkpointPassed ? "success" : "failure",
+      url: "",
+      axSnapshot: [],
+      detail: `Operator signal "${signal}"; human actions: ${
+        humanActions.map((a) => `${a.action} ${a.target}`).join("; ") || "none"
+      }; control history: ${this.controlState.history.map((h) => `${h.from}->${h.to}`).join(", ")}`,
     });
   }
 }

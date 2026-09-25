@@ -2,7 +2,9 @@
  * EscalationRequest — the context carried when escalating to a human operator.
  */
 
-import type { ScreenState, ActionType } from "../surface/types.js";
+import type { ScreenState, HumanAction } from "../surface/types.js";
+
+export type { HumanAction };
 
 export interface EscalationRequest {
   capability: string;
@@ -14,12 +16,6 @@ export interface EscalationRequest {
   token?: string;
 }
 
-export interface HumanAction {
-  action: ActionType;
-  target: string;
-  timestamp: string;
-  result: "success" | "failure";
-}
 
 export function createEscalationRequest(
   capability: string,

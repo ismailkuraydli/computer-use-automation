@@ -72,6 +72,15 @@ export type ActionResult =
   | { ok: true; extractedValue?: string }
   | { ok: false; error: SurfaceError; detail?: string };
 
+// --- Human operator actions (captured during a handoff) ---
+
+export interface HumanAction {
+  action: ActionType;
+  target: string;
+  timestamp: string;
+  result: "success" | "failure";
+}
+
 // --- Surface Interface ---
 
 export interface Surface {
@@ -88,5 +97,11 @@ export interface Surface {
   close(): Promise<void>;
 
   /** Expose the live session for human control (CDP endpoint, etc.). */
-  exposeSession?(): Promise<{ endpoint: string; token: string }>;
+  exposeSession?(): Promise<{ endpoint: string; token: string } | null>;
+
+  /** Start recording what a human operator does in the live session. */
+  startHumanCapture?(): Promise<void>;
+
+  /** Stop recording and return the human's actions (typed values are never kept). */
+  stopHumanCapture?(): Promise<HumanAction[]>;
 }

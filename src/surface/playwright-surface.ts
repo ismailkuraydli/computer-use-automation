@@ -20,9 +20,47 @@ import type {
   Action,
   ActionResult,
   AXNode,
+  HumanAction,
 } from "./types.js";
 import path from "path";
 import { randomUUID } from "crypto";
+
+/**
+ * Records operator clicks and field changes as "<role> <name>" — never the
+ * typed values, which may be regulated data. Plain script string so no
+ * bundler helpers leak into the page.
+ */
+const HUMAN_CAPTURE_JS = `(() => {
+  if (window.__cuaCaptureInstalled || typeof window.__cuaHumanEvent !== "function") return;
+  window.__cuaCaptureInstalled = true;
+  var describe = function (node) {
+    var el = node && node.closest ? (node.closest("a,button,input,select,textarea,[role]") || node) : node;
+    if (!el || !el.tagName) return "unknown";
+    var tag = el.tagName.toLowerCase();
+    var type = (el.getAttribute("type") || "").toLowerCase();
+    var role = el.getAttribute("role") ||
+      (tag === "a" ? "link" : tag === "select" ? "combobox" :
+       tag === "button" || type === "submit" || type === "button" ? "button" :
+       tag === "input" || tag === "textarea" ? "textbox" : tag);
+    var name = el.getAttribute("aria-label") ||
+      (role === "button" && tag === "input" ? el.value : "") ||
+      (el.textContent || "").replace(/\\s+/g, " ").trim().slice(0, 60);
+    return role + ' "' + name + '"';
+  };
+  document.addEventListener("click", function (e) {
+    window.__cuaHumanEvent({ type: "click", target: describe(e.target) });
+  }, true);
+  // "input" fires only while someone edits a field ("change" would also fire
+  // later, on blur, for a field the automation filled).
+  document.addEventListener("input", function (e) {
+    var t = e.target;
+    if (t && t.tagName !== "SELECT") window.__cuaHumanEvent({ type: "type", target: describe(t) });
+  }, true);
+  document.addEventListener("change", function (e) {
+    var t = e.target;
+    if (t && t.tagName === "SELECT") window.__cuaHumanEvent({ type: "select", target: describe(t) });
+  }, true);
+})()`;
 
 /** How long an action waits for its element to become actionable. */
 const ACTION_TIMEOUT_MS = 5000;
@@ -221,6 +259,8 @@ export class PlaywrightSurface implements Surface {
   private headless: boolean;
   private remoteDebuggingPort?: number;
   private dialogs: string[] = [];
+  private capturing = false;
+  private humanActions: HumanAction[] = [];
 
   constructor(options: PlaywrightSurfaceOptions = {}) {
     this.headless = options.headless ?? true;
@@ -245,6 +285,8 @@ export class PlaywrightSurface implements Surface {
       this.dialogs.push(`${dialog.type()}: ${dialog.message()}`);
       dialog.dismiss().catch(() => {});
     });
+
+    await this._installHumanCapture(this.page);
 
     if (url) {
       await this.page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
@@ -307,12 +349,42 @@ export class PlaywrightSurface implements Surface {
     }
   }
 
-  async exposeSession(): Promise<{ endpoint: string; token: string }> {
-    const port = this.remoteDebuggingPort ?? 9222;
-    return {
-      endpoint: `http://localhost:${port}`,
-      token: randomUUID(),
-    };
+  /** The CDP endpoint of this live browser, if it was started with remote debugging. */
+  async exposeSession(): Promise<{ endpoint: string; token: string } | null> {
+    if (!this.remoteDebuggingPort) return null;
+    return { endpoint: `http://localhost:${this.remoteDebuggingPort}`, token: randomUUID() };
+  }
+
+  async startHumanCapture(): Promise<void> {
+    if (!this.page) throw new Error("Surface not started");
+    this.humanActions = [];
+    this.capturing = true;
+    // Listeners are installed on every new document by the init script;
+    // the page that is open right now needs them too.
+    await Promise.all(this.page.frames().map((f) => f.evaluate(HUMAN_CAPTURE_JS).catch(() => {})));
+  }
+
+  async stopHumanCapture(): Promise<HumanAction[]> {
+    // A round trip to the page flushes binding calls still in flight.
+    await this.page?.evaluate("0").catch(() => {});
+    this.capturing = false;
+    return [...this.humanActions];
+  }
+
+  private async _installHumanCapture(page: Page): Promise<void> {
+    await page.exposeBinding("__cuaHumanEvent", (_source, event: { type: string; target: string }) => {
+      if (!this.capturing) return;
+      const action = (["click", "type", "select"].includes(event.type) ? event.type : "click") as HumanAction["action"];
+      const last = this.humanActions[this.humanActions.length - 1];
+      // One "type" entry per field, not one per keystroke
+      if (action === "type" && last?.action === "type" && last.target === event.target) return;
+      this.humanActions.push({ action, target: String(event.target).slice(0, 120), timestamp: new Date().toISOString(), result: "success" });
+    });
+    await page.addInitScript({ content: HUMAN_CAPTURE_JS });
+    page.on("framenavigated", (frame) => {
+      if (!this.capturing || frame !== page.mainFrame()) return;
+      this.humanActions.push({ action: "navigate", target: frame.url(), timestamp: new Date().toISOString(), result: "success" });
+    });
   }
 
   // --- Private implementation ---

@@ -28,11 +28,14 @@ import type { CapabilityArtifact } from "../artifact/types.js";
 import type { AppProfile } from "../artifact/profile-types.js";
 import { loadProfile } from "../artifact/profile-store.js";
 import { lookupSavingsBalance, openSubAccount, manageAccountByType } from "./mock-app-artifacts.js";
+import { EscalationManager } from "../escalation/escalation-manager.js";
+import type { OperatorChannel } from "../escalation/operator-channel.js";
+import type { Surface } from "../surface/types.js";
 
 type ExpectedResult =
-  | { status: "success"; outputs: Record<string, unknown> }
+  | { status: "success"; outputs: Record<string, unknown>; humanActions?: unknown[] }
   | { status: "business-outcome"; outcome: string }
-  | { status: "escalated" };
+  | { status: "escalated"; resolution?: string };
 
 interface Scenario {
   id: string;
@@ -42,6 +45,8 @@ interface Scenario {
   faults?: MockFaults;
   /** Adjust the Keystone profile, e.g. to make an interstitial unknown. */
   profile?: (profile: AppProfile) => AppProfile;
+  /** A scripted operator who takes over the live session on escalation. */
+  operator?: (surface: Surface) => OperatorChannel;
   /** The caller confirms irreversible steps may run. */
   confirmIrreversible?: boolean;
   expected: ExpectedResult;
@@ -54,6 +59,14 @@ const SCENARIO_TIMEOUT_MS = 90_000;
 const KEYSTONE_PROFILE = loadProfile("keystone-cu");
 const withoutInterstitials = (profile: AppProfile): AppProfile => ({ ...profile, interstitials: [] });
 const ACCOUNT_NUMBER = expect.stringMatching(/^\d{10}$/);
+
+/** Stands in for a person: closes the unknown overlay in the live page, then says "done". */
+const closesOverlay = (surface: Surface): OperatorChannel => ({
+  async requestIntervention() {
+    await surface.act({ type: "click", target: { role: "button", name: "Acknowledge" } });
+    return "done";
+  },
+});
 
 const SCENARIOS: Scenario[] = [
   // --- lookup-savings-balance ---
@@ -110,6 +123,23 @@ const SCENARIOS: Scenario[] = [
     faults: { interstitialPaths: ["/search"] },
     profile: withoutInterstitials,
     expected: { status: "escalated" },
+  },
+  {
+    id: "L7h",
+    title: "unknown overlay (on every results load), operator clears it in the live session each time",
+    artifact: lookupSavingsBalance,
+    params: { memberId: "12345" },
+    faults: { interstitialPaths: ["/search"] },
+    profile: withoutInterstitials,
+    operator: closesOverlay,
+    expected: {
+      status: "success",
+      outputs: { savingsBalance: "$12,847.00" },
+      humanActions: [
+        { action: "click", target: 'button "Acknowledge"' },
+        { action: "click", target: 'button "Acknowledge"' },
+      ],
+    },
   },
   {
     id: "L8",
@@ -207,7 +237,8 @@ async function replay(scenario: Scenario): Promise<ReplayResult> {
   await surface._start();
   try {
     const profile = (scenario.profile ?? ((p) => p))(KEYSTONE_PROFILE);
-    const engine = new ReplayEngine({ surface, evidenceCollector: evidence, profile });
+    const handoff = scenario.operator ? new EscalationManager(surface, evidence, scenario.operator(surface)) : undefined;
+    const engine = new ReplayEngine({ surface, evidenceCollector: evidence, profile, handoff });
     return await engine.run(scenario.artifact(baseUrl), scenario.params, {
       confirmIrreversible: scenario.confirmIrreversible,
     });

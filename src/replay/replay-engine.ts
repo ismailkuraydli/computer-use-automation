@@ -22,11 +22,14 @@ import { ErrorClassifier } from "./error-classifier.js";
 import { substitute, substituteDeep, missingParams, type Params } from "./params.js";
 import type { ReplayResult } from "./result.js";
 import { success, businessOutcome, failure, escalated } from "./result.js";
+import type { HumanAction } from "../surface/types.js";
+import type { EscalationResult, HandoffRequest } from "../escalation/escalation-manager.js";
 
 const CHECKPOINT_TIMEOUT_MS = 10_000;
 const CHECKPOINT_POLL_MS = 500;
 const MAX_DISMISSALS_PER_STEP = 2;
 const DEFAULT_MAX_RETRIES = 1;
+const MAX_HANDOFFS_PER_STEP = 2;
 
 /** Surface errors that mean "something unknown is in the way" — a human can clear it. */
 const BLOCKING_ERRORS = new Set(["blocked", "unexpected-dialog"]);
@@ -36,6 +39,11 @@ export interface ReplayEngineOptions {
   evidenceCollector: EvidenceCollector;
   profile?: AppProfile;
   checkpointTimeoutMs?: number;
+  /**
+   * Hands the live session to a human when replay must escalate. Without
+   * it, escalations end the run with status "escalated".
+   */
+  handoff?: { handoff(request: HandoffRequest): Promise<EscalationResult> };
 }
 
 export interface RunOptions {
@@ -51,6 +59,28 @@ interface StepContext {
   handlers: ErrorHandler[];
   retries: number;
   dismissals: number;
+  handoffs: number;
+}
+
+/** Internal: this step needs a human. */
+interface Escalation {
+  escalate: string;
+}
+
+type Decision = "retry-action" | "recheck" | Escalation | StepDone | ReplayResult;
+
+/** Internal: a human completed the step and its checkpoint holds. */
+interface StepDone {
+  stepDone: true;
+  state: ScreenState;
+}
+
+function isStepDone(value: unknown): value is StepDone {
+  return typeof value === "object" && value !== null && "stepDone" in value;
+}
+
+function isEscalation(value: unknown): value is Escalation {
+  return typeof value === "object" && value !== null && "escalate" in value;
 }
 
 /** Irreversible by the artifact's own classification or by the allowlist's action types. */
@@ -64,12 +94,16 @@ export class ReplayEngine {
   private evidence: EvidenceCollector;
   private profile: AppProfile;
   private checkpointTimeoutMs: number;
+  private handoff?: ReplayEngineOptions["handoff"];
+  private capability = "";
+  private humanActions: HumanAction[] = [];
 
   constructor(opts: ReplayEngineOptions) {
     this.surface = opts.surface;
     this.evidence = opts.evidenceCollector;
     this.profile = opts.profile ?? EMPTY_PROFILE;
     this.checkpointTimeoutMs = opts.checkpointTimeoutMs ?? CHECKPOINT_TIMEOUT_MS;
+    this.handoff = opts.handoff;
   }
 
   async run(artifact: CapabilityArtifact, params: Params, opts: RunOptions = {}): Promise<ReplayResult> {
@@ -78,14 +112,13 @@ export class ReplayEngine {
       return failure(0, `params ${missing.join(", ")}`, "missing", "missing-params", this.evidence.runDir);
     }
 
+    this.capability = artifact.capability;
+    this.humanActions = [];
     const safety = new SafetyGuard(artifact.allowlist);
     const outputs: Record<string, string> = {};
     let state: ScreenState | null = null;
 
     for (const step of artifact.steps) {
-      const blocked = this._checkPolicy(step, params, safety, opts);
-      if (blocked) return blocked;
-
       const ctx: StepContext = {
         step,
         irreversible: isIrreversible(step, safety),
@@ -93,7 +126,11 @@ export class ReplayEngine {
         handlers: substituteDeep([...(step.onError ?? []), ...this.profile.conditions], params),
         retries: 0,
         dismissals: 0,
+        handoffs: 0,
       };
+      const blocked = await this._checkPolicy(ctx, safety, opts);
+      if (blocked) return blocked;
+
       let outcome: { state: ScreenState } | ReplayResult;
       try {
         outcome = await this._runStep(ctx, outputs, state);
@@ -113,15 +150,20 @@ export class ReplayEngine {
 
   // --- Policy ---
 
-  private _checkPolicy(step: ArtifactStep, params: Params, safety: SafetyGuard, opts: RunOptions): ReplayResult | null {
+  /**
+   * Allowlist and irreversibility, before the step acts. An unconfirmed
+   * irreversible step goes to a human for approval ("done" approves it).
+   */
+  private async _checkPolicy(ctx: StepContext, safety: SafetyGuard, opts: RunOptions): Promise<ReplayResult | null> {
+    const { step, params } = ctx;
     const verdict = safety.check(this._buildAction(step, params), "");
 
-    if (isIrreversible(step, safety)) {
-      if (opts.confirmIrreversible) return null;
-      this._log(step, "failure", "Irreversible step needs caller confirmation");
-      return escalated(step.id, `Step ${step.id} (${step.action}) is irreversible and the run was not confirmed`, this.evidence.runDir);
+    if (ctx.irreversible && !opts.confirmIrreversible) {
+      this._log(step, "failure", "Irreversible step needs confirmation");
+      const approval = await this._escalate(ctx, `Step ${step.id} (${step.action}) is irreversible and the run was not confirmed`, false);
+      return approval === "retry-action" || isStepDone(approval) ? null : approval;
     }
-    if (!verdict.allowed) {
+    if (!verdict.allowed && !ctx.irreversible) {
       this._log(step, "failure", `Blocked by allowlist: ${verdict.reason}`);
       return failure(step.id, "action permitted by allowlist", verdict.reason ?? "not permitted", "policy-violation", this.evidence.runDir);
     }
@@ -145,7 +187,8 @@ export class ReplayEngine {
       ctx.dismissals++;
       const dismissed = await this._dismiss(step, upfront);
       if (!dismissed.ok) {
-        return escalated(step.id, `Could not dismiss "${upfront.name}": ${dismissed.error}`, this.evidence.runDir);
+        const handled = await this._escalate(ctx, `Could not dismiss "${upfront.name}": ${dismissed.error}`);
+        if (handled !== "retry-action") return handled;
       }
     }
 
@@ -163,8 +206,13 @@ export class ReplayEngine {
       const detail = result.ok ? "Checkpoint not met" : `${result.error}: ${result.detail ?? ""}`;
       this._log(step, "failure", detail, state);
 
-      const next = await this._recover(ctx, result, state);
+      let next: Decision = await this._recover(ctx, result, state);
+      if (isEscalation(next)) next = await this._escalate(ctx, next.escalate);
       if (next === "retry-action") continue;
+      if (isStepDone(next)) {
+        if (step.output && result.ok) outputs[step.output] = result.extractedValue ?? "";
+        return { state: next.state };
+      }
       if (next === "recheck") {
         const rechecked = await this._awaitCheckpoint(ctx);
         if (result.ok && GuardChecker.check(substituteDeep(step.checkpoint, params), rechecked)) {
@@ -182,16 +230,14 @@ export class ReplayEngine {
    * Decide what a failed action or unmet checkpoint means. Returns what to
    * do next, or the final result for the caller.
    */
-  private async _recover(ctx: StepContext, result: ActionResult, state: ScreenState): Promise<"retry-action" | "recheck" | ReplayResult> {
+  private async _recover(ctx: StepContext, result: ActionResult, state: ScreenState): Promise<Decision> {
     const { step, params } = ctx;
 
     const interstitial = ErrorClassifier.interstitial(state, substituteDeep(this.profile.interstitials, params));
     if (interstitial && ctx.dismissals < MAX_DISMISSALS_PER_STEP) {
       ctx.dismissals++;
       const dismissed = await this._dismiss(step, interstitial);
-      if (!dismissed.ok) {
-        return escalated(step.id, `Could not dismiss "${interstitial.name}": ${dismissed.error}`, this.evidence.runDir);
-      }
+      if (!dismissed.ok) return { escalate: `Could not dismiss "${interstitial.name}": ${dismissed.error}` };
       // The action did not happen if it was blocked; otherwise it already ran.
       return result.ok ? "recheck" : "retry-action";
     }
@@ -200,7 +246,7 @@ export class ReplayEngine {
     if (condition) return this._applyCondition(ctx, condition);
 
     if (!result.ok && BLOCKING_ERRORS.has(result.error)) {
-      return escalated(step.id, `Unknown blocking UI at step ${step.id}: ${result.detail ?? result.error}`, this.evidence.runDir);
+      return { escalate: `Unknown blocking UI at step ${step.id}: ${result.detail ?? result.error}` };
     }
 
     const observed = result.ok ? `Checkpoint not met on ${state.url}` : `${result.error}: ${result.detail ?? ""}`;
@@ -208,18 +254,18 @@ export class ReplayEngine {
     return failure(step.id, this._expected(step, params), observed, error, this.evidence.runDir);
   }
 
-  private _applyCondition(ctx: StepContext, condition: ErrorHandler): "retry-action" | ReplayResult {
+  private _applyCondition(ctx: StepContext, condition: ErrorHandler): Decision {
     const { step } = ctx;
     switch (condition.kind) {
       case "business-outcome":
         return businessOutcome(condition.outcome ?? "unknown", condition.description, this.evidence.runDir);
       case "escalate":
-        return escalated(step.id, condition.description, this.evidence.runDir);
+        return { escalate: condition.description };
       case "hard-failure":
         return failure(step.id, this._expected(step, ctx.params), condition.description, condition.outcome ?? "known-failure", this.evidence.runDir);
       case "retry": {
         if (ctx.irreversible) {
-          return escalated(step.id, `${condition.description} — irreversible step is never retried automatically`, this.evidence.runDir);
+          return { escalate: `${condition.description} — irreversible step is never retried automatically` };
         }
         if (ctx.retries >= (condition.maxRetries ?? DEFAULT_MAX_RETRIES)) {
           return failure(step.id, this._expected(step, ctx.params), `${condition.description} (retries exhausted)`, "retries-exhausted", this.evidence.runDir);
@@ -228,6 +274,38 @@ export class ReplayEngine {
         return "retry-action";
       }
     }
+  }
+
+  /**
+   * Hand the live session to a human, if a handoff is configured.
+   * - "done" + checkpoint holds → the step counts as done (unless the caller
+   *   asked to re-run it, as for approvals);
+   * - "done" otherwise → re-run the step the human unblocked;
+   * - "complete" / "abort" / no handoff → the run ends as escalated.
+   */
+  private async _escalate(ctx: StepContext, reason: string, acceptCheckpoint = true): Promise<"retry-action" | StepDone | ReplayResult> {
+    const { step, params } = ctx;
+    if (!this.handoff || ctx.handoffs >= MAX_HANDOFFS_PER_STEP) {
+      return escalated(step.id, reason, this.evidence.runDir, this.humanActions);
+    }
+    ctx.handoffs++;
+
+    const checkpoint = acceptCheckpoint ? substituteDeep(step.checkpoint, params) : undefined;
+    const outcome = await this.handoff.handoff({ capability: this.capability, stepId: step.id, reason, checkpoint });
+    this.humanActions.push(...outcome.humanActions);
+
+    if (outcome.signal === "complete") {
+      return escalated(step.id, reason, this.evidence.runDir, this.humanActions, "completed-by-human");
+    }
+    if (outcome.signal === "abort") {
+      return escalated(step.id, reason, this.evidence.runDir, this.humanActions, "aborted");
+    }
+    if (checkpoint && outcome.checkpointPassed) {
+      const state = await this.surface.observe();
+      this._log(step, "success", "Checkpoint met after human intervention", state);
+      return { stepDone: true, state };
+    }
+    return "retry-action";
   }
 
   private async _dismiss(step: ArtifactStep, interstitial: Interstitial): Promise<ActionResult> {
@@ -273,7 +351,7 @@ export class ReplayEngine {
         return failure(lastStep, `outputs ${missing.join(", ")}`, "not extracted", "missing-outputs", this.evidence.runDir);
       }
     }
-    return success(outputs, this.evidence.runDir);
+    return success(outputs, this.evidence.runDir, this.humanActions);
   }
 
   // --- Helpers ---

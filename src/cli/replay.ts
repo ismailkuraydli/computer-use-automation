@@ -8,12 +8,18 @@ import { EvidenceCollector } from "../evidence/evidence-collector.js";
 import { loadConfig } from "../config.js";
 import { loadArtifactFile } from "../artifact/artifact-store.js";
 import { loadProfile } from "../artifact/profile-store.js";
+import { EscalationManager } from "../escalation/escalation-manager.js";
+import { TerminalOperatorChannel } from "../escalation/operator-channel.js";
+
+/** CDP port exposed during --handoff so an operator can also attach remotely. */
+const HANDOFF_DEBUG_PORT = 9222;
 
 export async function runReplay(opts: Record<string, any>): Promise<void> {
   const artifactPath = opts.artifact as string;
   const target = opts.target as string;
   const paramsStr = opts.params as string;
-  const headed = opts.headed as boolean;
+  const handoff = opts.handoff === true;
+  const headed = (opts.headed as boolean) || handoff;
 
   if (!artifactPath) {
     console.error("Error: --artifact is required for replay");
@@ -50,13 +56,18 @@ export async function runReplay(opts: Record<string, any>): Promise<void> {
 
   const evidence = new EvidenceCollector("./evidence");
 
-  const surface = new PlaywrightSurface({ headless, screenshotDir: evidence.screenshotDir });
+  const surface = new PlaywrightSurface({
+    headless,
+    screenshotDir: evidence.screenshotDir,
+    ...(handoff ? { remoteDebuggingPort: HANDOFF_DEBUG_PORT } : {}),
+  });
   await surface._start(target);
 
   const engine = new ReplayEngine({
     surface,
     evidenceCollector: evidence,
     profile,
+    ...(handoff ? { handoff: new EscalationManager(surface, evidence, new TerminalOperatorChannel()) } : {}),
   });
 
   console.log(`\nReplaying artifact: ${artifact.capability}`);
@@ -85,6 +96,7 @@ export async function runReplay(opts: Record<string, any>): Promise<void> {
   switch (result.status) {
     case "success":
       console.log(`Outputs: ${JSON.stringify(result.outputs, null, 2)}`);
+      if (result.humanActions) console.log(`Human actions: ${JSON.stringify(result.humanActions, null, 2)}`);
       break;
     case "business-outcome":
       console.log(`Outcome: ${result.outcome}`);
@@ -99,6 +111,8 @@ export async function runReplay(opts: Record<string, any>): Promise<void> {
     case "escalated":
       console.log(`Step: ${result.stepId}`);
       console.log(`Reason: ${result.reason}`);
+      console.log(`Resolution: ${result.resolution}`);
+      if (result.humanActions) console.log(`Human actions: ${JSON.stringify(result.humanActions, null, 2)}`);
       break;
   }
 

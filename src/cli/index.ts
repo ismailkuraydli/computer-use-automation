@@ -21,6 +21,7 @@ const { values, positionals } = parseArgs({
     allowlist: { type: "string" },
     app: { type: "string" },
     confirm: { type: "boolean", default: false },
+    handoff: { type: "boolean", default: false },
     help: { type: "boolean", default: false },
   },
 });
@@ -33,7 +34,6 @@ if (values.help || !command) {
 Usage:
   cua discover --goal "Look up member 12345 and read their savings balance" --target http://localhost:3000/search --app keystone-cu
   cua replay --artifact ./artifacts/lookup-savings-balance/v1.json --params '{"memberId":"23456"}' --target http://localhost:3000
-  cua escalate --session <session-id>
 
 Options:
   --goal       Natural language goal (discover)
@@ -47,6 +47,7 @@ Options:
   --allowlist  Path to allowlist JSON file (discover)
   --app        App profile name in ./profiles (discover; stored in the artifact)
   --confirm    Allow the artifact's irreversible steps to run (replay)
+  --handoff    On escalation, hand the live browser to you and resume after (replay; implies --headed)
   --help       Show this help
 
 Config (cua.config.json):
@@ -69,11 +70,6 @@ async function main() {
     case "replay": {
       const { runReplay } = await import("./replay.js");
       await runReplay(values);
-      break;
-    }
-    case "escalate": {
-      const { runEscalate } = await import("./escalate.js");
-      await runEscalate(values);
       break;
     }
     default:
