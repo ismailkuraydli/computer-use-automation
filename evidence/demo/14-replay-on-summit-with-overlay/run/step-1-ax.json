@@ -1,0 +1,174 @@
+[
+  {
+    "role": "RootWebArea",
+    "name": "Summit FCU - Member Search",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "heading",
+    "name": "Member Servicing - Search",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Member Servicing - Search"
+      ]
+    }
+  },
+  {
+    "role": "StaticText",
+    "name": "Member Servicing - Search",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Security Reminder",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Never share your credentials. Verify the member before disclosing account data.",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "button",
+    "name": "Dismiss",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        ""
+      ]
+    }
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Member Servicing - Search",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Security Reminder",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Never share your credentials. Verify the member before disclosing account data.",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Dismiss",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Dismiss",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Account Holder #:",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "textbox",
+    "name": "Account Holder #",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Account Holder #:",
+        "",
+        ""
+      ],
+      "label": "Account Holder #:"
+    }
+  },
+  {
+    "role": "button",
+    "name": "Search",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Account Holder #:",
+        "",
+        ""
+      ],
+      "label": ""
+    }
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Account Holder #:",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Search",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Search",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "Member Servicing - Search",
+    "children": [],
+    "context": {
+      "row": [
+        "Member Servicing - Search"
+      ]
+    },
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "Account Holder #:",
+    "children": [],
+    "context": {
+      "row": [
+        "Account Holder #:"
+      ]
+    },
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "Security Reminder",
+    "children": [],
+    "context": {
+      "row": [
+        "Security Reminder"
+      ]
+    },
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "Never share your credentials. Verify the member before disclosing account data.",
+    "children": [],
+    "context": {
+      "row": [
+        "Never share your credentials. Verify the member before discl"
+      ]
+    },
+    "framePath": []
+  }
+]

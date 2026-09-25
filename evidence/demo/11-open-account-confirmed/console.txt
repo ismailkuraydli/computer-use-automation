@@ -1,12 +1,4 @@
-◇ injected env (6) from .env
-Browser: headless
-
-Replaying artifact: open-sub-account
-Params expected: ["memberId","accountType","deposit"]
-App profile: keystone-cu
-Params provided: {"memberId":"12345","accountType":"Checking","deposit":"250"}
-Target: about:blank
-
+Replayed: open-sub-account, app profile keystone-cu
 
 --- Replay Result ---
 Status: success
@@ -14,4 +6,4 @@ Outputs: {
   "accountNumber": "[REDACTED]"
 }
 
-Evidence: evidence/dc592f91
+Evidence: evidence/4ad7d753

@@ -35,5 +35,8 @@ SSNs, account numbers, member names and dates of birth are redacted in every fil
 | 11 | [open account, confirmed](11-open-account-confirmed/) | `--confirm` | `success`, new account number returned (redacted in this log) |
 | 12 | [open account, validation error](12-open-account-validation-error/) | `deposit=-5` | `business-outcome: validation-error` |
 | 13 | [open account, unexpected dialog](13-open-account-unexpected-dialog/) | native `confirm()` on submit | the dialog is dismissed, **not accepted**; `escalated` with the dialog text as the reason |
+| 14 | [replay on Summit FCU](14-replay-on-summit-with-overlay/) | second tenant: relabelled fields, `/members/:id` routes, its own security reminder | `success` with the **same** artifact through `--tenant summit` (`profiles/tenants/keystone-cu/summit.json`) |
+| 15 | [MCP: list + run](15-mcp-list-and-run/) | an agent host starts `bin/cua-mcp` over stdio (as Claude Code / Codex do) | tools listed, catalog listed, `run_capability` → `success` |
+| 16 | [MCP: run on Summit](16-mcp-run-on-summit/) | same, with `tenant: "summit"` | `success` |
 
-The replay engine's full acceptance matrix (16 scenarios) runs as a test: `npm run test:scenarios`.
+The replay engine's full acceptance matrix (19 scenarios, including the host-only Summit drift case) runs as a test: `npm run test:scenarios`.

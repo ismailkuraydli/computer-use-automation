@@ -6,7 +6,7 @@
       "target": "http://localhost:3000/search",
       "result": "success",
       "url": "http://localhost:3000/search",
-      "screenshotPath": "evidence/2ca41680/screenshots/screen-6d4c5692.png",
+      "screenshotPath": "evidence/152f3f05/screenshots/screen-dab63281.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -119,7 +119,7 @@
       "target": "textbox \"Member ID\"",
       "result": "success",
       "url": "http://localhost:3000/search",
-      "screenshotPath": "evidence/2ca41680/screenshots/screen-a4cc904e.png",
+      "screenshotPath": "evidence/152f3f05/screenshots/screen-fef48c49.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -245,7 +245,7 @@
       "target": "button \"Search\"",
       "result": "failure",
       "url": "http://localhost:3000/search?q=99999&btnSearch=Search",
-      "screenshotPath": "evidence/2ca41680/screenshots/screen-5f0ad258.png",
+      "screenshotPath": "evidence/152f3f05/screenshots/screen-ed45b0a9.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",

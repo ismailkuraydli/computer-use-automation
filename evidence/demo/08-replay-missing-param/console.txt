@@ -1,12 +1,4 @@
-◇ injected env (6) from .env
-Browser: headless
-
-Replaying artifact: lookup-member-savings-balance
-Params expected: ["memberId"]
-App profile: keystone-cu
-Params provided: {}
-Target: about:blank
-
+Replayed: lookup-member-savings-balance, app profile keystone-cu
 
 --- Replay Result ---
 Status: failure
@@ -15,4 +7,4 @@ Expected: params memberId
 Observed: missing
 Error: missing-params
 
-Evidence: evidence/5aa85b19
+Evidence: evidence/9d249f48

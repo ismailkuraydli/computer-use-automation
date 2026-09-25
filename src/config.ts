@@ -7,8 +7,9 @@ import { readFileSync, existsSync } from "fs";
 import path from "path";
 import dotenv from "dotenv";
 
-// Auto-load .env on import
-dotenv.config();
+// Auto-load .env on import. Quiet: dotenv's banner goes to stdout, which is
+// the protocol channel when running as an MCP server.
+dotenv.config({ quiet: true });
 
 export interface CuaConfig {
   provider: string;           // "openrouter", "openai", "anthropic", etc.

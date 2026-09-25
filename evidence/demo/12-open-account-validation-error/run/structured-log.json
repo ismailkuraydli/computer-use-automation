@@ -6,7 +6,7 @@
       "target": "http://localhost:3000/new-account?id={{memberId}}",
       "result": "success",
       "url": "http://localhost:3000/new-account?id=12345",
-      "screenshotPath": "evidence/a1f1be5c/screenshots/screen-d6d9b991.png",
+      "screenshotPath": "evidence/15cdf28d/screenshots/screen-be7a32cf.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -223,7 +223,7 @@
       "target": "combobox \"Account Type\"",
       "result": "success",
       "url": "http://localhost:3000/new-account?id=12345",
-      "screenshotPath": "evidence/a1f1be5c/screenshots/screen-10bffe36.png",
+      "screenshotPath": "evidence/15cdf28d/screenshots/screen-fd5f7985.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -440,7 +440,7 @@
       "target": "textbox \"Initial Deposit\"",
       "result": "success",
       "url": "http://localhost:3000/new-account?id=12345",
-      "screenshotPath": "evidence/a1f1be5c/screenshots/screen-dc888b2a.png",
+      "screenshotPath": "evidence/15cdf28d/screenshots/screen-211b1345.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -670,7 +670,7 @@
       "target": "button \"Continue\"",
       "result": "failure",
       "url": "http://localhost:3000/new-account-confirm",
-      "screenshotPath": "evidence/a1f1be5c/screenshots/screen-247960d4.png",
+      "screenshotPath": "evidence/15cdf28d/screenshots/screen-432691a1.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",

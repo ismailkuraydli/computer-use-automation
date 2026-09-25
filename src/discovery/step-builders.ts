@@ -13,6 +13,7 @@
 
 import type { Action, AXNode, ScreenState } from "../surface/types.js";
 import type { ScreenSignature, StateGuard, TargetSpec } from "../artifact/types.js";
+import { canonicalUrlPattern } from "./canonicalize.js";
 
 const MAX_ANCHORS = 2;
 const MAX_ANCHOR_LENGTH = 60;
@@ -60,7 +61,7 @@ export function buildCheckpoint(
 
   const urlChanged = urlKey(after.url) !== urlKey(before.url) || action.type === "navigate";
   if (urlChanged) {
-    const pattern = urlPattern(after.url, paramValues);
+    const pattern = canonicalUrlPattern(after.url, paramValues);
     if (pattern) sig.urlPattern = pattern;
   }
 
@@ -129,18 +130,4 @@ function urlKey(url: string): string {
   } catch {
     return url;
   }
-}
-
-/** Path plus query keys; values stay only when they are parameter values. */
-function urlPattern(url: string, paramValues: string[]): string | undefined {
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    return undefined;
-  }
-  const query = Array.from(parsed.searchParams.entries())
-    .map(([k, v]) => `${k}=${paramValues.some((p) => norm(p) === norm(v)) ? v : "*"}`)
-    .join("&");
-  return query ? `${parsed.pathname}?${query}` : parsed.pathname;
 }

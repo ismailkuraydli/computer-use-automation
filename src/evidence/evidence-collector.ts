@@ -68,8 +68,15 @@ export class EvidenceCollector {
   }
 
   logStep(entry: LogStepEntry): void {
-    // Redact PII from everything that is logged, snapshots included
-    const redacted: LogStepEntry = this.redactor.redactDeep(entry);
+    // Redact PII from everything that is logged, snapshots included. Screenshot
+    // paths are stored relative to the workspace (the parent of the evidence
+    // dir), so logs are portable and carry no local directory names.
+    const redacted: LogStepEntry = this.redactor.redactDeep({
+      ...entry,
+      ...(entry.screenshotPath
+        ? { screenshotPath: path.relative(path.dirname(path.dirname(this.runDir)), path.resolve(entry.screenshotPath)) }
+        : {}),
+    });
 
     this.steps.push(redacted);
 

@@ -1,0 +1,425 @@
+[
+  {
+    "role": "RootWebArea",
+    "name": "Summit FCU - Member Search",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "heading",
+    "name": "Member Servicing - Search",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Member Servicing - Search"
+      ]
+    }
+  },
+  {
+    "role": "StaticText",
+    "name": "Member Servicing - Search",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Security Reminder",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Never share your credentials. Verify the member before disclosing account data.",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "button",
+    "name": "Dismiss",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        ""
+      ]
+    }
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Member Servicing - Search",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "columnheader",
+    "name": "Account Holder #",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Account Holder #",
+        "Name",
+        "SSN",
+        "Accounts"
+      ]
+    }
+  },
+  {
+    "role": "columnheader",
+    "name": "Name",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Account Holder #",
+        "Name",
+        "SSN",
+        "Accounts"
+      ]
+    }
+  },
+  {
+    "role": "columnheader",
+    "name": "SSN",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Account Holder #",
+        "Name",
+        "SSN",
+        "Accounts"
+      ]
+    }
+  },
+  {
+    "role": "columnheader",
+    "name": "Accounts",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Account Holder #",
+        "Name",
+        "SSN",
+        "Accounts"
+      ]
+    }
+  },
+  {
+    "role": "cell",
+    "name": "23456",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "23456",
+        "[REDACTED]",
+        "[REDACTED]",
+        "3"
+      ],
+      "column": "Account Holder #"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "23456",
+        "[REDACTED]",
+        "[REDACTED]",
+        "3"
+      ],
+      "column": "Name"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "23456",
+        "[REDACTED]",
+        "[REDACTED]",
+        "3"
+      ],
+      "column": "SSN"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "3",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "23456",
+        "[REDACTED]",
+        "[REDACTED]",
+        "3"
+      ],
+      "column": "Accounts"
+    }
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Security Reminder",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Never share your credentials. Verify the member before disclosing account data.",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Dismiss",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Account Holder #",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Name",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "SSN",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Accounts",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "link",
+    "name": "23456",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "23456",
+        "[REDACTED]",
+        "[REDACTED]",
+        "3"
+      ],
+      "column": "Account Holder #"
+    }
+  },
+  {
+    "role": "StaticText",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "3",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Dismiss",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Account Holder #:",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "textbox",
+    "name": "Account Holder #",
+    "value": "23456",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Account Holder #:",
+        "",
+        ""
+      ],
+      "label": "Account Holder #:"
+    }
+  },
+  {
+    "role": "button",
+    "name": "Search",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Account Holder #:",
+        "",
+        ""
+      ],
+      "label": ""
+    }
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Account Holder #",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Name",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "SSN",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Accounts",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "23456",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "3",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Account Holder #:",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Search",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "23456",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "23456",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Search",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "23456",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "Member Servicing - Search",
+    "children": [],
+    "context": {
+      "row": [
+        "Member Servicing - Search"
+      ]
+    },
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "Account Holder #:",
+    "children": [],
+    "context": {
+      "row": [
+        "Account Holder #:"
+      ]
+    },
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "Account Holder #NameSSNAccounts\n          23456\n          [REDACTED][REDACTED]\n          3",
+    "children": [],
+    "context": {
+      "row": [
+        "Account Holder #NameSSNAccounts 23456 [REDACTED]234-56"
+      ]
+    },
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "Security Reminder",
+    "children": [],
+    "context": {
+      "row": [
+        "Security Reminder"
+      ]
+    },
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "Never share your credentials. Verify the member before disclosing account data.",
+    "children": [],
+    "context": {
+      "row": [
+        "Never share your credentials. Verify the member before discl"
+      ]
+    },
+    "framePath": []
+  }
+]

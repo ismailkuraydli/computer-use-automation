@@ -1,0 +1,118 @@
+[
+  {
+    "role": "RootWebArea",
+    "name": "Summit FCU - Member Search",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "heading",
+    "name": "Member Servicing - Search",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Member Servicing - Search"
+      ]
+    }
+  },
+  {
+    "role": "StaticText",
+    "name": "Member Servicing - Search",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Member Servicing - Search",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Account Holder #:",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "textbox",
+    "name": "Account Holder #",
+    "value": "45678",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Account Holder #:",
+        "",
+        ""
+      ],
+      "label": "Account Holder #:"
+    }
+  },
+  {
+    "role": "button",
+    "name": "Search",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Account Holder #:",
+        "",
+        ""
+      ],
+      "label": ""
+    }
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Account Holder #:",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Search",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "45678",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Search",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "45678",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "Member Servicing - Search",
+    "children": [],
+    "context": {
+      "row": [
+        "Member Servicing - Search"
+      ]
+    },
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "Account Holder #:",
+    "children": [],
+    "context": {
+      "row": [
+        "Account Holder #:"
+      ]
+    },
+    "framePath": []
+  }
+]

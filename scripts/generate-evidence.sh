@@ -16,12 +16,20 @@ MOCK=http://localhost:3000
 rm -rf "$OUT"/[0-9][0-9]-* "$OUT/artifacts"
 mkdir -p "$OUT/artifacts"
 
-if ! curl -s -o /dev/null "$MOCK/search"; then
-  npm run -s mock-app > /dev/null 2>&1 &
-  MOCK_PID=$!
-  trap 'kill $MOCK_PID 2>/dev/null || true' EXIT
-  for _ in $(seq 1 40); do curl -s -o /dev/null "$MOCK/search" && break; sleep 0.25; done
-fi
+SUMMIT=http://localhost:3100
+PIDS=()
+trap 'if [ ${#PIDS[@]} -gt 0 ]; then kill "${PIDS[@]}" 2>/dev/null || true; fi' EXIT
+
+# start <url> <npm script>: start a mock app unless one already answers
+start() {
+  if ! curl -s -o /dev/null "$1/search"; then
+    npm run -s "$2" > /dev/null 2>&1 &
+    PIDS+=($!)
+    for _ in $(seq 1 40); do curl -s -o /dev/null "$1/search" && break; sleep 0.25; done
+  fi
+}
+start "$MOCK" mock-app
+start "$SUMMIT" mock-app:summit
 
 faults() { curl -s -X POST "$MOCK/__faults" -H 'content-type: application/json' -d "$1" > /dev/null; }
 
@@ -33,14 +41,18 @@ keep() {
 }
 
 # Console output is kept as evidence too — redact it like every other log.
-redact() { perl -pe 's/(?<!\d)\d{10,12}(?!\d)/[REDACTED]/g; s/\d{3}-\d{2}-\d{4}/[REDACTED]/g'; }
+# Local paths are replaced too, so committed evidence carries no machine details.
+redact() {
+  perl -pe 's/(?<!\d)\d{10,12}(?!\d)/[REDACTED]/g; s/\d{3}-\d{2}-\d{4}/[REDACTED]/g' |
+    ROOT="$PWD" perl -pe 's/\Q$ENV{ROOT}\E/./g; s/\Q$ENV{HOME}\E/~/g'
+}
 
 record() {
   local name=$1; shift
   mkdir -p "$OUT/$name"
   { "$@" 2>&1 || true; } | redact > "$OUT/$name/console.txt"
-  keep "$OUT/$name" "$OUT/$name/console.txt" "Evidence:"
-  echo "$name: $(grep -E '^Status' "$OUT/$name/console.txt" | head -1)"
+  keep "$OUT/$name" "$OUT/$name/console.txt" "Evidence:|evidencePath"
+  echo "$name: $(grep -E '^Status|"status"' "$OUT/$name/console.txt" | head -1)"
 }
 
 # --- 1. Discovery with the real LLM ---
@@ -75,3 +87,10 @@ faults '{}';                                    record 11-open-account-confirmed
 faults '{}';                                    record 12-open-account-validation-error npm run -s replay -- --artifact "$F" --params '{"memberId":"12345","accountType":"Checking","deposit":"-5"}' --confirm "${BLANK[@]}"
 faults '{"confirmOnSubmit":true}';              record 13-open-account-unexpected-dialog npm run -s replay -- --artifact "$F" --params '{"memberId":"12345","accountType":"Savings","deposit":"250"}' --confirm "${BLANK[@]}"
 faults '{}'
+
+# --- 3. Cross-tenant reuse: the Keystone artifact on Summit FCU (profiles/tenants/keystone-cu/summit.json) ---
+record 14-replay-on-summit-with-overlay npm run -s replay -- --artifact "$A" --params '{"memberId":"23456"}' --tenant summit "${BLANK[@]}"
+
+# --- 4. The capability catalog through MCP, as an agent host (Claude Code / Codex) calls it ---
+record 15-mcp-list-and-run npx tsx scripts/mcp-demo.ts lookup-member-savings-balance '{"memberId":"45678"}'
+record 16-mcp-run-on-summit npx tsx scripts/mcp-demo.ts lookup-member-savings-balance '{"memberId":"45678"}' summit

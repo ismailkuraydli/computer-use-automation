@@ -43,6 +43,21 @@ describe("EvidenceCollector", () => {
     expect(log.steps[0].result).toBe("success");
   });
 
+  it("stores screenshot paths relative to the workspace, not as absolute local paths", () => {
+    collector.logStep({
+      step: 1,
+      action: "navigate",
+      target: "",
+      result: "success",
+      url: "http://localhost:3000/search",
+      screenshotPath: path.join(collector.screenshotDir, "screen-1.png"),
+      axSnapshot: [],
+    });
+
+    const log = JSON.parse(readFileSync(path.join(collector.runDir, "structured-log.json"), "utf-8"));
+    expect(log.steps[0].screenshotPath).toBe(path.join("test-evidence", collector.runId, "screenshots", "screen-1.png"));
+  });
+
   it("logs multiple steps in order", () => {
     collector.logStep({ step: 1, action: "navigate", target: "url1", result: "success", url: "url1" });
     collector.logStep({ step: 2, action: "click", target: "button", result: "success", url: "url2" });

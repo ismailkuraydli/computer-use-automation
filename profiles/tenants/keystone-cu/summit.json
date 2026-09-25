@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1.0",
+  "app": "keystone-cu",
+  "tenant": "summit",
+  "description": "Summit FCU runs the same member-servicing product as Keystone CU, configured differently: relabelled fields, member pages under /members/, and its own security reminder.",
+  "baseUrl": "http://localhost:3100",
+  "labels": {
+    "Member ID": "Account Holder #",
+    "Balance": "Available Balance",
+    "Member Detail": "Account Holder Detail"
+  },
+  "routes": [{ "from": "/detail?id=", "to": "/members/" }],
+  "allowUrlPatterns": ["/members/*"],
+  "interstitials": [
+    {
+      "name": "Security Reminder",
+      "when": { "anyOf": [{ "axContains": [{ "role": "button", "name": "Dismiss" }], "textContains": "Security Reminder" }] },
+      "dismiss": { "role": "button", "name": "Dismiss" }
+    }
+  ],
+  "sensitive": {
+    "patterns": ["^Account Holder Detail - (.+)$"]
+  }
+}

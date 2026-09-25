@@ -1,0 +1,23 @@
+{
+  "name": "computer-use-automation",
+  "version": "0.2.0",
+  "description": "Record UI automations once with an LLM, then replay them deterministically as typed capabilities. Tools: list_capabilities, run_capability, discover_capability.",
+  "author": { "name": "Ismail Kuraydli" },
+  "homepage": "https://github.com/ismailkuraydli/computer-use-automation",
+  "license": "MIT",
+  "keywords": ["computer-use", "automation", "playwright", "mcp", "rpa"],
+  "mcpServers": "./codex-mcp.json",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Computer-Use Automation",
+    "shortDescription": "Discover and replay UI capabilities",
+    "longDescription": "Turns a goal into a recorded, typed capability for a web app with no API (discovery uses an LLM once), then replays it deterministically without a model. Replay reports business outcomes, failures with the failing step, and escalations that need a person.",
+    "developerName": "Ismail Kuraydli",
+    "category": "Developer Tools",
+    "websiteURL": "https://github.com/ismailkuraydli/computer-use-automation",
+    "defaultPrompt": [
+      "List the saved capabilities",
+      "Run lookup-member-savings-balance for member 45678"
+    ]
+  }
+}

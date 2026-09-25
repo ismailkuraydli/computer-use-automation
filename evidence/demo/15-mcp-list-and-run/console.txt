@@ -1,0 +1,15 @@
+computer-use-automation MCP server ready (workspace: .)
+tools: list_capabilities, run_capability, discover_capability
+capability: look-up-member-12345 v1 params={"searchQuery":{"type":"string","description":"The search query"}} irreversible=false
+capability: lookup-member-savings-balance v3 params={"memberId":{"type":"string","description":"The ID of the member to look up"}} irreversible=false
+
+call run_capability {"name":"lookup-member-savings-balance","params":{"memberId":"45678"}}
+{
+  "capability": "lookup-member-savings-balance",
+  "version": 3,
+  "status": "success",
+  "outputs": {
+    "savingsBalance": "$45,200.00"
+  },
+  "evidencePath": "evidence/00b7fa38"
+}

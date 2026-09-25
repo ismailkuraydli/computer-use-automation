@@ -1,22 +1,5 @@
-◇ injected env (6) from .env
-Using openrouter / google/gemini-3.5-flash-lite
-Checking model accessibility...
-Model accessible ✓
-
 Planning capability from goal...
-Capability: lookup-member-savings-balance
-Params: ["memberId"]
-Outputs: ["savingsBalance"]
-Sub-goals:
-  1: Enter the member ID into the search or member lookup field (keywords: search, member, ID, textbox, input)
-  2: Submit the search or click the member lookup button (keywords: lookup, search, submit, button)
-  3: Locate and read the balance of the Savings account (keywords: Savings, balance, account, amount)
-
-Browser: headless
-
-Goal: Look up member 23456 and read the balance of their Savings account
-Target: http://localhost:3000/search
-
+Capability: lookup-member-savings-balance — params ["memberId"], outputs ["savingsBalance"]
   [Sub-goal 1 complete, advancing to 2]
   [Sub-goal 2 complete, advancing to 3]
 
@@ -27,8 +10,6 @@ Reason: goal met
 Outputs: {
   "savingsBalance": "$8,234.50"
 }
-Evidence: evidence/45d1c8db
-Self-check replay: passed (evidence/9a5c80fe)
-Artifact saved: artifacts/lookup-member-savings-balance/v11.json
-
-Evidence directory: evidence/45d1c8db
+Evidence: evidence/f45ff892
+Self-check replay: passed (evidence/0e216b5e)
+Artifact saved: artifacts/lookup-member-savings-balance/v3.json

@@ -1,0 +1,12 @@
+{
+  "name": "computer-use-automation",
+  "description": "Computer-use automation: LLM discovery, deterministic replay, human handoff.",
+  "owner": { "name": "Ismail Kuraydli" },
+  "plugins": [
+    {
+      "name": "computer-use-automation",
+      "source": "./",
+      "description": "Discover, list and run recorded UI capabilities from Claude Code."
+    }
+  ]
+}
