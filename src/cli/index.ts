@@ -4,29 +4,16 @@
  * Thin wrapper that delegates to existing components.
  */
 
-import { parseArgs } from "util";
+import { parseCliArgs } from "./args.js";
 
-const { values, positionals } = parseArgs({
-  args: process.argv.slice(2),
-  allowPositionals: true,
-  options: {
-    goal: { type: "string" },
-    target: { type: "string", default: "http://localhost:3000" },
-    output: { type: "string", default: "./artifacts" },
-    artifact: { type: "string" },
-    params: { type: "string", default: "{}" },
-    "mock-llm": { type: "boolean", default: false },
-    headed: { type: "boolean", default: false },
-    config: { type: "string" },
-    allowlist: { type: "string" },
-    app: { type: "string" },
-    confirm: { type: "boolean", default: false },
-    handoff: { type: "boolean", default: false },
-    help: { type: "boolean", default: false },
-  },
-});
+const parsed = parseCliArgs(process.argv.slice(2));
+if (!parsed.ok) {
+  console.error(`Error: ${parsed.message}`);
+  console.error("Run 'cua --help' for usage.");
+  process.exit(2);
+}
 
-const command = positionals[0];
+const { command, values } = parsed;
 
 if (values.help || !command) {
   console.log(`cua — Computer-Use Automation CLI
@@ -41,6 +28,7 @@ Options:
   --output     Output path for artifact (discover)
   --artifact   Path to saved artifact JSON (replay)
   --params     JSON string of input parameters (replay)
+  --tenant     Tenant overlay from profiles/tenants/<app>/<tenant>.json (replay)
   --mock-llm   Use MockLLMClient instead of real LLM (discover)
   --headed     Show the browser window (discover, replay)
   --config     Path to cua.config.json (default: ./cua.config.json)
@@ -56,6 +44,9 @@ Config (cua.config.json):
 Environment:
   OPENROUTER_API_KEY  Required for real LLM discovery (unless --mock-llm)
                       Set via the apiKeyEnvVar in cua.config.json
+  CUA_WORKSPACE       Where artifacts and evidence live (default: current directory)
+
+MCP server (for Claude Code / Codex): npm run mcp, or bin/cua-mcp
 `);
   process.exit(0);
 }
