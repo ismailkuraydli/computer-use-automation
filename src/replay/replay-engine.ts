@@ -306,9 +306,12 @@ export class ReplayEngine {
       return escalated(step.id, reason, this.evidence.runDir, this.humanActions, "aborted");
     }
     if (checkpoint && outcome.checkpointPassed) {
+      // Same rule as for automation: a known error page is never "done".
       const state = await this.surface.observe();
-      this._log(step, "success", "Checkpoint met after human intervention", state);
-      return { stepDone: true, state };
+      if (!ErrorClassifier.classify(state, ctx.handlers)) {
+        this._log(step, "success", "Checkpoint met after human intervention", state);
+        return { stepDone: true, state };
+      }
     }
     return "retry-action";
   }

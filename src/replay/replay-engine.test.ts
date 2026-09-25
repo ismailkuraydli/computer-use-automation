@@ -370,6 +370,32 @@ describe("ReplayEngine", () => {
       expect(surface.actions).toHaveLength(1);
     });
 
+    it("does not accept a human 'done' while a known error page is on screen", async () => {
+      const urlOnly: ArtifactStep = { ...NAVIGATE, checkpoint: { anyOf: [{ urlPattern: "/search" }] } };
+      const expiredProfile = {
+        ...PROFILE,
+        conditions: [{ when: { anyOf: [{ textContains: "Session Expired" }] }, kind: "escalate" as const, description: "Session expired" }],
+      };
+      const EXPIRED = screen("http://localhost:3000/search", ["Session Expired"]);
+      const surface = new ScriptedSurface([
+        { result: OK, state: EXPIRED },
+        { result: OK, state: SEARCH },
+      ]);
+      const human = new FakeHandoff(surface, "done", EXPIRED, true);
+      const replay = new ReplayEngine({
+        surface,
+        evidenceCollector: new EvidenceCollector(TEST_EVIDENCE_DIR),
+        profile: expiredProfile,
+        checkpointTimeoutMs: FAST_CHECKPOINT_MS,
+        handoff: human,
+      });
+
+      const result = await replay.run(artifact([urlOnly], noOutputs), { memberId: "1" });
+
+      expect(result.status).toBe("success");
+      expect(surface.actions).toHaveLength(2);
+    });
+
     it("re-runs the step after the human clears the blocker", async () => {
       const surface = new ScriptedSurface([
         { result: BLOCKED, state: SEARCH },
