@@ -92,7 +92,7 @@
     "context": {
       "row": [
         "12345",
-        "John A. Smith",
+        "[REDACTED]",
         "[REDACTED]",
         "2"
       ],
@@ -101,13 +101,13 @@
   },
   {
     "role": "cell",
-    "name": "John A. Smith",
+    "name": "[REDACTED]",
     "children": [],
     "framePath": [],
     "context": {
       "row": [
         "12345",
-        "John A. Smith",
+        "[REDACTED]",
         "[REDACTED]",
         "2"
       ],
@@ -122,7 +122,7 @@
     "context": {
       "row": [
         "12345",
-        "John A. Smith",
+        "[REDACTED]",
         "[REDACTED]",
         "2"
       ],
@@ -137,7 +137,7 @@
     "context": {
       "row": [
         "12345",
-        "John A. Smith",
+        "[REDACTED]",
         "[REDACTED]",
         "2"
       ],
@@ -176,7 +176,7 @@
     "context": {
       "row": [
         "12345",
-        "John A. Smith",
+        "[REDACTED]",
         "[REDACTED]",
         "2"
       ],
@@ -185,7 +185,7 @@
   },
   {
     "role": "StaticText",
-    "name": "John A. Smith",
+    "name": "[REDACTED]",
     "children": [],
     "framePath": []
   },
@@ -268,7 +268,7 @@
   },
   {
     "role": "InlineTextBox",
-    "name": "John A. Smith",
+    "name": "[REDACTED]",
     "children": [],
     "framePath": []
   },
@@ -344,11 +344,11 @@
   },
   {
     "role": "cell",
-    "name": "Member IDNameSSNAccounts\n          12345\n          John A. Smith[REDACTED]\n          2",
+    "name": "Member IDNameSSNAccounts\n          12345\n          [REDACTED][REDACTED]\n          2",
     "children": [],
     "context": {
       "row": [
-        "Member IDNameSSNAccounts 12345 John A. Smith[REDACTED] 2"
+        "Member IDNameSSNAccounts 12345 [REDACTED][REDACTED] 2"
       ]
     },
     "framePath": []

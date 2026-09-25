@@ -1,8 +1,8 @@
 {
   "schemaVersion": "2.0",
-  "artifactVersion": 9,
+  "artifactVersion": 11,
   "capability": "lookup-member-savings-balance",
-  "description": "Look up a member by ID and read the balance of their Savings account.",
+  "description": "Looks up a member ID and retrieves the balance of their Savings account.",
   "surface": {
     "type": "web",
     "baseUrl": "http://localhost:3000",
@@ -147,8 +147,8 @@
     "outputsExtracted": true
   },
   "metadata": {
-    "recordedAt": "2026-09-25T04:06:13.107Z",
+    "recordedAt": "2026-09-25T04:21:57.364Z",
     "recordedBy": "ismailkuraydli",
-    "selfCheck": "passed (evidence/e0a49866)"
+    "selfCheck": "passed (evidence/9a5c80fe)"
   }
 }

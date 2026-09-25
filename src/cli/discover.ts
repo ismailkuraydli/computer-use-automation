@@ -10,6 +10,7 @@ import { AgentLoop } from "../discovery/agent-loop.js";
 import { Recorder } from "../discovery/recorder.js";
 import { ReplayEngine } from "../replay/replay-engine.js";
 import { loadProfile } from "../artifact/profile-store.js";
+import { SensitiveDataRedactor } from "../safety/sensitive-data.js";
 import type { CapabilityArtifact } from "../artifact/types.js";
 import { SafetyGuard } from "../safety/safety-guard.js";
 import { EvidenceCollector } from "../evidence/evidence-collector.js";
@@ -48,6 +49,18 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
 
   // Load config
   const config = loadConfig(opts.config);
+
+  // One redactor per run, from the app profile: it learns sensitive values
+  // (names, dates of birth...) as screens are observed and scrubs them from
+  // LLM prompts, evidence, screenshots and the saved artifact.
+  let profile;
+  try {
+    profile = loadProfile(opts.app as string | undefined);
+  } catch (e) {
+    console.error(`Error loading app profile: ${(e as Error).message}`);
+    process.exit(1);
+  }
+  const redactor = new SensitiveDataRedactor(profile.sensitive);
 
   // Determine LLM client
   let llmClient;
@@ -92,7 +105,7 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
     }
     console.log("Model accessible ✓");
 
-    llmClient = new OpenRouterClient(apiKey, config);
+    llmClient = new OpenRouterClient(apiKey, config, redactor);
   }
 
   // Load allowlist
@@ -135,9 +148,9 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
   const headless = headed ? false : config.headless;
   console.log(`\nBrowser: ${headless ? "headless" : "headed (visible)"}`);
 
-  const evidence = new EvidenceCollector("./evidence");
+  const evidence = new EvidenceCollector("./evidence", redactor);
 
-  const surface = new PlaywrightSurface({ headless, screenshotDir: evidence.screenshotDir });
+  const surface = new PlaywrightSurface({ headless, screenshotDir: evidence.screenshotDir, redactor });
   await surface._start(target);
 
   // Pass paramValues to the Recorder so it can parameterize concrete values
@@ -191,10 +204,10 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
   console.log(`Evidence: ${evidence.runDir}`);
 
   if (result.success) {
-    const selfCheck = await selfCheckReplay(result.artifact, recorder.discoveryParams, headless);
+    const selfCheck = await selfCheckReplay(result.artifact, recorder.discoveryParams, headless, redactor);
     console.log(`Self-check replay: ${selfCheck}`);
     const store = new ArtifactStore(outputPath.includes(".json") ? "./artifacts" : outputPath);
-    const savedPath = store.save({ ...result.artifact, metadata: { ...result.artifact.metadata, selfCheck } });
+    const savedPath = store.save({ ...result.artifact, metadata: { ...result.artifact.metadata, selfCheck } }, redactor);
     console.log(`Artifact saved: ${savedPath}`);
   }
 
@@ -209,13 +222,14 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
 async function selfCheckReplay(
   artifact: CapabilityArtifact,
   params: Record<string, string>,
-  headless: boolean
+  headless: boolean,
+  redactor: SensitiveDataRedactor
 ): Promise<string> {
   if (artifact.steps.some((s) => s.classification === "irreversible")) {
     return "skipped: artifact has irreversible steps";
   }
-  const evidence = new EvidenceCollector("./evidence");
-  const surface = new PlaywrightSurface({ headless, screenshotDir: evidence.screenshotDir });
+  const evidence = new EvidenceCollector("./evidence", redactor);
+  const surface = new PlaywrightSurface({ headless, screenshotDir: evidence.screenshotDir, redactor });
   try {
     await surface._start();
     const engine = new ReplayEngine({ surface, evidenceCollector: evidence, profile: loadProfile(artifact.surface.app) });

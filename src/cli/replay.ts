@@ -8,6 +8,7 @@ import { EvidenceCollector } from "../evidence/evidence-collector.js";
 import { loadConfig } from "../config.js";
 import { loadArtifactFile } from "../artifact/artifact-store.js";
 import { loadProfile } from "../artifact/profile-store.js";
+import { SensitiveDataRedactor } from "../safety/sensitive-data.js";
 import { EscalationManager } from "../escalation/escalation-manager.js";
 import { TerminalOperatorChannel } from "../escalation/operator-channel.js";
 
@@ -54,11 +55,15 @@ export async function runReplay(opts: Record<string, any>): Promise<void> {
   const headless = headed ? false : config.headless;
   console.log(`Browser: ${headless ? "headless" : "headed (visible)"}`);
 
-  const evidence = new EvidenceCollector("./evidence");
+  // One redactor per run: it learns sensitive values as screens are observed
+  // and scrubs them from evidence, screenshots and everything written.
+  const redactor = new SensitiveDataRedactor(profile.sensitive);
+  const evidence = new EvidenceCollector("./evidence", redactor);
 
   const surface = new PlaywrightSurface({
     headless,
     screenshotDir: evidence.screenshotDir,
+    redactor,
     ...(handoff ? { remoteDebuggingPort: HANDOFF_DEBUG_PORT } : {}),
   });
   await surface._start(target);

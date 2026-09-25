@@ -6,7 +6,7 @@
       "target": "http://localhost:3000/search",
       "result": "success",
       "url": "http://localhost:3000/search",
-      "screenshotPath": "evidence/ab8f3b1a/screenshots/screen-b7fb117c.png",
+      "screenshotPath": "evidence/04bf4b5b/screenshots/screen-f495334f.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -119,7 +119,7 @@
       "target": "textbox \"Member ID\"",
       "result": "success",
       "url": "http://localhost:3000/search",
-      "screenshotPath": "evidence/ab8f3b1a/screenshots/screen-f165afcd.png",
+      "screenshotPath": "evidence/04bf4b5b/screenshots/screen-1275d192.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -245,7 +245,7 @@
       "target": "button \"Search\"",
       "result": "success",
       "url": "http://localhost:3000/search?q=34567&btnSearch=Search",
-      "screenshotPath": "evidence/ab8f3b1a/screenshots/screen-aeaf3de2.png",
+      "screenshotPath": "evidence/04bf4b5b/screenshots/screen-8af0c813.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -340,7 +340,7 @@
           "context": {
             "row": [
               "34567",
-              "Robert C. Lee",
+              "[REDACTED]",
               "[REDACTED]",
               "1"
             ],
@@ -349,13 +349,13 @@
         },
         {
           "role": "cell",
-          "name": "Robert C. Lee",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": [],
           "context": {
             "row": [
               "34567",
-              "Robert C. Lee",
+              "[REDACTED]",
               "[REDACTED]",
               "1"
             ],
@@ -370,7 +370,7 @@
           "context": {
             "row": [
               "34567",
-              "Robert C. Lee",
+              "[REDACTED]",
               "[REDACTED]",
               "1"
             ],
@@ -385,7 +385,7 @@
           "context": {
             "row": [
               "34567",
-              "Robert C. Lee",
+              "[REDACTED]",
               "[REDACTED]",
               "1"
             ],
@@ -424,7 +424,7 @@
           "context": {
             "row": [
               "34567",
-              "Robert C. Lee",
+              "[REDACTED]",
               "[REDACTED]",
               "1"
             ],
@@ -433,7 +433,7 @@
         },
         {
           "role": "StaticText",
-          "name": "Robert C. Lee",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -516,7 +516,7 @@
         },
         {
           "role": "InlineTextBox",
-          "name": "Robert C. Lee",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -592,11 +592,11 @@
         },
         {
           "role": "cell",
-          "name": "Member IDNameSSNAccounts\n          34567\n          Robert C. Lee[REDACTED]\n          1",
+          "name": "Member IDNameSSNAccounts\n          34567\n          [REDACTED][REDACTED]\n          1",
           "children": [],
           "context": {
             "row": [
-              "Member IDNameSSNAccounts 34567 Robert C. Lee[REDACTED] 1"
+              "Member IDNameSSNAccounts 34567 [REDACTED][REDACTED] 1"
             ]
           },
           "framePath": []
@@ -609,7 +609,7 @@
       "target": "link \"{{memberId}}\"",
       "result": "success",
       "url": "http://localhost:3000/detail?id=34567",
-      "screenshotPath": "evidence/ab8f3b1a/screenshots/screen-09c7702e.png",
+      "screenshotPath": "evidence/04bf4b5b/screenshots/screen-19049481.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -619,12 +619,12 @@
         },
         {
           "role": "heading",
-          "name": "Member Detail - Robert C. Lee",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "framePath": [],
           "context": {
             "row": [
-              "Member Detail - Robert C. Lee"
+              "Member Detail - [REDACTED]"
             ]
           }
         },
@@ -664,7 +664,7 @@
         },
         {
           "role": "StaticText",
-          "name": "Member Detail - Robert C. Lee",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -694,7 +694,7 @@
         },
         {
           "role": "InlineTextBox",
-          "name": "Member Detail - Robert C. Lee",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -746,7 +746,7 @@
             "row": [
               "34567",
               "[REDACTED]",
-              "1968-11-30"
+              "[REDACTED]"
             ],
             "column": "Member ID"
           }
@@ -760,21 +760,21 @@
             "row": [
               "34567",
               "[REDACTED]",
-              "1968-11-30"
+              "[REDACTED]"
             ],
             "column": "SSN"
           }
         },
         {
           "role": "cell",
-          "name": "1968-11-30",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": [],
           "context": {
             "row": [
               "34567",
               "[REDACTED]",
-              "1968-11-30"
+              "[REDACTED]"
             ],
             "column": "DOB"
           }
@@ -939,7 +939,7 @@
         },
         {
           "role": "StaticText",
-          "name": "1968-11-30",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -1032,7 +1032,7 @@
         },
         {
           "role": "InlineTextBox",
-          "name": "1968-11-30",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -1092,22 +1092,22 @@
         },
         {
           "role": "cell",
-          "name": "Member Detail - Robert C. Lee",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "context": {
             "row": [
-              "Member Detail - Robert C. Lee"
+              "Member Detail - [REDACTED]"
             ]
           },
           "framePath": []
         },
         {
           "role": "cell",
-          "name": "Member IDSSNDOB\n      34567[REDACTED]1968-11-30",
+          "name": "Member IDSSNDOB\n      34567[REDACTED][REDACTED]",
           "children": [],
           "context": {
             "row": [
-              "Member IDSSNDOB 34567[REDACTED]1968-11-30"
+              "Member IDSSNDOB 34567[REDACTED][REDACTED]"
             ]
           },
           "framePath": []
@@ -1153,7 +1153,7 @@
       "target": "cell in row \"Savings\" under column \"Balance\"",
       "result": "failure",
       "url": "http://localhost:3000/detail?id=34567",
-      "screenshotPath": "evidence/ab8f3b1a/screenshots/screen-58909b29.png",
+      "screenshotPath": "evidence/04bf4b5b/screenshots/screen-c53d5a0d.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -1163,12 +1163,12 @@
         },
         {
           "role": "heading",
-          "name": "Member Detail - Robert C. Lee",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "framePath": [],
           "context": {
             "row": [
-              "Member Detail - Robert C. Lee"
+              "Member Detail - [REDACTED]"
             ]
           }
         },
@@ -1208,7 +1208,7 @@
         },
         {
           "role": "StaticText",
-          "name": "Member Detail - Robert C. Lee",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -1238,7 +1238,7 @@
         },
         {
           "role": "InlineTextBox",
-          "name": "Member Detail - Robert C. Lee",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -1290,7 +1290,7 @@
             "row": [
               "34567",
               "[REDACTED]",
-              "1968-11-30"
+              "[REDACTED]"
             ],
             "column": "Member ID"
           }
@@ -1304,21 +1304,21 @@
             "row": [
               "34567",
               "[REDACTED]",
-              "1968-11-30"
+              "[REDACTED]"
             ],
             "column": "SSN"
           }
         },
         {
           "role": "cell",
-          "name": "1968-11-30",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": [],
           "context": {
             "row": [
               "34567",
               "[REDACTED]",
-              "1968-11-30"
+              "[REDACTED]"
             ],
             "column": "DOB"
           }
@@ -1483,7 +1483,7 @@
         },
         {
           "role": "StaticText",
-          "name": "1968-11-30",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -1576,7 +1576,7 @@
         },
         {
           "role": "InlineTextBox",
-          "name": "1968-11-30",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -1636,22 +1636,22 @@
         },
         {
           "role": "cell",
-          "name": "Member Detail - Robert C. Lee",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "context": {
             "row": [
-              "Member Detail - Robert C. Lee"
+              "Member Detail - [REDACTED]"
             ]
           },
           "framePath": []
         },
         {
           "role": "cell",
-          "name": "Member IDSSNDOB\n      34567[REDACTED]1968-11-30",
+          "name": "Member IDSSNDOB\n      34567[REDACTED][REDACTED]",
           "children": [],
           "context": {
             "row": [
-              "Member IDSSNDOB 34567[REDACTED]1968-11-30"
+              "Member IDSSNDOB 34567[REDACTED][REDACTED]"
             ]
           },
           "framePath": []

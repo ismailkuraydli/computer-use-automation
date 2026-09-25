@@ -8,7 +8,7 @@ import { mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync } from 
 import path from "path";
 import type { CapabilityArtifact } from "./types.js";
 import { toCurrentArtifact } from "./migrate.js";
-import { redactPIIInObject } from "../safety/pii-redactor.js";
+import { SensitiveDataRedactor } from "../safety/sensitive-data.js";
 
 export class ArtifactStore {
   private baseDir: string;
@@ -18,7 +18,8 @@ export class ArtifactStore {
     mkdirSync(baseDir, { recursive: true });
   }
 
-  save(artifact: CapabilityArtifact): string {
+  /** Save a new version. Regulated data (including values learned during the run) is redacted. */
+  save(artifact: CapabilityArtifact, redactor: SensitiveDataRedactor = new SensitiveDataRedactor()): string {
     const capabilityDir = path.join(this.baseDir, artifact.capability);
     mkdirSync(capabilityDir, { recursive: true });
 
@@ -31,7 +32,7 @@ export class ArtifactStore {
     const versionedArtifact = { ...artifact, artifactVersion: nextVersion };
 
     // Redact PII before writing
-    const redacted = redactPIIInObject(versionedArtifact);
+    const redacted = redactor.redactDeep(versionedArtifact);
 
     const filename = `v${nextVersion}.json`;
     const filePath = path.join(capabilityDir, filename);

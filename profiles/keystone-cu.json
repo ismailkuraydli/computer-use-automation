@@ -3,6 +3,10 @@
   "app": "keystone-cu",
   "version": 1,
   "description": "Keystone CU member servicing (legacy server-rendered back office). Runtime conditions any screen can show.",
+  "sensitive": {
+    "fields": ["Name", "SSN", "DOB", "Member"],
+    "patterns": ["^Member Detail - (.+)$", "^Open New Sub-Account for (.+?) \\(\\d+\\)"]
+  },
   "interstitials": [
     {
       "name": "System Notice",

@@ -6,7 +6,7 @@
       "target": "http://localhost:3000/search",
       "result": "success",
       "url": "http://localhost:3000/search",
-      "screenshotPath": "evidence/79dbe406/screenshots/screen-dc622ced.png",
+      "screenshotPath": "evidence/ccf749c4/screenshots/screen-e8659dfd.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -197,7 +197,7 @@
       "target": "textbox \"Member ID\"",
       "result": "success",
       "url": "http://localhost:3000/search",
-      "screenshotPath": "evidence/79dbe406/screenshots/screen-e88105d9.png",
+      "screenshotPath": "evidence/ccf749c4/screenshots/screen-27b9bcf6.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -323,7 +323,7 @@
       "target": "button \"Search\"",
       "result": "success",
       "url": "http://localhost:3000/search?q=12345&btnSearch=Search",
-      "screenshotPath": "evidence/79dbe406/screenshots/screen-e226da69.png",
+      "screenshotPath": "evidence/ccf749c4/screenshots/screen-17b050c3.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -441,7 +441,7 @@
           "context": {
             "row": [
               "12345",
-              "John A. Smith",
+              "[REDACTED]",
               "[REDACTED]",
               "2"
             ],
@@ -450,13 +450,13 @@
         },
         {
           "role": "cell",
-          "name": "John A. Smith",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": [],
           "context": {
             "row": [
               "12345",
-              "John A. Smith",
+              "[REDACTED]",
               "[REDACTED]",
               "2"
             ],
@@ -471,7 +471,7 @@
           "context": {
             "row": [
               "12345",
-              "John A. Smith",
+              "[REDACTED]",
               "[REDACTED]",
               "2"
             ],
@@ -486,7 +486,7 @@
           "context": {
             "row": [
               "12345",
-              "John A. Smith",
+              "[REDACTED]",
               "[REDACTED]",
               "2"
             ],
@@ -543,7 +543,7 @@
           "context": {
             "row": [
               "12345",
-              "John A. Smith",
+              "[REDACTED]",
               "[REDACTED]",
               "2"
             ],
@@ -552,7 +552,7 @@
         },
         {
           "role": "StaticText",
-          "name": "John A. Smith",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -641,7 +641,7 @@
         },
         {
           "role": "InlineTextBox",
-          "name": "John A. Smith",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -717,11 +717,11 @@
         },
         {
           "role": "cell",
-          "name": "Member IDNameSSNAccounts\n          12345\n          John A. Smith[REDACTED]\n          2",
+          "name": "Member IDNameSSNAccounts\n          12345\n          [REDACTED][REDACTED]\n          2",
           "children": [],
           "context": {
             "row": [
-              "Member IDNameSSNAccounts 12345 John A. Smith[REDACTED] 2"
+              "Member IDNameSSNAccounts 12345 [REDACTED][REDACTED] 2"
             ]
           },
           "framePath": []
@@ -765,7 +765,7 @@
       "target": "link \"{{memberId}}\"",
       "result": "success",
       "url": "http://localhost:3000/detail?id=12345",
-      "screenshotPath": "evidence/79dbe406/screenshots/screen-7445c0b8.png",
+      "screenshotPath": "evidence/ccf749c4/screenshots/screen-1b1e7b05.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -775,12 +775,12 @@
         },
         {
           "role": "heading",
-          "name": "Member Detail - John A. Smith",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "framePath": [],
           "context": {
             "row": [
-              "Member Detail - John A. Smith"
+              "Member Detail - [REDACTED]"
             ]
           }
         },
@@ -820,7 +820,7 @@
         },
         {
           "role": "StaticText",
-          "name": "Member Detail - John A. Smith",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -850,7 +850,7 @@
         },
         {
           "role": "InlineTextBox",
-          "name": "Member Detail - John A. Smith",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -902,7 +902,7 @@
             "row": [
               "12345",
               "[REDACTED]",
-              "1975-03-15"
+              "[REDACTED]"
             ],
             "column": "Member ID"
           }
@@ -916,21 +916,21 @@
             "row": [
               "12345",
               "[REDACTED]",
-              "1975-03-15"
+              "[REDACTED]"
             ],
             "column": "SSN"
           }
         },
         {
           "role": "cell",
-          "name": "1975-03-15",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": [],
           "context": {
             "row": [
               "12345",
               "[REDACTED]",
-              "1975-03-15"
+              "[REDACTED]"
             ],
             "column": "DOB"
           }
@@ -1155,7 +1155,7 @@
         },
         {
           "role": "StaticText",
-          "name": "1975-03-15",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -1281,7 +1281,7 @@
         },
         {
           "role": "InlineTextBox",
-          "name": "1975-03-15",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -1371,22 +1371,22 @@
         },
         {
           "role": "cell",
-          "name": "Member Detail - John A. Smith",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "context": {
             "row": [
-              "Member Detail - John A. Smith"
+              "Member Detail - [REDACTED]"
             ]
           },
           "framePath": []
         },
         {
           "role": "cell",
-          "name": "Member IDSSNDOB\n      12345[REDACTED]1975-03-15",
+          "name": "Member IDSSNDOB\n      12345[REDACTED][REDACTED]",
           "children": [],
           "context": {
             "row": [
-              "Member IDSSNDOB 12345[REDACTED]1975-03-15"
+              "Member IDSSNDOB 12345[REDACTED][REDACTED]"
             ]
           },
           "framePath": []
@@ -1432,7 +1432,7 @@
       "target": "cell in row \"Savings\" under column \"Balance\"",
       "result": "success",
       "url": "http://localhost:3000/detail?id=12345",
-      "screenshotPath": "evidence/79dbe406/screenshots/screen-0d2702b8.png",
+      "screenshotPath": "evidence/ccf749c4/screenshots/screen-c7082d0d.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -1442,12 +1442,12 @@
         },
         {
           "role": "heading",
-          "name": "Member Detail - John A. Smith",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "framePath": [],
           "context": {
             "row": [
-              "Member Detail - John A. Smith"
+              "Member Detail - [REDACTED]"
             ]
           }
         },
@@ -1487,7 +1487,7 @@
         },
         {
           "role": "StaticText",
-          "name": "Member Detail - John A. Smith",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -1517,7 +1517,7 @@
         },
         {
           "role": "InlineTextBox",
-          "name": "Member Detail - John A. Smith",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -1569,7 +1569,7 @@
             "row": [
               "12345",
               "[REDACTED]",
-              "1975-03-15"
+              "[REDACTED]"
             ],
             "column": "Member ID"
           }
@@ -1583,21 +1583,21 @@
             "row": [
               "12345",
               "[REDACTED]",
-              "1975-03-15"
+              "[REDACTED]"
             ],
             "column": "SSN"
           }
         },
         {
           "role": "cell",
-          "name": "1975-03-15",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": [],
           "context": {
             "row": [
               "12345",
               "[REDACTED]",
-              "1975-03-15"
+              "[REDACTED]"
             ],
             "column": "DOB"
           }
@@ -1822,7 +1822,7 @@
         },
         {
           "role": "StaticText",
-          "name": "1975-03-15",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -1948,7 +1948,7 @@
         },
         {
           "role": "InlineTextBox",
-          "name": "1975-03-15",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -2038,22 +2038,22 @@
         },
         {
           "role": "cell",
-          "name": "Member Detail - John A. Smith",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "context": {
             "row": [
-              "Member Detail - John A. Smith"
+              "Member Detail - [REDACTED]"
             ]
           },
           "framePath": []
         },
         {
           "role": "cell",
-          "name": "Member IDSSNDOB\n      12345[REDACTED]1975-03-15",
+          "name": "Member IDSSNDOB\n      12345[REDACTED][REDACTED]",
           "children": [],
           "context": {
             "row": [
-              "Member IDSSNDOB 12345[REDACTED]1975-03-15"
+              "Member IDSSNDOB 12345[REDACTED][REDACTED]"
             ]
           },
           "framePath": []

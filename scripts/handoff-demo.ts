@@ -16,6 +16,7 @@ import { EscalationManager } from "../src/escalation/escalation-manager.js";
 import type { OperatorChannel } from "../src/escalation/operator-channel.js";
 import { loadArtifactFile } from "../src/artifact/artifact-store.js";
 import { loadProfile } from "../src/artifact/profile-store.js";
+import { SensitiveDataRedactor } from "../src/safety/sensitive-data.js";
 
 async function main(): Promise<void> {
   const [artifactPath, paramsJson = "{}"] = process.argv.slice(2);
@@ -23,8 +24,9 @@ async function main(): Promise<void> {
 
   const artifact = loadArtifactFile(artifactPath);
   const profile = { ...loadProfile(artifact.surface.app), interstitials: [] };
-  const evidence = new EvidenceCollector("./evidence");
-  const surface = new PlaywrightSurface({ headless: true, screenshotDir: evidence.screenshotDir });
+  const redactor = new SensitiveDataRedactor(profile.sensitive);
+  const evidence = new EvidenceCollector("./evidence", redactor);
+  const surface = new PlaywrightSurface({ headless: true, screenshotDir: evidence.screenshotDir, redactor });
   await surface._start();
 
   const operator: OperatorChannel = {

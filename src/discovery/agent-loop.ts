@@ -146,7 +146,9 @@ export class AgentLoop {
       const action = llmResponse.action;
 
       // Keep the model's row scope only where it is needed, and as one cell.
-      if (action.target) action.target = normalizeRowScope(action.target, screenState.axTree);
+      if (action.target) {
+        action.target = normalizeRowScope(action.target, screenState.axTree, (t) => this.opts.evidenceCollector.redactor.redact(t));
+      }
 
       // Enrich the target with its frame from the AX tree — the LLM doesn't
       // know about frames, but every AX node carries its framePath.
@@ -364,7 +366,7 @@ const normText = (t: string) => t.replace(/\s+/g, " ").trim().toLowerCase();
  * row to a target that is already unique. Drop the row when role + name is
  * unique; replace a full-row copy with the row's first other cell.
  */
-export function normalizeRowScope(target: TargetSpec, tree: AXNode[]): TargetSpec {
+export function normalizeRowScope(target: TargetSpec, tree: AXNode[], redact: (text: string) => string = redactPII): TargetSpec {
   if (!target.row) return target;
   const { row, ...rest } = target;
   const same = tree.filter((n) => n.role === target.role && (!target.name || normText(n.name) === normText(target.name)));
@@ -374,7 +376,7 @@ export function normalizeRowScope(target: TargetSpec, tree: AXNode[]): TargetSpe
   if (same.some((n) => cells(n).includes(normText(row)))) return target;
 
   // The model saw the row redacted, so compare against the redacted form
-  const copied = same.find((n) => normText(redactPII((n.context?.row ?? []).join(" | "))) === normText(row));
+  const copied = same.find((n) => normText(redact((n.context?.row ?? []).join(" | "))) === normText(row));
   const key = copied?.context?.row?.find((c) => c && normText(c) !== normText(target.name ?? ""));
   return key ? { ...rest, row: key } : target;
 }

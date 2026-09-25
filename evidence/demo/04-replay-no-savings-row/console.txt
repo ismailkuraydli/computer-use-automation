@@ -15,4 +15,4 @@ Expected: extract cell in row "Savings" under column "Balance"
 Observed: element-not-found: No table row containing "Savings"
 Error: element-not-found
 
-Evidence: evidence/ab8f3b1a
+Evidence: evidence/04bf4b5b

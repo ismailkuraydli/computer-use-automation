@@ -92,7 +92,7 @@
     "context": {
       "row": [
         "34567",
-        "Robert C. Lee",
+        "[REDACTED]",
         "[REDACTED]",
         "1"
       ],
@@ -101,13 +101,13 @@
   },
   {
     "role": "cell",
-    "name": "Robert C. Lee",
+    "name": "[REDACTED]",
     "children": [],
     "framePath": [],
     "context": {
       "row": [
         "34567",
-        "Robert C. Lee",
+        "[REDACTED]",
         "[REDACTED]",
         "1"
       ],
@@ -122,7 +122,7 @@
     "context": {
       "row": [
         "34567",
-        "Robert C. Lee",
+        "[REDACTED]",
         "[REDACTED]",
         "1"
       ],
@@ -137,7 +137,7 @@
     "context": {
       "row": [
         "34567",
-        "Robert C. Lee",
+        "[REDACTED]",
         "[REDACTED]",
         "1"
       ],
@@ -176,7 +176,7 @@
     "context": {
       "row": [
         "34567",
-        "Robert C. Lee",
+        "[REDACTED]",
         "[REDACTED]",
         "1"
       ],
@@ -185,7 +185,7 @@
   },
   {
     "role": "StaticText",
-    "name": "Robert C. Lee",
+    "name": "[REDACTED]",
     "children": [],
     "framePath": []
   },
@@ -268,7 +268,7 @@
   },
   {
     "role": "InlineTextBox",
-    "name": "Robert C. Lee",
+    "name": "[REDACTED]",
     "children": [],
     "framePath": []
   },
@@ -344,11 +344,11 @@
   },
   {
     "role": "cell",
-    "name": "Member IDNameSSNAccounts\n          34567\n          Robert C. Lee[REDACTED]\n          1",
+    "name": "Member IDNameSSNAccounts\n          34567\n          [REDACTED][REDACTED]\n          1",
     "children": [],
     "context": {
       "row": [
-        "Member IDNameSSNAccounts 34567 Robert C. Lee[REDACTED] 1"
+        "Member IDNameSSNAccounts 34567 [REDACTED][REDACTED] 1"
       ]
     },
     "framePath": []

@@ -7,24 +7,24 @@
   },
   {
     "role": "heading",
-    "name": "Open New Sub-Account for John A. Smith (12345)",
+    "name": "Open New Sub-Account for [REDACTED] (12345)",
     "children": [],
     "framePath": [],
     "context": {
       "row": [
-        "Open New Sub-Account for John A. Smith (12345)"
+        "Open New Sub-Account for [REDACTED] (12345)"
       ]
     }
   },
   {
     "role": "StaticText",
-    "name": "Open New Sub-Account for John A. Smith (12345)",
+    "name": "Open New Sub-Account for [REDACTED] (12345)",
     "children": [],
     "framePath": []
   },
   {
     "role": "InlineTextBox",
-    "name": "Open New Sub-Account for John A. Smith (12345)",
+    "name": "Open New Sub-Account for [REDACTED] (12345)",
     "children": [],
     "framePath": []
   },
@@ -162,11 +162,11 @@
   },
   {
     "role": "cell",
-    "name": "Open New Sub-Account for John A. Smith (12345)",
+    "name": "Open New Sub-Account for [REDACTED] (12345)",
     "children": [],
     "context": {
       "row": [
-        "Open New Sub-Account for John A. Smith (12345)"
+        "Open New Sub-Account for [REDACTED] (12345)"
       ]
     },
     "framePath": []
