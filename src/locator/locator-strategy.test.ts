@@ -58,6 +58,19 @@ describe("LocatorStrategy", () => {
     }
   });
 
+  it("resolves role + name case-insensitively (param 'fantasy' matches 'Fantasy')", () => {
+    const tree = mockAXTree();
+    const spec: LocatorSpec = {
+      primary: { role: "textbox", name: "member id" },
+    };
+
+    const result = resolveLocator(spec, tree);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.node.name).toBe("Member ID");
+    }
+  });
+
   it("resolves an AX locator inside a specific frame (iframe)", () => {
     const tree = mockAXTree();
     const spec: LocatorSpec = {

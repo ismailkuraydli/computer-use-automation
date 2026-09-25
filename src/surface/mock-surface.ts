@@ -69,6 +69,17 @@ export class MockSurface implements Surface {
       return { ok: true, extractedValue: "Mock page text content" };
     }
 
+    // For click/type/submit — check if the target exists in the current state
+    if (action.target && (action.type === "click" || action.type === "type" || action.type === "submit")) {
+      const tree = currentState?.axTree || this.axTree;
+      const found = tree.some(
+        (n) => n.role === action.target!.role && n.name === action.target!.name
+      );
+      if (!found && tree.length > 0) {
+        return { ok: false, error: "element-not-found", detail: `Mock: ${action.target!.role} "${action.target!.name}" not in current state` };
+      }
+    }
+
     return { ok: true };
   }
 

@@ -489,6 +489,12 @@ export class PlaywrightSurface implements Surface {
     return stripped.length >= 3 ? stripped : name;
   }
 
+  /** Anchored, case-insensitive pattern matching the whole name. */
+  private _exactNamePattern(name: string): RegExp {
+    const escaped = name.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`^\\s*${escaped}\\s*$`, "i");
+  }
+
   private async _tryFindElement(target: AXNode): Promise<ReturnType<Page["locator"]> | null> {
     if (!this.page) return null;
 
@@ -536,9 +542,11 @@ export class PlaywrightSurface implements Surface {
       } catch { /* not found */ }
     }
 
-    // 4. getByRole with exact name match
+    // 4. getByRole with full-name match, case-insensitive (user may pass
+    //    "fantasy" when the page says "Fantasy")
+    const exactName = this._exactNamePattern(target.name);
     try {
-      const locator = frame.getByRole(target.role as any, { name: target.name, exact: true });
+      const locator = frame.getByRole(target.role as any, { name: exactName });
       if (await locator.count() > 0) return locator.first();
     } catch { /* non-standard role */ }
 
@@ -553,7 +561,7 @@ export class PlaywrightSurface implements Surface {
     // 6. getByText (for non-standard roles: labels, spans, settings text)
     try {
       // Exact match first
-      const exactLocator = frame.getByText(target.name, { exact: true });
+      const exactLocator = frame.getByText(exactName);
       if (await exactLocator.count() > 0) return exactLocator.first();
 
       // Partial match with stripped name

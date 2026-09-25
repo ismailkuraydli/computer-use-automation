@@ -129,7 +129,8 @@ export class ReplayEngine {
     // Execute the action
     const actResult = await this.surface.act(action);
 
-    // Observe after-state
+    // Save before-state for error classification, then observe after-state
+    const beforeState = state;
     state = await this.surface.observe();
 
     // Log the step in evidence
@@ -144,8 +145,11 @@ export class ReplayEngine {
     });
 
     if (!actResult.ok) {
-      // Action failed — check error handlers
-      const classification = ErrorClassifier.classify(state, step.onError || []);
+      // Action failed — check error handlers against both before and after state.
+      // Use beforeState as primary (it has the page content that triggered the
+      // error, e.g. "No records found"), fall back to afterState.
+      const errorState = actResult.error === "element-not-found" ? beforeState : state;
+      const classification = ErrorClassifier.classify(errorState, step.onError || []);
 
       if (classification.tier === "business-outcome") {
         return businessOutcome(classification.outcome || "unknown", classification.reason, this.evidence.runDir);
@@ -258,37 +262,29 @@ export class ReplayEngine {
       return action;
     }
 
-    // AX tree resolution failed — the element may be hidden (e.g. inside a
-    // collapsed dropdown). If the artifact has identity fields (cssSelector,
-    // id, etc.), build the Action directly from them. The PlaywrightSurface
-    // will use these to find the element via CSS selector, which works even
-    // for hidden elements.
-    // Note: cssSelector and id are already stripped above if the step had
-    // a {{param}} template, so this only fires for param-independent elements.
-    if (resolvedTarget.primary.cssSelector || resolvedTarget.primary.id || resolvedTarget.primary.dataTestId) {
-      const target: AXNode = {
-        role: resolvedTarget.primary.role,
-        name: resolvedTarget.primary.name,
-        cssSelector: resolvedTarget.primary.cssSelector,
-        id: resolvedTarget.primary.id,
-        dataTestId: resolvedTarget.primary.dataTestId,
-        ariaLabel: resolvedTarget.primary.ariaLabel,
-        text: resolvedTarget.primary.text,
-        href: resolvedTarget.primary.href,
-        framePath: step.target.framePath,
-      } as AXNode;
+    // AX tree resolution failed. Build an Action with whatever identity fields
+    // remain (cssSelector/id already stripped if the step had {{param}}).
+    // The PlaywrightSurface._findElementByAX will try getByRole, getByText,
+    // and partial matching to find the element on the actual page.
+    const target: AXNode = {
+      role: resolvedTarget.primary.role,
+      name: resolvedTarget.primary.name,
+      cssSelector: resolvedTarget.primary.cssSelector,
+      id: resolvedTarget.primary.id,
+      dataTestId: resolvedTarget.primary.dataTestId,
+      ariaLabel: resolvedTarget.primary.ariaLabel,
+      text: resolvedTarget.primary.text,
+      href: resolvedTarget.primary.href,
+      framePath: step.target.framePath,
+    } as AXNode;
 
-      const action: Action = {
-        type: step.action,
-        target,
-        value: resolvedValue,
-        output: step.output,
-      };
+    const action: Action = {
+      type: step.action,
+      target,
+      value: resolvedValue,
+      output: step.output,
+    };
 
-      return action;
-    }
-
-    // No identity fields and not in AX tree — can't resolve
-    return null;
+    return action;
   }
 }

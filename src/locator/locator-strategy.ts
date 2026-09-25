@@ -49,9 +49,10 @@ function matchesAXLocator(node: AXNode, spec: LocatorSpec): boolean {
     if (node.dataTestId === spec.primary.dataTestId) return true;
   }
 
-  // 4. role + name match (existing AX-based resolution)
+  // 4. role + name match (case-insensitive — user may type "fantasy" but
+  //    the page has "Fantasy")
   if (node.role !== spec.primary.role) return false;
-  if (node.name !== spec.primary.name) return false;
+  if (node.name.toLowerCase() !== spec.primary.name.toLowerCase()) return false;
 
   // If description is specified, match it too (for disambiguation)
   if (spec.primary.description !== undefined) {
