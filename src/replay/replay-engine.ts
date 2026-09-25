@@ -223,12 +223,19 @@ export class ReplayEngine {
       return { type: "scroll", value: resolvedValue || "down" };
     }
 
-    // Substitute params in the locator before resolving
+    // Substitute params in the locator before resolving.
+    // If the original step name had a {{param}} template, strip cssSelector
+    // and id — they point to the discovery element, not the param-substituted
+    // one. The locator strategy and surface will use getByRole with the
+    // substituted name instead.
+    const hadParamTemplate = /\{\{[^}]+\}\}/.test(step.target.primary.name);
     const resolvedTarget: LocatorSpec = {
       ...step.target,
       primary: {
         ...step.target.primary,
         name: this._substituteParams(step.target.primary.name, params) || step.target.primary.name,
+        cssSelector: hadParamTemplate ? undefined : step.target.primary.cssSelector,
+        id: hadParamTemplate ? undefined : step.target.primary.id,
       },
     };
 
@@ -256,17 +263,14 @@ export class ReplayEngine {
     // id, etc.), build the Action directly from them. The PlaywrightSurface
     // will use these to find the element via CSS selector, which works even
     // for hidden elements.
-    //
-    // If the original step name had a {{param}} template, the CSS selector
-    // and id point to the discovery element (wrong one). Mark the target so
-    // the surface skips CSS/id and uses getByRole with the substituted name.
-    const hadParamTemplate = /\{\{[^}]+\}\}/.test(step.target.primary.name);
+    // Note: cssSelector and id are already stripped above if the step had
+    // a {{param}} template, so this only fires for param-independent elements.
     if (resolvedTarget.primary.cssSelector || resolvedTarget.primary.id || resolvedTarget.primary.dataTestId) {
       const target: AXNode = {
         role: resolvedTarget.primary.role,
         name: resolvedTarget.primary.name,
-        cssSelector: hadParamTemplate ? undefined : resolvedTarget.primary.cssSelector,
-        id: hadParamTemplate ? undefined : resolvedTarget.primary.id,
+        cssSelector: resolvedTarget.primary.cssSelector,
+        id: resolvedTarget.primary.id,
         dataTestId: resolvedTarget.primary.dataTestId,
         ariaLabel: resolvedTarget.primary.ariaLabel,
         text: resolvedTarget.primary.text,
