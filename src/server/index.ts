@@ -73,8 +73,8 @@ app.get("/api/artifacts", (_req, res) => {
     for (const cap of capabilities) {
       const capDir = join(artifactsDir, cap);
       const versions = readdirSync(capDir)
-        .filter((f) => f.endsWith(".json"))
-        .sort();
+        .filter((f) => SAFE_VERSION.test(f))
+        .sort((a, b) => parseInt(a.slice(1), 10) - parseInt(b.slice(1), 10)); // v2 before v10
       result.push({ name: cap, versions });
     }
 

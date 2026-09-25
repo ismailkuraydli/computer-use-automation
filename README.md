@@ -70,10 +70,11 @@ curl -X DELETE localhost:3000/__faults
 **4. Hand the live session to a human** on escalation. This opens a visible browser; automation pauses and prints an intervention request:
 
 ```bash
-curl -X POST localhost:3000/__faults -H 'content-type: application/json' -d '{"expireSessionAfter":2}'
+curl -X POST localhost:3000/__faults -H 'content-type: application/json' -d '{"expireSessionAfter":0}'
 npm run replay -- --artifact $A --params '{"memberId":"12345"}' --handoff
+# The session is expired when the run starts, so step 1 escalates.
 # While paused, "log in again": in another terminal run  curl -X DELETE localhost:3000/__faults
-# then type `done` → the step is re-checked, re-run, and the replay completes.
+# then type `done` → step 1 is re-checked, re-run, and the replay completes.
 # (`complete` = you finished the task yourself, `abort` = stop.)
 ```
 

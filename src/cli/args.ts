@@ -8,7 +8,7 @@ import { parseArgs } from "util";
 
 const OPTIONS = {
   goal: { type: "string" },
-  target: { type: "string", default: "http://localhost:3000" },
+  target: { type: "string" },
   output: { type: "string", default: "./artifacts" },
   artifact: { type: "string" },
   params: { type: "string", default: "{}" },

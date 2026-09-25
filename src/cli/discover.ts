@@ -14,7 +14,7 @@ export async function runDiscover(opts: CliValues): Promise<void> {
     console.error('Example: cua discover --goal "Look up member 12345 and read their savings balance" --target http://localhost:3000/search');
     process.exit(2);
   }
-  const target = opts.target ?? "http://localhost:3000";
+  const target = opts.target || process.env.CUA_TARGET_URL || "http://localhost:3000";
 
   try {
     const outcome = await discoverCapability({

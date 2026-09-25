@@ -24,12 +24,12 @@ Usage:
 
 Options:
   --goal       Natural language goal (discover)
-  --target     Target URL (default: http://localhost:3000)
+  --target     Start URL (discover: default $CUA_TARGET_URL, else http://localhost:3000; replay: optional start page)
   --output     Output path for artifact (discover)
   --artifact   Path to saved artifact JSON (replay)
   --params     JSON string of input parameters (replay)
   --tenant     Tenant overlay from profiles/tenants/<app>/<tenant>.json (replay)
-  --base-url   Where the app runs now, e.g. https://bank.example/portal (replay; rebases the artifact)
+  --base-url   Where the app runs now, e.g. https://bank.example/portal (replay; default $CUA_TARGET_URL)
   --mock-llm   Use MockLLMClient instead of real LLM (discover)
   --headed     Show the browser window (discover, replay)
   --config     Path to cua.config.json (default: ./cua.config.json)
@@ -45,6 +45,7 @@ Config (cua.config.json):
 Environment:
   OPENROUTER_API_KEY  Required for real LLM discovery (unless --mock-llm)
                       Set via the apiKeyEnvVar in cua.config.json
+  CUA_TARGET_URL      Where the application runs (replay rebases onto it; discovery starts there)
   CUA_WORKSPACE       Where artifacts and evidence live (default: current directory)
 
 MCP server (for Claude Code / Codex): npm run mcp, or bin/cua-mcp
