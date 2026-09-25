@@ -34,7 +34,11 @@ function pageText(state: ScreenState): string {
   return norm(state.axTree.map((n) => n.name).join(" "));
 }
 
-/** `*` is a wildcard; matched against path + query, case-insensitively. */
+/**
+ * Matched from the start of path + query, case-insensitively. `*` matches
+ * anything; `:name` matches one path segment. A pattern without a query must
+ * match the whole path (any query allowed); one with a query is a prefix.
+ */
 function matchesUrl(pattern: string, url: string): boolean {
   let target = url;
   try {
@@ -43,6 +47,10 @@ function matchesUrl(pattern: string, url: string): boolean {
   } catch {
     // not an absolute URL — match against it as-is
   }
-  const regex = pattern.replace(/[.+^${}()|[\]\\?]/g, "\\$&").replace(/\*/g, ".*");
-  return new RegExp(regex, "i").test(target);
+  const body = pattern
+    .replace(/[.+^${}()|[\]\\?]/g, "\\$&")
+    .replace(/\*/g, ".*")
+    .replace(/:[A-Za-z_]\w*/g, "[^/?#&]+");
+  const tail = pattern.includes("?") ? "" : "(?:[?#].*)?$";
+  return new RegExp(`^${body}${tail}`, "i").test(target);
 }

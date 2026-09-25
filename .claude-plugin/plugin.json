@@ -1,0 +1,26 @@
+{
+  "name": "computer-use-automation",
+  "version": "0.2.0",
+  "description": "Record UI automations once with an LLM, then replay them deterministically as typed capabilities. Tools: list_capabilities, run_capability, discover_capability.",
+  "author": { "name": "Ismail Kuraydli" },
+  "homepage": "https://github.com/ismailkuraydli/computer-use-automation",
+  "repository": "https://github.com/ismailkuraydli/computer-use-automation",
+  "license": "MIT",
+  "keywords": ["computer-use", "automation", "playwright", "mcp", "rpa"],
+  "mcpServers": {
+    "computer-use-automation": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/bin/cua-mcp",
+      "env": {
+        "OPENROUTER_API_KEY": "${user_config.openrouter_api_key}"
+      }
+    }
+  },
+  "userConfig": {
+    "openrouter_api_key": {
+      "type": "string",
+      "title": "OpenRouter API key",
+      "description": "Used only by discover_capability. Replay never calls a model.",
+      "sensitive": true
+    }
+  }
+}

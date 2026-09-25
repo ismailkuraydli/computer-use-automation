@@ -31,11 +31,14 @@ import { lookupSavingsBalance, openSubAccount, manageAccountByType } from "./moc
 import { EscalationManager } from "../escalation/escalation-manager.js";
 import type { OperatorChannel } from "../escalation/operator-channel.js";
 import type { Surface } from "../surface/types.js";
+import { applyTenantOverlay, loadTenantOverlay, type TenantOverlay } from "../artifact/tenant-overlay.js";
+import { resolveWorkspace } from "../app/workspace.js";
 
 type ExpectedResult =
   | { status: "success"; outputs: Record<string, unknown>; humanActions?: unknown[] }
   | { status: "business-outcome"; outcome: string }
-  | { status: "escalated"; resolution?: string };
+  | { status: "escalated"; resolution?: string }
+  | { status: "failure"; stepId?: number; error?: string };
 
 interface Scenario {
   id: string;
@@ -47,6 +50,12 @@ interface Scenario {
   profile?: (profile: AppProfile) => AppProfile;
   /** A scripted operator who takes over the live session on escalation. */
   operator?: (surface: Surface) => OperatorChannel;
+  /**
+   * Replay on the Summit tenant (same product, configured differently):
+   * "host-only" just points the artifact at Summit, "overlay" applies
+   * profiles/tenants/keystone-cu/summit.json.
+   */
+  tenant?: "host-only" | "overlay";
   /** The caller confirms irreversible steps may run. */
   confirmIrreversible?: boolean;
   expected: ExpectedResult;
@@ -57,6 +66,7 @@ interface Scenario {
 const SCENARIO_TIMEOUT_MS = 90_000;
 
 const KEYSTONE_PROFILE = loadProfile("keystone-cu");
+const SUMMIT_OVERLAY = loadTenantOverlay(resolveWorkspace(), "keystone-cu", "summit");
 const withoutInterstitials = (profile: AppProfile): AppProfile => ({ ...profile, interstitials: [] });
 const ACCOUNT_NUMBER = expect.stringMatching(/^\d{10}$/);
 
@@ -207,24 +217,59 @@ const SCENARIOS: Scenario[] = [
     params: { memberId: "45678", accountType: "Checking" },
     expected: { status: "success", outputs: { balance: "$2,340.00" } },
   },
+
+  // --- the same artifacts on a second tenant (cross-tenant reuse) ---
+  {
+    id: "T1",
+    title: "Keystone artifact pointed at Summit without its overlay (drift is reported precisely)",
+    artifact: lookupSavingsBalance,
+    params: { memberId: "23456" },
+    tenant: "host-only",
+    expected: { status: "failure", stepId: 1, error: "checkpoint-failed" },
+  },
+  {
+    id: "T2",
+    title: "Keystone artifact on Summit with the tenant overlay",
+    artifact: lookupSavingsBalance,
+    params: { memberId: "23456" },
+    tenant: "overlay",
+    expected: { status: "success", outputs: { savingsBalance: "$8,234.50" } },
+  },
+  {
+    id: "T3",
+    title: "row-selecting artifact on Summit with the tenant overlay",
+    artifact: manageAccountByType,
+    params: { memberId: "45678", accountType: "Checking" },
+    tenant: "overlay",
+    expected: { status: "success", outputs: { balance: "$2,340.00" } },
+  },
 ];
 
 let mock: MockApp;
 let server: Server;
 let baseUrl: string;
+let summitServer: Server;
+let summitUrl: string;
 let evidenceRoot: string;
+
+function listen(app: MockApp["app"]): Promise<Server> {
+  return new Promise<Server>((resolve) => {
+    const s = app.listen(0, "127.0.0.1", () => resolve(s));
+  });
+}
 
 beforeAll(async () => {
   mock = createMockApp();
-  server = await new Promise<Server>((resolve) => {
-    const s = mock.app.listen(0, "127.0.0.1", () => resolve(s));
-  });
+  server = await listen(mock.app);
   baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  summitServer = await listen(createMockApp({ variant: "summit" }).app);
+  summitUrl = `http://127.0.0.1:${(summitServer.address() as AddressInfo).port}`;
   evidenceRoot = mkdtempSync(path.join(tmpdir(), "scenario-matrix-"));
 });
 
 afterAll(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
+  await new Promise<void>((resolve) => summitServer.close(() => resolve()));
   rmSync(evidenceRoot, { recursive: true, force: true });
 });
 
@@ -236,10 +281,18 @@ async function replay(scenario: Scenario): Promise<ReplayResult> {
   const surface = new PlaywrightSurface({ headless: true, screenshotDir: evidence.screenshotDir });
   await surface._start();
   try {
-    const profile = (scenario.profile ?? ((p) => p))(KEYSTONE_PROFILE);
+    let profile = (scenario.profile ?? ((p) => p))(KEYSTONE_PROFILE);
+    let artifact = scenario.artifact(baseUrl); // always recorded on Keystone
+    if (scenario.tenant) {
+      const overlay: TenantOverlay =
+        scenario.tenant === "overlay"
+          ? { ...SUMMIT_OVERLAY, baseUrl: summitUrl }
+          : { schemaVersion: "1.0", app: "keystone-cu", tenant: "host-only", baseUrl: summitUrl };
+      ({ artifact, profile } = applyTenantOverlay(artifact, profile, overlay));
+    }
     const handoff = scenario.operator ? new EscalationManager(surface, evidence, scenario.operator(surface)) : undefined;
     const engine = new ReplayEngine({ surface, evidenceCollector: evidence, profile, handoff });
-    return await engine.run(scenario.artifact(baseUrl), scenario.params, {
+    return await engine.run(artifact, scenario.params, {
       confirmIrreversible: scenario.confirmIrreversible,
     });
   } finally {

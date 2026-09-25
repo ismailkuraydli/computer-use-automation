@@ -107,6 +107,14 @@ describe("GuardChecker", () => {
     expect(GuardChecker.check(guard, state)).toBe(false);
   });
 
+  it("matches a :placeholder path segment against exactly one segment", () => {
+    const guard: StateGuard = { anyOf: [{ urlPattern: "/member/:id" }] };
+
+    expect(GuardChecker.check(guard, mockState("http://localhost:3000/member/12345", []))).toBe(true);
+    expect(GuardChecker.check(guard, mockState("http://localhost:3000/member/12345/accounts", []))).toBe(false);
+    expect(GuardChecker.check(guard, mockState("http://localhost:3000/member/", []))).toBe(false);
+  });
+
   it("returns true when guard is undefined", () => {
     expect(GuardChecker.check(undefined, mockState("http://localhost:3000", []))).toBe(true);
   });

@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Starts the computer-use-automation MCP server (stdio) for Claude Code,
+# Codex or any MCP host.
+#
+# First start installs the runtime dependencies and Chromium. Everything this
+# script prints goes to stderr: stdout carries the MCP protocol.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [ ! -x "$ROOT/node_modules/.bin/tsx" ]; then
+  echo "computer-use-automation: installing dependencies (first start only)..." >&2
+  (cd "$ROOT" && npm ci --omit=dev --no-audit --no-fund) >&2
+fi
+
+BROWSER_MARKER="$ROOT/node_modules/.cua-chromium-installed"
+if [ ! -f "$BROWSER_MARKER" ]; then
+  echo "computer-use-automation: installing Chromium for Playwright (first start only)..." >&2
+  (cd "$ROOT" && node_modules/.bin/playwright install chromium) >&2
+  touch "$BROWSER_MARKER"
+fi
+
+# Hosts that start the server inside the plugin directory (Codex uses cwd ".")
+# would otherwise write artifacts into the plugin cache, which updates replace.
+if [ -z "${CUA_WORKSPACE:-}" ] && [ "$PWD" = "$ROOT" ]; then
+  export CUA_WORKSPACE="$HOME/.computer-use-automation"
+  mkdir -p "$CUA_WORKSPACE"
+fi
+
+exec "$ROOT/node_modules/.bin/tsx" "$ROOT/src/mcp/server.ts"

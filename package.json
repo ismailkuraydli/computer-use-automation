@@ -1,7 +1,7 @@
 {
   "name": "computer-use-automation",
-  "version": "0.1.0",
-  "description": "Computer-use automation system for bank back-office applications \u2014 LLM discovery, deterministic replay, human-in-the-loop escalation.",
+  "version": "0.2.0",
+  "description": "Computer-use automation system for bank back-office applications — LLM discovery, deterministic replay, human-in-the-loop escalation.",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -16,7 +16,8 @@
     "build": "tsc",
     "discover": "tsx src/cli/index.ts discover",
     "replay": "tsx src/cli/index.ts replay",
-    "escalate": "tsx src/cli/index.ts escalate",
+    "mcp": "tsx src/mcp/server.ts",
+    "mock-app:summit": "MOCK_VARIANT=summit PORT=3100 tsx mock-app/server.ts",
     "ui": "tsx src/server/index.ts"
   },
   "keywords": [
@@ -30,13 +31,15 @@
   "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/node": "^22.0.0",
-    "tsx": "^4.19.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.1",
     "dotenv": "^18.0.3",
     "express": "^4.21.0",
-    "playwright": "^1.48.0"
+    "playwright": "^1.48.0",
+    "tsx": "^4.23.15",
+    "zod": "^3.25.76"
   }
 }
