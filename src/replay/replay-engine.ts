@@ -195,7 +195,12 @@ export class ReplayEngine {
     for (;;) {
       const result = await this.surface.act(action);
       const state = result.ok ? await this._awaitCheckpoint(ctx) : await this.surface.observe();
-      const met = result.ok && GuardChecker.check(substituteDeep(step.checkpoint, params), state);
+      // A known runtime condition on screen (error page, session expired)
+      // wins over a checkpoint that happens to match, e.g. on URL alone.
+      const met =
+        result.ok &&
+        GuardChecker.check(substituteDeep(step.checkpoint, params), state) &&
+        !ErrorClassifier.classify(state, ctx.handlers);
 
       if (met) {
         if (step.output && result.ok) outputs[step.output] = result.extractedValue ?? "";

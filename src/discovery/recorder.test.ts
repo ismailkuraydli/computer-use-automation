@@ -199,4 +199,14 @@ describe("Recorder", () => {
 
     expect(finalize(r).steps[0].checkpoint?.anyOf?.[0].textContains).toBeUndefined();
   });
+
+  it("gives a navigation a checkpoint on the page's controls even when it was already open", () => {
+    const r = recorder();
+    r.recordAction({ type: "navigate", value: "http://localhost:3000/search" }, SEARCH, SEARCH, "success");
+
+    expect(finalize(r).steps[0].checkpoint?.anyOf?.[0].axContains).toEqual([
+      { role: "textbox", name: "Member ID" },
+      { role: "button", name: "Search" },
+    ]);
+  });
 });

@@ -191,6 +191,19 @@ describe("ReplayEngine", () => {
     expect(surface.actions).toHaveLength(2);
   });
 
+  it("treats a known error page as a failure even when the checkpoint matches", async () => {
+    const urlOnly: ArtifactStep = { ...NAVIGATE, checkpoint: { anyOf: [{ urlPattern: "/search" }] } };
+    const surface = new ScriptedSurface([
+      { result: OK, state: UNAVAILABLE },
+      { result: OK, state: SEARCH },
+    ]);
+
+    const result = await engine(surface).run(artifact([urlOnly], { outputs: [], checkpoint: {} }), { memberId: "1" });
+
+    expect(result.status).toBe("success");
+    expect(surface.actions).toHaveLength(2);
+  });
+
   it("stops retrying after maxRetries", async () => {
     const surface = new ScriptedSurface([
       { result: OK, state: UNAVAILABLE },

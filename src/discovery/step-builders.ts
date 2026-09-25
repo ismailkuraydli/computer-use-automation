@@ -65,7 +65,9 @@ export function buildCheckpoint(
   }
 
   if (!usableExpect) {
-    const anchors = newAnchors(before, after);
+    // A navigation must prove the page loaded, whatever was on screen before.
+    const baseline = action.type === "navigate" ? { ...before, axTree: [] } : before;
+    const anchors = newAnchors(baseline, after);
     if (anchors.length > 0) sig.axContains = anchors;
   }
 
