@@ -1,12 +1,4 @@
-◇ injected env (6) from .env
-Browser: headless
-
-Replaying artifact: open-sub-account
-Params expected: ["memberId","accountType","deposit"]
-App profile: keystone-cu
-Params provided: {"memberId":"12345","accountType":"Checking","deposit":"250"}
-Target: about:blank
-
+Replayed: open-sub-account, app profile keystone-cu
 
 --- Replay Result ---
 Status: escalated
@@ -14,4 +6,4 @@ Step: 4
 Reason: Step 4 (submit) is irreversible and the run was not confirmed
 Resolution: unresolved
 
-Evidence: evidence/fb05ab27
+Evidence: evidence/c22758c7

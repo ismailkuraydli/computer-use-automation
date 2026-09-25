@@ -1,12 +1,4 @@
-◇ injected env (6) from .env
-Browser: headless
-
-Replaying artifact: lookup-member-savings-balance
-Params expected: ["memberId"]
-App profile: keystone-cu
-Params provided: {"memberId":"34567"}
-Target: about:blank
-
+Replayed: lookup-member-savings-balance, app profile keystone-cu
 
 --- Replay Result ---
 Status: failure
@@ -15,4 +7,4 @@ Expected: extract cell in row "Savings" under column "Balance"
 Observed: element-not-found: No table row containing "Savings"
 Error: element-not-found
 
-Evidence: evidence/04bf4b5b
+Evidence: evidence/6546e142

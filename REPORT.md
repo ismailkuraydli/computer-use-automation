@@ -15,13 +15,15 @@ A single TypeScript process with a CLI (and a small local web UI). The seams are
 | `ReplayEngine` | Deterministic replay: policy, act, checkpoint, recover, escalate. No LLM. |
 | App profile (`profiles/*.json`) | Interstitials and runtime conditions shared by every artifact of one app. |
 | `EscalationManager` + `OperatorChannel` | Control-transfer state machine and live-session handoff. |
+| `CapabilityCatalog` + MCP server (`src/mcp`) | Agent-facing tools over saved artifacts; shipped as a Claude Code and Codex plugin. |
+| `replay-service`, `discovery-service` (`src/app`) | One replay / one discovery, shared by the CLI and the MCP server. |
 | `SafetyGuard`, `pii-redactor`, `EvidenceCollector` | Allowlist, action classes, redaction, structured evidence. |
 
 **Decisions and trade-offs.**
 - **Accessibility tree first.** It is what an operator perceives, it exists on desktop platforms too, and it survives markup churn better than DOM paths.
 - **One process, JSON on disk.** The brief rewards design, not infrastructure. Artifacts and profiles are reviewable in a pull request.
 - **No agent framework.** The loop is short and the evaluated logic stays visible.
-- **The target is a local, deliberately hostile back-office app**, not a public site (ADR-014). Public consumer sites fail through A/B layouts, marketing modals and bot detection. The brief's environment fails through runtime conditions, and the mock app injects exactly those. `src/scenarios/scenario-matrix.test.ts` (16 rows) is the acceptance gate for the replay engine.
+- **The target is a local, deliberately hostile back-office app**, not a public site (ADR-014). Public consumer sites fail through A/B layouts, marketing modals and bot detection. The brief's environment fails through runtime conditions, and the mock app injects exactly those. `src/scenarios/scenario-matrix.test.ts` (19 rows) is the acceptance gate for the replay engine.
 
 ## 2. Artifact schema
 
@@ -90,17 +92,17 @@ For each step, replay: checks policy → builds the action with params substitut
 - Legacy web is already the default case: frames, layout tables, no test IDs, and ARIA gaps covered by label and text fallbacks.
 - A surface with no accessible structure (Citrix, canvas) would need a visual resolver behind the same interface. Its `TargetSpec` would stay semantic, with the resolver doing screenshot grounding. We did not build it.
 
-**Multi-tenant reuse.** The unit of reuse is the *vendor product*, not the tenant:
-- Artifacts target the base product.
-- App profiles hold the product's conditions.
-- A tenant overlay would only patch what differs: labels (`"Member ID"` → `"Account Holder #"`), extra interstitials, URL prefix, disabled capabilities.
-- Semantic targets make overlays small, because branding and layout changes do not affect role and name, and configuration changes show up as label diffs.
+**Multi-tenant reuse (built).** The unit of reuse is the *vendor product*, not the tenant:
+- Artifacts are recorded once, against the base product. App profiles hold the product's conditions.
+- **Canonical routes.** Checkpoint URLs are recorded as route shapes: param values become `{{param}}`, other ID-like path segments become `:id` (`/member/12345` becomes `/member/:id`), other query values become `*`. A checkpoint recorded on one record holds for every record.
+- **Tenant overlays** (`profiles/tenants/<app>/<tenant>.json`) list only what differs for one institution: its host, relabelled UI text (`"Member ID"` → `"Account Holder #"`), route rewrites (`/detail?id=` → `/members/`), extra interstitials, conditions and sensitive fields. `applyTenantOverlay` derives that tenant's artifact and profile at replay time; the recorded artifact is never copied or edited.
+- **Demonstrated** on a second tenant, Summit FCU: the same mock product with relabelled fields, member pages under `/members/:id` and its own security reminder. The artifact recorded on Keystone runs there with a short overlay (matrix rows T2/T3, evidence run 14). Semantic targets keep overlays small: branding and layout changes do not affect role and name, and configuration changes show up as label diffs.
 
 **Drift detection falls out of the contract.**
-- An enforced checkpoint or an ambiguous or missing target is a precise, per-step signal ("tenant X, step 3: no columnheader Balance").
-- Replaying each capability per tenant on a schedule, as the scenario matrix does for one app, turns drift into a report instead of a production incident.
+- An enforced checkpoint or an ambiguous or missing target is a precise, per-step signal. Pointing the Keystone artifact at Summit without its overlay fails at step 1 with `checkpoint-failed` (row T1), not somewhere later.
+- Replaying each capability per tenant on a schedule, as the scenario matrix does, turns drift into a report instead of a production incident.
 
-**What is built:** the profile mechanism and `surface.app`. **Not built:** overlay merge, per-tenant storage, scheduled drift runs.
+**Not built:** per-tenant artifact storage, scheduled drift runs, overlay inheritance (tenant → region → product).
 
 ## 5. Escalation & handoff
 
@@ -153,8 +155,13 @@ Both apply to the prompt sent to the model provider, step logs, snapshot files, 
 
 ## 7. Cuts
 
+**Stretch goals done (ISM-818):**
+- **Agent-facing capability interface.** An MCP server (`list_capabilities`, `run_capability`, `discover_capability`) packaged as a plugin for both Claude Code and Codex, with a skill that tells the agent how to read results and when to ask the user. `run_capability` validates params against each artifact's typed params before any browser starts, and returns the ReplayResult unchanged (evidence runs 15–16).
+- **Canonicalization and cross-tenant reuse**, described in §4.
+
 **Left out deliberately:**
-- the multi-tenant overlay merge and drift scheduler (designed in §4);
+- the interactive handoff over MCP (escalations reach the calling agent as `escalated`; the live handoff is CLI-only);
+- per-tenant storage and the drift scheduler (designed in §4);
 - a desktop or visual surface (the seam and target model are ready);
 - a web operator console (the terminal channel implements the real interface);
 - conditions of the form "absence means X";
@@ -164,6 +171,5 @@ The first public-site work (Wikipedia, Goodreads) is no longer a target. It is t
 
 **Next, in order:**
 1. **Promote human fixes into profiles**: propose an interstitial from a captured handoff, with review before use.
-2. **Tenant overlays** on profiles and targets, plus a two-variant demo of the mock app (the canonicalization stretch goal).
-3. **Approval states and replay-stability scores**: draft → approved, where approval requires N green matrix-style replays.
-4. **Capability catalog**: an agent-facing tool surface over saved artifacts.
+2. **Approval states and replay-stability scores**: draft → approved, where approval requires N green matrix-style replays; `run_capability` would then refuse drafts.
+3. **Handoff over MCP**: surface an escalation to the host (MCP elicitation) instead of ending the run.

@@ -6,7 +6,7 @@
       "target": "http://localhost:3000/new-account?id={{memberId}}",
       "result": "success",
       "url": "http://localhost:3000/new-account?id=12345",
-      "screenshotPath": "evidence/dc592f91/screenshots/screen-86892b12.png",
+      "screenshotPath": "evidence/4ad7d753/screenshots/screen-29e4cbf2.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -223,7 +223,7 @@
       "target": "combobox \"Account Type\"",
       "result": "success",
       "url": "http://localhost:3000/new-account?id=12345",
-      "screenshotPath": "evidence/dc592f91/screenshots/screen-c9f90599.png",
+      "screenshotPath": "evidence/4ad7d753/screenshots/screen-cc29826b.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -440,7 +440,7 @@
       "target": "textbox \"Initial Deposit\"",
       "result": "success",
       "url": "http://localhost:3000/new-account?id=12345",
-      "screenshotPath": "evidence/dc592f91/screenshots/screen-888912e6.png",
+      "screenshotPath": "evidence/4ad7d753/screenshots/screen-a3ca25cb.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -670,7 +670,7 @@
       "target": "button \"Continue\"",
       "result": "success",
       "url": "http://localhost:3000/new-account-confirm",
-      "screenshotPath": "evidence/dc592f91/screenshots/screen-9ae90e35.png",
+      "screenshotPath": "evidence/4ad7d753/screenshots/screen-ca29b3e3.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -990,7 +990,7 @@
         },
         {
           "role": "cell",
-          "name": "FieldValue\n      Member[REDACTED]\n      Account Typechecking\n      Account Number61600884",
+          "name": "FieldValue\n      Member[REDACTED]\n      Account Typechecking\n      Account Number12528633",
           "children": [],
           "context": {
             "row": [
@@ -1018,7 +1018,7 @@
       "target": "cell labelled \"Account Number\"",
       "result": "success",
       "url": "http://localhost:3000/new-account-confirm",
-      "screenshotPath": "evidence/dc592f91/screenshots/screen-e86baec5.png",
+      "screenshotPath": "evidence/4ad7d753/screenshots/screen-d06af2e8.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -1338,7 +1338,7 @@
         },
         {
           "role": "cell",
-          "name": "FieldValue\n      Member[REDACTED]\n      Account Typechecking\n      Account Number61600884",
+          "name": "FieldValue\n      Member[REDACTED]\n      Account Typechecking\n      Account Number12528633",
           "children": [],
           "context": {
             "row": [

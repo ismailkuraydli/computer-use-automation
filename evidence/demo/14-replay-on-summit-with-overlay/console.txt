@@ -1,0 +1,9 @@
+Replayed: lookup-member-savings-balance (tenant summit), app profile keystone-cu
+
+--- Replay Result ---
+Status: success
+Outputs: {
+  "savingsBalance": "$8,234.50"
+}
+
+Evidence: evidence/d453ef62

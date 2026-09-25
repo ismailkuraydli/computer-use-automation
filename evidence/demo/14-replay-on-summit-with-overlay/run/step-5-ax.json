@@ -1,0 +1,782 @@
+[
+  {
+    "role": "RootWebArea",
+    "name": "Summit FCU - Member Detail",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "heading",
+    "name": "Account Holder Detail - [REDACTED]",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Account Holder Detail - [REDACTED]"
+      ]
+    }
+  },
+  {
+    "role": "StaticText",
+    "name": "Accounts",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "link",
+    "name": "Back to Search",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Back to Search | Open New Sub-Account"
+      ]
+    }
+  },
+  {
+    "role": "StaticText",
+    "name": " | ",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "link",
+    "name": "Open New Sub-Account",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Back to Search | Open New Sub-Account"
+      ]
+    }
+  },
+  {
+    "role": "StaticText",
+    "name": "Account Holder Detail - [REDACTED]",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Accounts",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Back to Search",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": " | ",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Open New Sub-Account",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Account Holder Detail - [REDACTED]",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "columnheader",
+    "name": "Account Holder #",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Account Holder #",
+        "SSN",
+        "DOB"
+      ]
+    }
+  },
+  {
+    "role": "columnheader",
+    "name": "SSN",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Account Holder #",
+        "SSN",
+        "DOB"
+      ]
+    }
+  },
+  {
+    "role": "columnheader",
+    "name": "DOB",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Account Holder #",
+        "SSN",
+        "DOB"
+      ]
+    }
+  },
+  {
+    "role": "cell",
+    "name": "23456",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "23456",
+        "[REDACTED]",
+        "[REDACTED]"
+      ],
+      "column": "Account Holder #"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "23456",
+        "[REDACTED]",
+        "[REDACTED]"
+      ],
+      "column": "SSN"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "23456",
+        "[REDACTED]",
+        "[REDACTED]"
+      ],
+      "column": "DOB"
+    }
+  },
+  {
+    "role": "columnheader",
+    "name": "Type",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Type",
+        "Account Number",
+        "Available Balance",
+        "Action"
+      ]
+    }
+  },
+  {
+    "role": "columnheader",
+    "name": "Account Number",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Type",
+        "Account Number",
+        "Available Balance",
+        "Action"
+      ]
+    }
+  },
+  {
+    "role": "columnheader",
+    "name": "Available Balance",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Type",
+        "Account Number",
+        "Available Balance",
+        "Action"
+      ]
+    }
+  },
+  {
+    "role": "columnheader",
+    "name": "Action",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Type",
+        "Account Number",
+        "Available Balance",
+        "Action"
+      ]
+    }
+  },
+  {
+    "role": "cell",
+    "name": "Savings",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Savings",
+        "[REDACTED]",
+        "$8,234.50",
+        "Manage"
+      ],
+      "column": "Type"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Savings",
+        "[REDACTED]",
+        "$8,234.50",
+        "Manage"
+      ],
+      "column": "Account Number"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "$8,234.50",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Savings",
+        "[REDACTED]",
+        "$8,234.50",
+        "Manage"
+      ],
+      "column": "Available Balance"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "Manage",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Savings",
+        "[REDACTED]",
+        "$8,234.50",
+        "Manage"
+      ],
+      "column": "Action"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "Checking",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Checking",
+        "[REDACTED]",
+        "$1,100.00",
+        "Manage"
+      ],
+      "column": "Type"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Checking",
+        "[REDACTED]",
+        "$1,100.00",
+        "Manage"
+      ],
+      "column": "Account Number"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "$1,100.00",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Checking",
+        "[REDACTED]",
+        "$1,100.00",
+        "Manage"
+      ],
+      "column": "Available Balance"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "Manage",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Checking",
+        "[REDACTED]",
+        "$1,100.00",
+        "Manage"
+      ],
+      "column": "Action"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "CD",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "CD",
+        "[REDACTED]",
+        "$25,000.00",
+        "Manage"
+      ],
+      "column": "Type"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "CD",
+        "[REDACTED]",
+        "$25,000.00",
+        "Manage"
+      ],
+      "column": "Account Number"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "$25,000.00",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "CD",
+        "[REDACTED]",
+        "$25,000.00",
+        "Manage"
+      ],
+      "column": "Available Balance"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "Manage",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "CD",
+        "[REDACTED]",
+        "$25,000.00",
+        "Manage"
+      ],
+      "column": "Action"
+    }
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Back to Search",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Open New Sub-Account",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Account Holder #",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "SSN",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "DOB",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "23456",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Type",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Account Number",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Available Balance",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Action",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Savings",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "$8,234.50",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "link",
+    "name": "Manage",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Savings",
+        "[REDACTED]",
+        "$8,234.50",
+        "Manage"
+      ],
+      "column": "Action"
+    }
+  },
+  {
+    "role": "StaticText",
+    "name": "Checking",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "$1,100.00",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "link",
+    "name": "Manage",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Checking",
+        "[REDACTED]",
+        "$1,100.00",
+        "Manage"
+      ],
+      "column": "Action"
+    }
+  },
+  {
+    "role": "StaticText",
+    "name": "CD",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "$25,000.00",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "link",
+    "name": "Manage",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "CD",
+        "[REDACTED]",
+        "$25,000.00",
+        "Manage"
+      ],
+      "column": "Action"
+    }
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Account Holder #",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "SSN",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "DOB",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "23456",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Type",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Account Number",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Available Balance",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Action",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Savings",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "$8,234.50",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Manage",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Checking",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "$1,100.00",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Manage",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "CD",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "$25,000.00",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Manage",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Manage",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Manage",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Manage",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "Account Holder Detail - [REDACTED]",
+    "children": [],
+    "context": {
+      "row": [
+        "Account Holder Detail - [REDACTED]"
+      ]
+    },
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "Account Holder #SSNDOB\n      23456[REDACTED][REDACTED]",
+    "children": [],
+    "context": {
+      "row": [
+        "Account Holder #SSNDOB 23456[REDACTED][REDACTED]"
+      ]
+    },
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "Accounts",
+    "children": [],
+    "context": {
+      "row": [
+        "Accounts"
+      ]
+    },
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "TypeAccount NumberAvailable BalanceAction\n      Savings[REDACTED]$8,234.50\n        ManageChecking400",
+    "children": [],
+    "context": {
+      "row": [
+        "TypeAccount NumberAvailable BalanceAction Savings[REDACTED]$"
+      ]
+    },
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "Back to Search |\n      Open New Sub-Account",
+    "children": [],
+    "context": {
+      "row": [
+        "Back to Search | Open New Sub-Account"
+      ]
+    },
+    "framePath": []
+  }
+]

@@ -1,12 +1,4 @@
-◇ injected env (6) from .env
-Browser: headless
-
-Replaying artifact: open-sub-account
-Params expected: ["memberId","accountType","deposit"]
-App profile: keystone-cu
-Params provided: {"memberId":"12345","accountType":"Savings","deposit":"250"}
-Target: about:blank
-
+Replayed: open-sub-account, app profile keystone-cu
 
 --- Replay Result ---
 Status: escalated
@@ -14,4 +6,4 @@ Step: 4
 Reason: Unknown blocking UI at step 4: Dismissed confirm: Open this account? This cannot be undone.
 Resolution: unresolved
 
-Evidence: evidence/596df4f3
+Evidence: evidence/f899378c

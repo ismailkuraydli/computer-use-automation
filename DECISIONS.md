@@ -311,3 +311,23 @@ The AX prioritizer boosts elements matching the current sub-goal's keywords to t
 **Decision:** The app profile declares where sensitive data sits (`sensitive.fields`: column headers or labels; `sensitive.patterns`: regexes with a sensitive capture group). One `SensitiveDataRedactor` per run learns the actual values from each observed screen and scrubs them from all text afterwards: the LLM prompt, evidence, artifacts and screenshot masks. It keeps the fixed patterns too.
 
 **Consequences:** No named-entity guessing and no over-redaction of ordinary text. It is as complete as the profile: a value is protected once it has been seen in a classified place, so profiles need per-app review.
+
+---
+
+### ADR-018: Capability catalog as an MCP server, packaged for Claude Code and Codex
+
+**Context:** The stretch goal asks for an agent-facing interface: discover capabilities and invoke them by name with typed args. The user wants to call discovery and replay from Claude Code and Codex.
+
+**Decision:** One stdio MCP server (`src/mcp`) with three tools: `list_capabilities`, `run_capability`, `discover_capability`. It uses a generic `run_capability` rather than one tool per capability, because it behaves the same in every host and needs no tool-list-changed support. The catalog gives each capability's params as JSON Schema, and the server validates params against the artifact's `ParamSpec` before a browser starts. The repo root is a plugin for both hosts (`.claude-plugin/`, `.codex-plugin/` + `codex-mcp.json`, marketplaces, a shared skill), launched by `bin/cua-mcp`, which installs dependencies and Chromium on first start. The CLI and the MCP server share `replay-service` and `discovery-service`. Data lives in `CUA_WORKSPACE`.
+
+**Consequences:** An agent gets a typed, deterministic tool instead of re-reasoning about the UI. Escalations reach the agent as results; the live handoff stays CLI-only until MCP elicitation is wired. Discovery through MCP costs model tokens, so the skill tells the agent to prefer existing capabilities. `tsx` became a runtime dependency because the plugin runs TypeScript directly.
+
+---
+
+### ADR-019: Canonical route patterns and tenant overlays
+
+**Context:** Many institutions run the same vendor product, configured differently. Re-recording per tenant does not scale, and a checkpoint that encodes one record's ID does not generalize.
+
+**Decision:** Checkpoint URLs are recorded as route shapes (`{{param}}`, `:id` for other ID-like segments, `*` for other query values). Tenant overlays (`profiles/tenants/<app>/<tenant>.json`) list only a tenant's differences: host, relabelled UI text, route rewrites, extra interstitials, conditions and sensitive fields. `applyTenantOverlay` is a pure function applied at replay time (`--tenant`, `run_capability.tenant`).
+
+**Consequences:** One recorded artifact serves every tenant of a product; per-tenant work is a short, reviewable data file. Without an overlay, drift fails precisely at the first changed step. Not yet: overlay inheritance, per-tenant storage, scheduled drift runs.
