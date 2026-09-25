@@ -6,7 +6,8 @@ import { PlaywrightSurface } from "../surface/playwright-surface.js";
 import { ReplayEngine } from "../replay/replay-engine.js";
 import { EvidenceCollector } from "../evidence/evidence-collector.js";
 import { loadConfig } from "../config.js";
-import { readFileSync } from "fs";
+import { loadArtifactFile } from "../artifact/artifact-store.js";
+import { loadProfile } from "../artifact/profile-store.js";
 
 export async function runReplay(opts: Record<string, any>): Promise<void> {
   const artifactPath = opts.artifact as string;
@@ -23,13 +24,14 @@ export async function runReplay(opts: Record<string, any>): Promise<void> {
   // Load config
   const config = loadConfig(opts.config);
 
-  // Load artifact
+  // Load artifact (validated and migrated to the current schema) and its app profile
   let artifact;
+  let profile;
   try {
-    const content = readFileSync(artifactPath, "utf-8");
-    artifact = JSON.parse(content);
+    artifact = loadArtifactFile(artifactPath);
+    profile = loadProfile(artifact.surface.app);
   } catch (e) {
-    console.error(`Error loading artifact from ${artifactPath}: ${(e as Error).message}`);
+    console.error(`Error loading ${artifactPath}: ${(e as Error).message}`);
     process.exit(1);
   }
 
@@ -54,10 +56,12 @@ export async function runReplay(opts: Record<string, any>): Promise<void> {
   const engine = new ReplayEngine({
     surface,
     evidenceCollector: evidence,
+    profile,
   });
 
   console.log(`\nReplaying artifact: ${artifact.capability}`);
-  console.log(`Params expected: ${JSON.stringify(artifact.params.map((p: any) => p.name))}`);
+  console.log(`Params expected: ${JSON.stringify(artifact.params.map((p) => p.name))}`);
+  console.log(`App profile: ${profile.app}`);
   console.log(`Params provided: ${JSON.stringify(params)}`);
   console.log(`Target: ${target}\n`);
 
@@ -66,12 +70,12 @@ export async function runReplay(opts: Record<string, any>): Promise<void> {
   const normalize = (s: string) => s.toLowerCase().replace(/[-_]/g, "");
   const normalizedParams: Record<string, string> = {};
   for (const [key, val] of Object.entries(params)) {
-    const match = artifact.params.find((p: any) => normalize(p.name) === normalize(key));
+    const match = artifact.params.find((p) => normalize(p.name) === normalize(key));
     normalizedParams[match ? match.name : key] = val;
   }
   params = normalizedParams;
 
-  const result = await engine.run(artifact, params);
+  const result = await engine.run(artifact, params, { confirmIrreversible: opts.confirm === true });
 
   await surface.close();
 

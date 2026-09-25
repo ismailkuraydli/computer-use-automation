@@ -145,15 +145,14 @@ export class AgentLoop {
 
       const action = llmResponse.action;
 
-      // Enrich action with framePath from the AX tree — the LLM doesn't know
-      // about frames, but the AX tree has framePath on each node. Look up the
-      // target element and copy its framePath into the action.
+      // Enrich the target with its frame from the AX tree — the LLM doesn't
+      // know about frames, but every AX node carries its framePath.
       if (action.target && screenState.axTree.length > 0) {
         const match = screenState.axTree.find(
           (n) => n.role === action.target!.role && n.name === action.target!.name
         );
         if (match && match.framePath && match.framePath.length > 0) {
-          action.target = { ...action.target, framePath: match.framePath };
+          action.target = { ...action.target, frame: match.framePath };
         }
       }
 
@@ -213,7 +212,7 @@ export class AgentLoop {
       const afterState = await surface.observe();
 
       // Record in artifact
-      recorder.recordAction(action, beforeState, afterState, actResult.ok ? "success" : "failure");
+      recorder.recordAction(action, beforeState, afterState, actResult.ok ? "success" : "failure", llmResponse.expect);
 
       // Log in evidence
       evidenceCollector.logStep({

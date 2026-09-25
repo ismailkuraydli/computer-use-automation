@@ -168,6 +168,7 @@ Available actions:
 - navigate: { type: "navigate", value: "<url>" }
 - click: { type: "click", target: { role: "<role>", name: "<name>" } }
 - type: { type: "type", target: { role: "<role>", name: "<name>" }, value: "<text>" }
+- select: { type: "select", target: { role: "combobox", name: "<name>" }, value: "<option text>" }
 - extract: { type: "extract", target: { role: "<role>", name: "<name>" }, output: "<outputName>" }
 - scroll: { type: "scroll", value: "down" } or { type: "scroll", value: "up" } — scroll the page to see more content
 - read_page_text: { type: "read_page_text" } — read all visible text on the page (use when you need to see content that is not in the AX tree)
@@ -187,9 +188,12 @@ Critical rules:
 - Do NOT set goalMet to true until ALL sub-goals are complete AND you have extracted meaningful data using the extract action AND outputComplete is true.
 - If you need to click a link or button to reach a sub-task's target, do that FIRST, then perform the sub-task on the NEXT step.
 - Use the exact role and name from the AX tree for targets.
+- Elements inside a table show their row as "row": [cell texts]. When several elements share the same role and name (e.g. a "Manage" link on every row), add "row": "<the cell text that identifies the intended row>" to the target, e.g. { role: "link", name: "Manage", row: "Savings" }.
+- To read a value from a table, extract the cell that holds the value itself.
+- Optionally add "expect": "<short text that will be visible once this action worked>" next to "action" — a stable label or heading, not data that changes per record.
 
 Respond with JSON only:
-{ "action": <action>, "reasoning": "<why>", "goalMet": <true|false>, "subGoalComplete": <true|false>, "outputComplete": <true|false> }`;
+{ "action": <action>, "expect": "<optional>", "reasoning": "<why>", "goalMet": <true|false>, "subGoalComplete": <true|false>, "outputComplete": <true|false> }`;
 
     const stateDesc = `Goal: ${request.goal}
 Step: ${request.stepNumber}
@@ -199,12 +203,12 @@ ${request.outputNames && request.outputNames.length > 0 ? `\nOutputs to extract:
 ${request.subGoals && request.subGoals.length > 0 ? `\nSub-goals:\n${request.subGoals.map(sg => `  [${request.completedSubGoals?.includes(sg.id) ? "DONE" : request.currentSubGoal === sg.id ? "CURRENT" : "PENDING"}] ${sg.id}: ${sg.description}`).join("\n")}\n\nCurrent sub-goal: ${request.subGoals.find(sg => sg.id === request.currentSubGoal)?.description || "none"}\nFocus on completing the CURRENT sub-goal. When it is done, set subGoalComplete=true.\n` : ""}
 ${request.paramNames && request.paramNames.length > 0 ? `\nInput parameters available: ${request.paramNames.join(", ")}\n` : ""}
 AX Tree (${request.screenState.axTree.length} total elements, showing most relevant):
-${JSON.stringify(this._prioritizeAXTree(request.screenState.axTree, 100, request.subGoals?.find(sg => sg.id === request.currentSubGoal)?.keywords).map(n => ({ role: n.role, name: n.name, value: n.value })), null, 2)}
+${JSON.stringify(this._prioritizeAXTree(request.screenState.axTree, 100, request.subGoals?.find(sg => sg.id === request.currentSubGoal)?.keywords).map(n => ({ role: n.role, name: n.name, value: n.value, row: n.context?.row })), null, 2)}
 
 Previous actions:
 ${request.history.map(h => {
   const a = h.action;
-  const target = a.target ? `${a.target.role}:${a.target.name}` : "";
+  const target = a.target ? `${a.target.role}:${a.target.name}${a.target.row ? ` (row ${a.target.row})` : ""}` : "";
   const val = a.value ? ` value="${a.value}"` : "";
   const out = a.output ? ` output=${a.output}` : "";
   const obs = h.observation ? ` → ${h.observation.substring(0, 100)}` : "";
@@ -241,6 +245,7 @@ REMEMBER: Review the goal, sub-goals, and the actions above. Focus on the CURREN
       return {
         ok: true,
         action: parsed.action,
+        expect: typeof parsed.expect === "string" && parsed.expect.trim() ? parsed.expect.trim() : undefined,
         reasoning: parsed.reasoning || "",
         goalMet: parsed.goalMet || false,
         subGoalComplete: parsed.subGoalComplete === true,
@@ -299,7 +304,8 @@ REMEMBER: Review the goal, sub-goals, and the actions above. Focus on the CURREN
       if (node.role === "StaticText" || node.role === "InlineTextBox") continue;
       if (node.role === "GenericContainer" || node.role === "Section") continue;
 
-      const key = `${node.role}:${node.name}`;
+      // Same role+name in different table rows are different controls
+      const key = `${node.role}:${node.name}:${node.context?.row?.join("|") ?? ""}`;
       if (seen.has(key)) continue;
       seen.add(key);
 

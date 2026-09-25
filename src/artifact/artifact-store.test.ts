@@ -8,7 +8,7 @@ const TEST_ARTIFACTS_DIR = path.join(process.cwd(), "test-artifacts");
 
 function mockArtifact(): CapabilityArtifact {
   return {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     artifactVersion: 1,
     capability: "lookup-member-balance",
     description: "Look up a member and read their savings balance",
@@ -24,13 +24,12 @@ function mockArtifact(): CapabilityArtifact {
       {
         id: 1,
         action: "navigate",
-        target: { primary: { role: "textbox", name: "Member ID" } },
         value: "http://localhost:3000/search",
       },
       {
         id: 2,
         action: "type",
-        target: { primary: { role: "textbox", name: "Member ID" } },
+        target: { role: "textbox", name: "Member ID" },
         value: "{{memberId}}",
       },
     ],
@@ -60,7 +59,7 @@ describe("ArtifactStore", () => {
     expect(existsSync(savedPath)).toBe(true);
     const loaded = JSON.parse(readFileSync(savedPath, "utf-8"));
     expect(loaded.capability).toBe("lookup-member-balance");
-    expect(loaded.schemaVersion).toBe("1.0");
+    expect(loaded.schemaVersion).toBe("2.0");
     expect(loaded.artifactVersion).toBe(1);
   });
 

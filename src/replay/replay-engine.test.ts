@@ -1,297 +1,315 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { ReplayEngine } from "./replay-engine.js";
-import { MockSurface } from "../surface/mock-surface.js";
-import { EvidenceCollector } from "../evidence/evidence-collector.js";
-import type { CapabilityArtifact, AllowlistConfig } from "../artifact/types.js";
 import { rmSync } from "fs";
 import path from "path";
+import { ReplayEngine } from "./replay-engine.js";
+import { EvidenceCollector } from "../evidence/evidence-collector.js";
+import type { Surface, ScreenState, Action, ActionResult } from "../surface/types.js";
+import type { CapabilityArtifact, ArtifactStep } from "../artifact/types.js";
+import type { AppProfile } from "../artifact/profile-types.js";
 
 const TEST_EVIDENCE_DIR = path.join(process.cwd(), "test-evidence-replay");
+const FAST_CHECKPOINT_MS = 50;
 
-const allowlist: AllowlistConfig = {
-  permittedDomains: ["localhost"],
-  permittedUrlPatterns: ["/search*", "/detail*", "/"],
-  permittedActions: ["navigate", "click", "type", "extract", "wait", "submit"],
+/** Each act() returns the next scripted result and moves the screen to its state. */
+class ScriptedSurface implements Surface {
+  readonly actions: Action[] = [];
+  private current: ScreenState;
+
+  constructor(private script: Array<{ result: ActionResult; state: ScreenState }>, initial = screen("about:blank")) {
+    this.current = initial;
+  }
+
+  async observe(): Promise<ScreenState> {
+    return this.current;
+  }
+
+  async act(action: Action): Promise<ActionResult> {
+    this.actions.push(action);
+    const next = this.script.shift();
+    if (!next) throw new Error(`Unscripted action: ${action.type}`);
+    this.current = next.state;
+    return next.result;
+  }
+
+  async navigate(): Promise<ActionResult> {
+    return { ok: true };
+  }
+
+  async close(): Promise<void> {}
+}
+
+function screen(url: string, texts: string[] = [], controls: Array<[string, string]> = []): ScreenState {
+  return {
+    url,
+    title: "Keystone",
+    axTree: [
+      ...texts.map((name) => ({ role: "StaticText", name })),
+      ...controls.map(([role, name]) => ({ role, name })),
+    ],
+    domSnapshot: "",
+    frameUrls: [],
+  };
+}
+
+const OK: ActionResult = { ok: true };
+const SEARCH = screen("http://localhost:3000/search", [], [["textbox", "Member ID"], ["button", "Search"]]);
+const RESULTS = screen("http://localhost:3000/search?q=12345", [], [["link", "12345"]]);
+const NOT_FOUND = screen("http://localhost:3000/search?q=99999", ["No records found for Member ID: 99999"]);
+const UNAVAILABLE = screen("http://localhost:3000/search", ["503 Service Temporarily Unavailable"]);
+const NOTICE = screen("http://localhost:3000/search", ["System Notice"], [["button", "Acknowledge"]]);
+
+const PROFILE: AppProfile = {
+  schemaVersion: "1.0",
+  app: "keystone-cu",
+  version: 1,
+  interstitials: [
+    {
+      name: "System Notice",
+      when: { anyOf: [{ axContains: [{ role: "button", name: "Acknowledge" }] }] },
+      dismiss: { role: "button", name: "Acknowledge" },
+    },
+  ],
+  conditions: [
+    { when: { anyOf: [{ textContains: "No records found" }] }, kind: "business-outcome", outcome: "not-found", description: "Member does not exist" },
+    { when: { anyOf: [{ textContains: "Service Temporarily Unavailable" }] }, kind: "retry", maxRetries: 1, description: "Transient error" },
+  ],
 };
 
-function mockArtifact(overrides: Partial<CapabilityArtifact> = {}): CapabilityArtifact {
+const NAVIGATE: ArtifactStep = {
+  id: 1,
+  action: "navigate",
+  value: "http://localhost:3000/search",
+  checkpoint: { anyOf: [{ axContains: [{ role: "textbox", name: "Member ID" }] }] },
+};
+const TYPE: ArtifactStep = { id: 2, action: "type", target: { role: "textbox", name: "Member ID" }, value: "{{memberId}}" };
+const SEARCH_CLICK: ArtifactStep = {
+  id: 3,
+  action: "click",
+  target: { role: "button", name: "Search" },
+  checkpoint: { anyOf: [{ axContains: [{ role: "link", name: "{{memberId}}" }] }] },
+};
+const EXTRACT: ArtifactStep = { id: 4, action: "extract", target: { role: "link", name: "{{memberId}}" }, output: "memberLink" };
+
+function artifact(steps: ArtifactStep[], overrides: Partial<CapabilityArtifact> = {}): CapabilityArtifact {
   return {
-    schemaVersion: "1.0",
+    schemaVersion: "2.0",
     artifactVersion: 1,
-    capability: "lookup-member-balance",
-    description: "Look up member and read balance",
-    surface: { type: "web", baseUrl: "http://localhost:3000" },
+    capability: "lookup-member",
+    description: "Look up a member",
+    surface: { type: "web", baseUrl: "http://localhost:3000", app: "keystone-cu" },
     params: [{ name: "memberId", type: "string", required: true }],
-    outputs: [{ name: "memberName", type: "string" }],
-    allowlist,
-    steps: [
-      {
-        id: 1,
-        action: "navigate",
-        target: { primary: { role: "RootWebArea", name: "http://localhost:3000/search" } },
-        value: "http://localhost:3000/search",
-      },
-      {
-        id: 2,
-        action: "type",
-        target: { primary: { role: "textbox", name: "Member ID" } },
-        value: "{{memberId}}",
-        guard: { anyOf: [{ axContains: [{ role: "textbox", name: "Member ID" }] }] },
-        checkpoint: { anyOf: [{ axContains: [{ role: "link", name: "12345" }] }] },
-      },
-      {
-        id: 3,
-        action: "navigate",
-        target: { primary: { role: "RootWebArea", name: "http://localhost:3000/detail?id=12345" } },
-        value: "http://localhost:3000/detail?id=12345",
-        guard: { anyOf: [{ axContains: [{ role: "link", name: "12345" }] }] },
-      },
-      {
-        id: 4,
-        action: "extract",
-        target: { primary: { role: "heading", name: "Member Detail - John A. Smith" } },
-        output: "memberName",
-        checkpoint: { anyOf: [{ axContains: [{ role: "heading", name: "Member Detail - John A. Smith" }] }] },
-      },
-    ],
+    outputs: [{ name: "memberLink", type: "string" }],
+    allowlist: {
+      permittedDomains: ["localhost"],
+      permittedUrlPatterns: ["/*"],
+      permittedActions: ["navigate", "click", "type", "extract", "submit"],
+      irreversibleActions: ["submit"],
+    },
+    steps,
     checkpoint: { outputsExtracted: true },
-    metadata: { recordedAt: "2026-09-23T20:00:00Z", recordedBy: "test" },
+    metadata: { recordedAt: "2026-09-24T00:00:00Z", recordedBy: "test" },
     ...overrides,
   };
 }
 
+function engine(surface: Surface): ReplayEngine {
+  return new ReplayEngine({
+    surface,
+    evidenceCollector: new EvidenceCollector(TEST_EVIDENCE_DIR),
+    profile: PROFILE,
+    checkpointTimeoutMs: FAST_CHECKPOINT_MS,
+  });
+}
+
 describe("ReplayEngine", () => {
-  afterEach(() => {
-    rmSync(TEST_EVIDENCE_DIR, { recursive: true, force: true });
+  afterEach(() => rmSync(TEST_EVIDENCE_DIR, { recursive: true, force: true }));
+
+  it("replays every step, substitutes params and returns outputs", async () => {
+    const surface = new ScriptedSurface([
+      { result: OK, state: SEARCH },
+      { result: OK, state: SEARCH },
+      { result: OK, state: RESULTS },
+      { result: { ok: true, extractedValue: "12345" }, state: RESULTS },
+    ]);
+
+    const result = await engine(surface).run(artifact([NAVIGATE, TYPE, SEARCH_CLICK, EXTRACT]), { memberId: "12345" });
+
+    expect(result).toMatchObject({ status: "success", outputs: { memberLink: "12345" } });
+    expect(surface.actions[1]).toMatchObject({ type: "type", value: "12345" });
+    expect(surface.actions[3].target).toEqual({ role: "link", name: "12345" });
   });
 
-  // AC1: Given a saved artifact and valid params, when I run ReplayEngine,
-  // then each step executes in order, guards and checkpoints verified, result is success.
-  it("replays artifact successfully with extracted outputs", async () => {
-    const surface = new MockSurface("http://localhost:3000/search", [
-      { role: "textbox", name: "Member ID" },
-      { role: "button", name: "Search" },
-    ]);
-    surface.setStateSequence([
-      // State 0: search page (after step 1 navigate)
-      {
-        url: "http://localhost:3000/search",
-        title: "Search",
-        axTree: [{ role: "textbox", name: "Member ID" }, { role: "button", name: "Search" }],
-        domSnapshot: "", frameUrls: [],
-      },
-      // State 1: still search page (step 2 guard check — same page)
-      {
-        url: "http://localhost:3000/search",
-        title: "Search",
-        axTree: [{ role: "textbox", name: "Member ID" }, { role: "button", name: "Search" }],
-        domSnapshot: "", frameUrls: [],
-      },
-      // State 2: search results (after step 2 type — shows results)
-      {
-        url: "http://localhost:3000/search?q=12345",
-        title: "Search Results",
-        axTree: [{ role: "link", name: "12345" }, { role: "table", name: "Search Results" }],
-        domSnapshot: "", frameUrls: [],
-      },
-      // State 3: detail page (after step 3 navigate)
-      {
-        url: "http://localhost:3000/detail?id=12345",
-        title: "Member Detail",
-        axTree: [{ role: "heading", name: "Member Detail - John A. Smith" }],
-        domSnapshot: "", frameUrls: [],
-      },
-      // State 4: detail page (after step 4 extract — same page)
-      {
-        url: "http://localhost:3000/detail?id=12345",
-        title: "Member Detail",
-        axTree: [{ role: "heading", name: "Member Detail - John A. Smith" }],
-        domSnapshot: "", frameUrls: [],
-      },
+  it("returns a business outcome when a known condition replaces the checkpoint", async () => {
+    const surface = new ScriptedSurface([
+      { result: OK, state: SEARCH },
+      { result: OK, state: SEARCH },
+      { result: OK, state: NOT_FOUND },
     ]);
 
-    const engine = new ReplayEngine({
-      surface,
-      evidenceCollector: new EvidenceCollector(TEST_EVIDENCE_DIR),
-    });
+    const result = await engine(surface).run(artifact([NAVIGATE, TYPE, SEARCH_CLICK, EXTRACT]), { memberId: "99999" });
 
-    const result = await engine.run(mockArtifact(), { memberId: "12345" });
+    expect(result).toMatchObject({ status: "business-outcome", outcome: "not-found" });
+  });
+
+  it("retries a transient condition, then continues", async () => {
+    const surface = new ScriptedSurface([
+      { result: OK, state: UNAVAILABLE },
+      { result: OK, state: SEARCH },
+    ]);
+
+    const result = await engine(surface).run(artifact([NAVIGATE], { outputs: [], checkpoint: {} }), { memberId: "1" });
 
     expect(result.status).toBe("success");
-    if (result.status === "success") {
-      expect(result.outputs.memberName).toBeTruthy();
-    }
+    expect(surface.actions).toHaveLength(2);
   });
 
-  // AC3: Given a replay where the page shows "No records found", when ErrorClassifier
-  // examines the state, then it returns business-outcome with outcome member-not-found.
-  it("returns business-outcome for member-not-found", async () => {
-    const artifact = mockArtifact({
-      steps: [
-        {
-          id: 1,
-          action: "navigate",
-          target: { primary: { role: "RootWebArea", name: "search" } },
-          value: "http://localhost:3000/search",
-        },
-        {
-          id: 2,
-          action: "type",
-          target: { primary: { role: "textbox", name: "Member ID" } },
-          value: "{{memberId}}",
-          guard: { anyOf: [{ axContains: [{ role: "textbox", name: "Member ID" }] }] },
-          checkpoint: {
-            anyOf: [
-              { axContains: [{ role: "link", name: "12345" }] },
-              { textContains: "No records found" },
-            ],
-          },
-          onError: [
-            {
-              when: { anyOf: [{ textContains: "No records found" }] },
-              handler: "fail",
-              outcome: "member-not-found",
-            },
-          ],
-        },
-      ],
-    });
-
-    const surface = new MockSurface("http://localhost:3000/search", []);
-    surface.setStateSequence([
-      {
-        url: "http://localhost:3000/search",
-        title: "Search",
-        axTree: [{ role: "textbox", name: "Member ID" }],
-        domSnapshot: "", frameUrls: [],
-      },
-      {
-        url: "http://localhost:3000/search?q=99999",
-        title: "Search Results",
-        axTree: [{ role: "heading", name: "No records found for Member ID: 99999" }],
-        domSnapshot: "", frameUrls: [],
-      },
-      {
-        url: "http://localhost:3000/search?q=99999",
-        title: "Search Results",
-        axTree: [{ role: "heading", name: "No records found for Member ID: 99999" }],
-        domSnapshot: "", frameUrls: [],
-      },
+  it("stops retrying after maxRetries", async () => {
+    const surface = new ScriptedSurface([
+      { result: OK, state: UNAVAILABLE },
+      { result: OK, state: UNAVAILABLE },
     ]);
 
-    const engine = new ReplayEngine({
-      surface,
-      evidenceCollector: new EvidenceCollector(TEST_EVIDENCE_DIR),
-    });
+    const result = await engine(surface).run(artifact([NAVIGATE], { outputs: [], checkpoint: {} }), { memberId: "1" });
 
-    const result = await engine.run(artifact, { memberId: "99999" });
-
-    expect(result.status).toBe("business-outcome");
-    if (result.status === "business-outcome") {
-      expect(result.outcome).toBe("member-not-found");
-    }
+    expect(result).toMatchObject({ status: "failure", stepId: 1, error: "retries-exhausted" });
   });
 
-  // AC4: Given a replay where a locator cannot be resolved, returns hard failure.
-  it("returns failure when locator cannot be resolved", async () => {
-    const artifact = mockArtifact({
-      steps: [
-        {
-          id: 1,
-          action: "navigate",
-          target: { primary: { role: "RootWebArea", name: "search" } },
-          value: "http://localhost:3000/search",
-        },
-        {
-          id: 2,
-          action: "type",
-          target: { primary: { role: "textbox", name: "Non-existent Field" } },
-          value: "test",
-          guard: { anyOf: [{ axContains: [{ role: "textbox", name: "Non-existent Field" }] }] },
-        },
-      ],
-    });
+  it("fails hard when the checkpoint never holds on an unknown screen", async () => {
+    const surface = new ScriptedSurface([{ result: OK, state: screen("http://localhost:3000/elsewhere") }]);
 
-    const surface = new MockSurface("http://localhost:3000/search", []);
-    surface.setStateSequence([
-      {
-        url: "http://localhost:3000/search",
-        title: "Search",
-        axTree: [{ role: "button", name: "Search" }], // No matching textbox
-        domSnapshot: "", frameUrls: [],
-      },
-      {
-        url: "http://localhost:3000/search",
-        title: "Search",
-        axTree: [{ role: "button", name: "Search" }],
-        domSnapshot: "", frameUrls: [],
-      },
+    const result = await engine(surface).run(artifact([NAVIGATE], { outputs: [], checkpoint: {} }), { memberId: "1" });
+
+    expect(result).toMatchObject({ status: "failure", stepId: 1, error: "checkpoint-failed" });
+  });
+
+  it("dismisses a known interstitial that blocks an action, then retries it", async () => {
+    const surface = new ScriptedSurface([
+      { result: { ok: false, error: "blocked", detail: "covered by <div>" }, state: NOTICE },
+      { result: OK, state: SEARCH },
+      { result: OK, state: RESULTS },
     ]);
 
-    const engine = new ReplayEngine({
-      surface,
-      evidenceCollector: new EvidenceCollector(TEST_EVIDENCE_DIR),
-    });
+    const result = await engine(surface).run(artifact([SEARCH_CLICK], { outputs: [], checkpoint: {} }), { memberId: "12345" });
 
-    const result = await engine.run(artifact, { memberId: "12345" });
-
-    expect(result.status).toBe("failure");
-    if (result.status === "failure") {
-      expect(result.stepId).toBe(2);
-      expect(result.error).toBeTruthy();
-    }
+    expect(result.status).toBe("success");
+    expect(surface.actions.map((a) => a.target?.name)).toEqual(["Search", "Acknowledge", "Search"]);
   });
 
-  // AC8: Given the same artifact and params, when I run ReplayEngine twice,
-  // then both results are identical (determinism).
-  it("produces identical results for the same inputs (determinism)", async () => {
-    const makeSurface = () => {
-      const s = new MockSurface("http://localhost:3000/search", [
-        { role: "textbox", name: "Member ID" },
-      ]);
-      s.setStateSequence([
-        {
-          url: "http://localhost:3000/search",
-          title: "Search",
-          axTree: [{ role: "textbox", name: "Member ID" }],
-          domSnapshot: "", frameUrls: [],
-        },
-        {
-          url: "http://localhost:3000/search",
-          title: "Search",
-          axTree: [{ role: "textbox", name: "Member ID" }],
-          domSnapshot: "", frameUrls: [],
-        },
-      ]);
-      return s;
+  it("escalates when unknown UI blocks the action", async () => {
+    const surface = new ScriptedSurface([
+      { result: { ok: false, error: "blocked", detail: "covered by <div id=promo>" }, state: SEARCH },
+    ]);
+
+    const result = await engine(surface).run(artifact([SEARCH_CLICK], { outputs: [], checkpoint: {} }), { memberId: "12345" });
+
+    expect(result).toMatchObject({ status: "escalated", stepId: 3 });
+  });
+
+  it("escalates an unexpected native dialog", async () => {
+    const surface = new ScriptedSurface([
+      { result: { ok: false, error: "unexpected-dialog", detail: "confirm: Are you sure?" }, state: SEARCH },
+    ]);
+
+    const result = await engine(surface).run(artifact([SEARCH_CLICK], { outputs: [], checkpoint: {} }), { memberId: "12345" });
+
+    expect(result).toMatchObject({ status: "escalated" });
+  });
+
+  it("reports an ambiguous target as a hard failure", async () => {
+    const surface = new ScriptedSurface([
+      { result: { ok: false, error: "ambiguous", detail: "2 matches" }, state: SEARCH },
+    ]);
+
+    const result = await engine(surface).run(artifact([SEARCH_CLICK], { outputs: [], checkpoint: {} }), { memberId: "12345" });
+
+    expect(result).toMatchObject({ status: "failure", error: "ambiguous" });
+  });
+
+  it("escalates an irreversible step without caller confirmation, before acting", async () => {
+    const submit: ArtifactStep = { id: 1, action: "submit", target: { role: "button", name: "Continue" }, classification: "irreversible" };
+    const surface = new ScriptedSurface([]);
+
+    const result = await engine(surface).run(artifact([submit], { outputs: [], checkpoint: {} }), { memberId: "1" });
+
+    expect(result).toMatchObject({ status: "escalated", stepId: 1 });
+    expect(surface.actions).toHaveLength(0);
+  });
+
+  it("runs an irreversible step when the caller confirms", async () => {
+    const submit: ArtifactStep = { id: 1, action: "submit", target: { role: "button", name: "Continue" }, classification: "irreversible" };
+    const surface = new ScriptedSurface([{ result: OK, state: SEARCH }]);
+
+    const result = await engine(surface).run(artifact([submit], { outputs: [], checkpoint: {} }), { memberId: "1" }, { confirmIrreversible: true });
+
+    expect(result.status).toBe("success");
+  });
+
+  it("never retries an irreversible step", async () => {
+    const submit: ArtifactStep = {
+      id: 1,
+      action: "submit",
+      target: { role: "button", name: "Continue" },
+      classification: "irreversible",
+      checkpoint: { anyOf: [{ textContains: "Opened Successfully" }] },
+    };
+    const surface = new ScriptedSurface([{ result: OK, state: UNAVAILABLE }]);
+
+    const result = await engine(surface).run(artifact([submit], { outputs: [], checkpoint: {} }), { memberId: "1" }, { confirmIrreversible: true });
+
+    expect(result).toMatchObject({ status: "escalated" });
+    expect(surface.actions).toHaveLength(1);
+  });
+
+  it("rejects a run with missing required params without acting", async () => {
+    const surface = new ScriptedSurface([]);
+
+    const result = await engine(surface).run(artifact([NAVIGATE]), {});
+
+    expect(result).toMatchObject({ status: "failure", stepId: 0, error: "missing-params" });
+    expect(surface.actions).toHaveLength(0);
+  });
+
+  it("refuses to navigate outside the allowlist", async () => {
+    const offsite: ArtifactStep = { id: 1, action: "navigate", value: "https://evil.example.com/" };
+    const surface = new ScriptedSurface([]);
+
+    const result = await engine(surface).run(artifact([offsite]), { memberId: "1" });
+
+    expect(result).toMatchObject({ status: "failure", error: "policy-violation" });
+    expect(surface.actions).toHaveLength(0);
+  });
+
+  it("fails when a declared output was not extracted", async () => {
+    const surface = new ScriptedSurface([{ result: OK, state: SEARCH }]);
+
+    const result = await engine(surface).run(artifact([NAVIGATE]), { memberId: "1" });
+
+    expect(result).toMatchObject({ status: "failure", error: "missing-outputs" });
+  });
+
+  it("turns a thrown surface error into a failure instead of crashing", async () => {
+    const surface = new ScriptedSurface([]);
+    surface.act = async () => {
+      throw new Error("page crashed");
     };
 
-    const artifact = mockArtifact({
-      steps: [
-        {
-          id: 1,
-          action: "navigate",
-          target: { primary: { role: "RootWebArea", name: "search" } },
-          value: "http://localhost:3000/search",
-        },
-      ],
-    });
+    const result = await engine(surface).run(artifact([NAVIGATE]), { memberId: "1" });
 
-    const engine1 = new ReplayEngine({
-      surface: makeSurface(),
-      evidenceCollector: new EvidenceCollector(TEST_EVIDENCE_DIR + "-1"),
-    });
-    const engine2 = new ReplayEngine({
-      surface: makeSurface(),
-      evidenceCollector: new EvidenceCollector(TEST_EVIDENCE_DIR + "-2"),
-    });
+    expect(result).toMatchObject({ status: "failure", stepId: 1, error: "surface-error", observed: "page crashed" });
+  });
 
-    const result1 = await engine1.run(artifact, { memberId: "12345" });
-    const result2 = await engine2.run(artifact, { memberId: "12345" });
+  it("never retries an action the allowlist marks irreversible, even without a step classification", async () => {
+    const submit: ArtifactStep = {
+      id: 1,
+      action: "submit",
+      target: { role: "button", name: "Continue" },
+      checkpoint: { anyOf: [{ textContains: "Opened Successfully" }] },
+    };
+    const surface = new ScriptedSurface([{ result: OK, state: UNAVAILABLE }]);
 
-    expect(result1.status).toBe(result2.status);
+    const result = await engine(surface).run(artifact([submit], { outputs: [], checkpoint: {} }), { memberId: "1" }, { confirmIrreversible: true });
 
-    rmSync(TEST_EVIDENCE_DIR + "-1", { recursive: true, force: true });
-    rmSync(TEST_EVIDENCE_DIR + "-2", { recursive: true, force: true });
+    expect(result).toMatchObject({ status: "escalated" });
+    expect(surface.actions).toHaveLength(1);
   });
 });

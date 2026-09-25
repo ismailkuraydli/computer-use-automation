@@ -5,186 +5,154 @@ import type { AllowlistConfig } from "../artifact/types.js";
 
 const allowlist: AllowlistConfig = {
   permittedDomains: ["localhost"],
-  permittedUrlPatterns: ["/search*", "/detail/*"],
-  permittedActions: ["navigate", "click", "type", "extract"],
+  permittedUrlPatterns: ["/*"],
+  permittedActions: ["navigate", "click", "type", "extract", "submit"],
+  irreversibleActions: ["submit"],
 };
 
-function mockScreenState(url: string, axTree: AXNode[] = []): ScreenState {
-  return {
-    url,
-    title: "Test Page",
-    axTree,
-    domSnapshot: "<html></html>",
-    frameUrls: [url],
-  };
+function screen(url: string, axTree: AXNode[] = []): ScreenState {
+  return { url, title: "Keystone", axTree, domSnapshot: "", frameUrls: [url] };
+}
+
+const SEARCH = screen("http://localhost:3000/search", [
+  { role: "textbox", name: "Member ID" },
+  { role: "button", name: "Search" },
+]);
+
+const DETAIL = screen("http://localhost:3000/detail?id=12345", [
+  { role: "heading", name: "Member Detail - John A. Smith" },
+  { role: "columnheader", name: "Balance" },
+  { role: "cell", name: "$4,521.33", context: { row: ["Checking", "1002003004", "$4,521.33", "Manage"], column: "Balance" } },
+  { role: "cell", name: "$12,847.00", context: { row: ["Savings", "2003004005", "$12,847.00", "Manage"], column: "Balance" } },
+  { role: "link", name: "Manage", context: { row: ["Checking", "1002003004", "$4,521.33", "Manage"], column: "Action" } },
+  { role: "link", name: "Manage", context: { row: ["Savings", "2003004005", "$12,847.00", "Manage"], column: "Action" } },
+]);
+
+const ACCOUNT = screen("http://localhost:3000/account-action?id=12345&acct=2003004005", [
+  { role: "cell", name: "$12,847.00", context: { row: ["Current Balance", "$12,847.00"], column: "Value", label: "Current Balance" } },
+]);
+
+function recorder(paramValues: Record<string, string> = {}): Recorder {
+  return new Recorder({
+    capability: "lookup",
+    description: "Look up a member",
+    allowlist,
+    params: [
+      { name: "memberId", type: "string", required: true },
+      { name: "accountType", type: "string", required: true },
+    ],
+    outputs: [{ name: "balance", type: "string" }],
+    paramValues,
+    app: "keystone-cu",
+  });
+}
+
+function finalize(r: Recorder) {
+  return r.finalize([], [{ name: "balance", type: "string" }], { outputsExtracted: true });
 }
 
 describe("Recorder", () => {
-  // AC2: Given MockLLMClient returns scripted actions, when AgentLoop runs,
-  // then the Recorder produces a valid CapabilityArtifact with typed params,
-  // outputs, steps, locators, guards, and checkpoints.
+  it("emits a schema-v2 artifact with the app profile and base URL", () => {
+    const r = recorder();
+    r.recordAction({ type: "navigate", value: "http://localhost:3000/search" }, screen("about:blank"), SEARCH, "success");
 
-  it("transforms a navigate action into an artifact step", () => {
-    const recorder = new Recorder("test-capability", "Test capability", allowlist);
-    const action: Action = { type: "navigate", value: "http://localhost:3000/search" };
-    const beforeState = mockScreenState("http://localhost:3000/");
-    const afterState = mockScreenState("http://localhost:3000/search", [
-      { role: "textbox", name: "Member ID" },
-    ]);
+    const artifact = finalize(r);
 
-    recorder.recordAction(action, beforeState, afterState, "success");
-
-    const artifact = recorder.finalize(
-      [{ name: "memberId", type: "string", required: true }],
-      [{ name: "savingsBalance", type: "string" }],
-      { outputsExtracted: true }
-    );
-
-    expect(artifact.steps).toHaveLength(1);
-    expect(artifact.steps[0].action).toBe("navigate");
-    expect(artifact.steps[0].target).toBeDefined();
-    expect(artifact.steps[0].value).toBe("http://localhost:3000/search");
+    expect(artifact.schemaVersion).toBe("2.0");
+    expect(artifact.surface).toEqual({ type: "web", baseUrl: "http://localhost:3000", app: "keystone-cu" });
+    expect(artifact.steps[0]).toMatchObject({ id: 1, action: "navigate", value: "http://localhost:3000/search" });
+    expect(artifact.steps[0].target).toBeUndefined();
   });
 
-  it("extracts a locator from the AX tree for click actions", () => {
-    const recorder = new Recorder("test-capability", "Test capability", allowlist);
-    const beforeState = mockScreenState("http://localhost:3000/search", [
-      { role: "textbox", name: "Member ID" },
-      { role: "button", name: "Search" },
-    ]);
-    const afterState = mockScreenState("http://localhost:3000/search?q=12345", [
-      { role: "link", name: "12345" },
-    ]);
+  it("does not record failed actions", () => {
+    const r = recorder();
+    r.recordAction({ type: "click", target: { role: "button", name: "Missing" } }, SEARCH, SEARCH, "failure");
 
-    recorder.recordAction(
-      { type: "click", target: { role: "button", name: "Search" } },
-      beforeState,
-      afterState,
-      "success"
-    );
-
-    const artifact = recorder.finalize([], [], { outputsExtracted: true });
-    expect(artifact.steps).toHaveLength(1);
-    expect(artifact.steps[0].action).toBe("click");
-    expect(artifact.steps[0].target.primary.role).toBe("button");
-    expect(artifact.steps[0].target.primary.name).toBe("Search");
+    expect(finalize(r).steps).toHaveLength(0);
   });
 
-  it("generates a checkpoint from the after-state AX tree", () => {
-    const recorder = new Recorder("test-capability", "Test capability", allowlist);
-    const beforeState = mockScreenState("http://localhost:3000/search");
-    const afterState = mockScreenState("http://localhost:3000/search?q=12345", [
-      { role: "link", name: "12345" },
-      { role: "table", name: "Search Results" },
-    ]);
+  it("turns an extracted table value into a row + column target", () => {
+    const r = recorder({ accountType: "Savings" });
+    r.recordAction({ type: "extract", target: { role: "cell", name: "$12,847.00" }, output: "balance" }, DETAIL, DETAIL, "success");
 
-    recorder.recordAction(
-      { type: "type", target: { role: "textbox", name: "Member ID" }, value: "12345" },
-      beforeState,
-      afterState,
-      "success"
-    );
-
-    const artifact = recorder.finalize([], [], { outputsExtracted: true });
-    expect(artifact.steps[0].checkpoint).toBeDefined();
-    // Checkpoint should reference elements from the after-state
-    expect(artifact.steps[0].checkpoint?.anyOf).toBeDefined();
+    expect(finalize(r).steps[0].target).toEqual({ role: "cell", row: "{{accountType}}", column: "Balance" });
   });
 
-  it("generates a guard from the before-state for non-first steps", () => {
-    const recorder = new Recorder("test-capability", "Test capability", allowlist);
+  it("turns a value in a key/value table into a label target", () => {
+    const r = recorder();
+    r.recordAction({ type: "extract", target: { role: "cell", name: "$12,847.00" }, output: "balance" }, ACCOUNT, ACCOUNT, "success");
 
-    // Step 1: navigate
-    recorder.recordAction(
-      { type: "navigate", value: "http://localhost:3000/search" },
-      mockScreenState("http://localhost:3000/"),
-      mockScreenState("http://localhost:3000/search", [{ role: "textbox", name: "Member ID" }]),
-      "success"
-    );
-
-    // Step 2: type (has a guard from the before-state)
-    recorder.recordAction(
-      { type: "type", target: { role: "textbox", name: "Member ID" }, value: "12345" },
-      mockScreenState("http://localhost:3000/search", [{ role: "textbox", name: "Member ID" }]),
-      mockScreenState("http://localhost:3000/search?q=12345", [{ role: "link", name: "12345" }]),
-      "success"
-    );
-
-    const artifact = recorder.finalize([], [], { outputsExtracted: true });
-    expect(artifact.steps).toHaveLength(2);
-    // Step 2 should have a guard from the before-state
-    expect(artifact.steps[1].guard).toBeDefined();
+    expect(finalize(r).steps[0].target).toEqual({ role: "cell", label: "Current Balance" });
   });
 
-  it("records extract actions with output mapping", () => {
-    const recorder = new Recorder("test-capability", "Test capability", allowlist);
-    const beforeState = mockScreenState("http://localhost:3000/detail?id=12345", [
-      { role: "heading", name: "Member Detail - John A. Smith" },
-    ]);
-    const afterState = mockScreenState("http://localhost:3000/detail?id=12345", [
-      { role: "heading", name: "Member Detail - John A. Smith" },
-    ]);
+  it("scopes a control that repeats on every row to the row the model chose", () => {
+    const r = recorder({ memberId: "12345", accountType: "Savings" });
+    const click: Action = { type: "click", target: { role: "link", name: "Manage", row: "Savings" } };
+    r.recordAction(click, DETAIL, ACCOUNT, "success");
 
-    recorder.recordAction(
-      { type: "extract", target: { role: "heading", name: "Member Detail - John A. Smith" }, output: "memberName" },
-      beforeState,
-      afterState,
-      "success"
-    );
-
-    const artifact = recorder.finalize(
-      [],
-      [{ name: "memberName", type: "string" }],
-      { outputsExtracted: true }
-    );
-    expect(artifact.steps[0].action).toBe("extract");
-    expect(artifact.steps[0].output).toBe("memberName");
+    const step = finalize(r).steps[0];
+    expect(step.target).toEqual({ role: "link", name: "Manage", row: "{{accountType}}" });
+    expect(step.checkpoint).toEqual({ anyOf: [{ urlPattern: "/account-action?id={{memberId}}&acct=*" }] });
   });
 
-  it("preserves frame path in locators", () => {
-    const recorder = new Recorder("test-capability", "Test capability", allowlist);
-    const beforeState = mockScreenState("http://localhost:3000/search");
-    const afterState: ScreenState = {
-      ...mockScreenState("http://localhost:3000/search"),
-      axTree: [{ role: "textbox", name: "Member ID", framePath: ["mainFrame"] }],
-    };
+  it("adds a row scope itself when the model did not", () => {
+    const r = recorder();
+    r.recordAction({ type: "click", target: { role: "link", name: "Manage" } }, DETAIL, ACCOUNT, "success");
 
-    recorder.recordAction(
-      { type: "type", target: { role: "textbox", name: "Member ID", framePath: ["mainFrame"] }, value: "12345" },
-      beforeState,
-      afterState,
-      "success"
-    );
-
-    const artifact = recorder.finalize([], [], { outputsExtracted: true });
-    expect(artifact.steps[0].target.framePath).toEqual(["mainFrame"]);
+    expect(finalize(r).steps[0].target).toEqual({ role: "link", name: "Manage", row: "Checking" });
   });
 
-  it("produces a valid CapabilityArtifact with all required fields", () => {
-    const recorder = new Recorder("lookup-member-balance", "Look up a member's balance", allowlist);
+  it("uses the model's expectation as the checkpoint text", () => {
+    const r = recorder();
+    r.recordAction({ type: "click", target: { role: "button", name: "Search" } }, SEARCH, DETAIL, "success", "Member Detail");
 
-    recorder.recordAction(
-      { type: "navigate", value: "http://localhost:3000/search" },
-      mockScreenState("http://localhost:3000/"),
-      mockScreenState("http://localhost:3000/search", [{ role: "textbox", name: "Member ID" }]),
-      "success"
-    );
+    expect(finalize(r).steps[0].checkpoint?.anyOf?.[0].textContains).toBe("Member Detail");
+  });
 
-    const artifact = recorder.finalize(
-      [{ name: "memberId", type: "string", required: true }],
-      [{ name: "savingsBalance", type: "string" }],
-      { outputsExtracted: true }
-    );
+  it("falls back to static controls and headers that appeared, skipping data", () => {
+    const r = recorder();
+    r.recordAction({ type: "click", target: { role: "button", name: "Search" } }, SEARCH, DETAIL, "success");
 
-    expect(artifact.schemaVersion).toBe("1.0");
-    expect(artifact.capability).toBe("lookup-member-balance");
-    expect(artifact.description).toBe("Look up a member's balance");
-    expect(artifact.surface.type).toBe("web");
-    expect(artifact.params).toHaveLength(1);
-    expect(artifact.outputs).toHaveLength(1);
-    expect(artifact.allowlist).toEqual(allowlist);
-    expect(artifact.steps).toHaveLength(1);
-    expect(artifact.checkpoint).toBeDefined();
-    expect(artifact.metadata.recordedAt).toBeTruthy();
+    const sig = finalize(r).steps[0].checkpoint?.anyOf?.[0];
+    expect(sig?.axContains).toEqual([{ role: "columnheader", name: "Balance" }]);
+  });
+
+  it("parameterizes typed values, URLs and target names", () => {
+    const r = recorder({ memberId: "12345" });
+    r.recordAction({ type: "type", target: { role: "textbox", name: "Member ID" }, value: "12345" }, SEARCH, SEARCH, "success");
+    r.recordAction({ type: "navigate", value: "http://localhost:3000/detail?id=12345" }, SEARCH, DETAIL, "success");
+
+    const [type, nav] = finalize(r).steps;
+    expect(type.value).toBe("{{memberId}}");
+    expect(nav.value).toBe("http://localhost:3000/detail?id={{memberId}}");
+    expect(nav.checkpoint?.anyOf?.[0].urlPattern).toBe("/detail?id={{memberId}}");
+  });
+
+  it("infers a param value typed from the goal", () => {
+    const r = new Recorder({
+      capability: "lookup",
+      description: "Look up",
+      allowlist,
+      params: [{ name: "memberId", type: "string", required: true }],
+      goal: "Look up member 12345",
+    });
+    r.recordAction({ type: "type", target: { role: "textbox", name: "Member ID" }, value: "12345" }, SEARCH, SEARCH, "success");
+
+    expect(r.discoveryParams).toEqual({ memberId: "12345" });
+    expect(finalize(r).steps[0].value).toBe("{{memberId}}");
+  });
+
+  it("classifies irreversible actions from the allowlist", () => {
+    const r = recorder();
+    r.recordAction({ type: "submit", target: { role: "button", name: "Continue" } }, SEARCH, DETAIL, "success");
+
+    expect(finalize(r).steps[0].classification).toBe("irreversible");
+  });
+
+  it("keeps the frame of a target", () => {
+    const r = recorder();
+    r.recordAction({ type: "click", target: { role: "link", name: "Member Search", frame: ["navFrame"] } }, SEARCH, SEARCH, "success");
+
+    expect(finalize(r).steps[0].target).toEqual({ role: "link", name: "Member Search", frame: ["navFrame"] });
   });
 });

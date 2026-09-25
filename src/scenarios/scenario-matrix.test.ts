@@ -25,15 +25,12 @@ import { EvidenceCollector } from "../evidence/evidence-collector.js";
 import { ReplayEngine } from "../replay/replay-engine.js";
 import type { ReplayResult } from "../replay/result.js";
 import type { CapabilityArtifact } from "../artifact/types.js";
-import {
-  lookupSavingsBalance,
-  openSubAccount,
-  manageAccountByType,
-  DISMISS_NOTICE_HANDLER,
-} from "./mock-app-artifacts.js";
+import type { AppProfile } from "../artifact/profile-types.js";
+import { loadProfile } from "../artifact/profile-store.js";
+import { lookupSavingsBalance, openSubAccount, manageAccountByType } from "./mock-app-artifacts.js";
 
 type ExpectedResult =
-  | { status: "success"; outputs: Record<string, string> }
+  | { status: "success"; outputs: Record<string, unknown> }
   | { status: "business-outcome"; outcome: string }
   | { status: "escalated" };
 
@@ -43,6 +40,10 @@ interface Scenario {
   artifact: (baseUrl: string) => CapabilityArtifact;
   params: Record<string, string>;
   faults?: MockFaults;
+  /** Adjust the Keystone profile, e.g. to make an interstitial unknown. */
+  profile?: (profile: AppProfile) => AppProfile;
+  /** The caller confirms irreversible steps may run. */
+  confirmIrreversible?: boolean;
   expected: ExpectedResult;
   /** Why the current engine fails this row. Remove once fixed. */
   knownGap?: string;
@@ -50,7 +51,9 @@ interface Scenario {
 
 const SCENARIO_TIMEOUT_MS = 90_000;
 
-const withNoticeHandler = (base: string) => lookupSavingsBalance(base, { extraHandlers: [DISMISS_NOTICE_HANDLER] });
+const KEYSTONE_PROFILE = loadProfile("keystone-cu");
+const withoutInterstitials = (profile: AppProfile): AppProfile => ({ ...profile, interstitials: [] });
+const ACCOUNT_NUMBER = expect.stringMatching(/^\d{10}$/);
 
 const SCENARIOS: Scenario[] = [
   // --- lookup-savings-balance ---
@@ -67,7 +70,6 @@ const SCENARIOS: Scenario[] = [
     artifact: lookupSavingsBalance,
     params: { memberId: "23456" },
     expected: { status: "success", outputs: { savingsBalance: "$8,234.50" } },
-    knownGap: `extract locator is the literal value recorded in discovery ("$12,847.00"), not a position relative to the "Savings" row`,
   },
   {
     id: "L3",
@@ -91,16 +93,14 @@ const SCENARIOS: Scenario[] = [
     params: { memberId: "12345" },
     faults: { transientErrors: 1 },
     expected: { status: "success", outputs: { savingsBalance: "$12,847.00" } },
-    knownGap: `"recoverable" handlers (retry) are classified but never executed; replay fails at step 2`,
   },
   {
     id: "L6",
     title: "known notice overlay blocks the results page",
-    artifact: withNoticeHandler,
+    artifact: lookupSavingsBalance,
     params: { memberId: "12345" },
     faults: { interstitialPaths: ["/search"] },
     expected: { status: "success", outputs: { savingsBalance: "$12,847.00" } },
-    knownGap: `surface reports "blocked", but the engine never executes dismiss handlers`,
   },
   {
     id: "L7",
@@ -108,8 +108,8 @@ const SCENARIOS: Scenario[] = [
     artifact: lookupSavingsBalance,
     params: { memberId: "12345" },
     faults: { interstitialPaths: ["/search"] },
+    profile: withoutInterstitials,
     expected: { status: "escalated" },
-    knownGap: `surface reports "blocked", but the engine turns it into a hard failure instead of escalating`,
   },
   {
     id: "L8",
@@ -125,31 +125,41 @@ const SCENARIOS: Scenario[] = [
     id: "A1",
     title: "happy path reaches confirmation",
     artifact: openSubAccount,
-    params: { memberId: "12345", deposit: "500" },
-    expected: { status: "success", outputs: { confirmation: "Sub-Account Opened Successfully" } },
+    params: { memberId: "12345", accountType: "Checking", deposit: "500" },
+    confirmIrreversible: true,
+    expected: { status: "success", outputs: { accountNumber: ACCOUNT_NUMBER } },
   },
   {
     id: "A2",
     title: "validation error on bad deposit",
     artifact: openSubAccount,
-    params: { memberId: "12345", deposit: "abc" },
+    params: { memberId: "12345", accountType: "Savings", deposit: "abc" },
+    confirmIrreversible: true,
     expected: { status: "business-outcome", outcome: "validation-error" },
   },
   {
     id: "A3",
     title: "permission denied for restricted member",
     artifact: openSubAccount,
-    params: { memberId: "34567", deposit: "500" },
+    params: { memberId: "34567", accountType: "Savings", deposit: "500" },
+    confirmIrreversible: true,
     expected: { status: "business-outcome", outcome: "permission-denied" },
   },
   {
     id: "A4",
     title: "unexpected confirm() dialog on an irreversible submit",
     artifact: openSubAccount,
-    params: { memberId: "12345", deposit: "500" },
+    params: { memberId: "12345", accountType: "Savings", deposit: "500" },
     faults: { confirmOnSubmit: true },
+    confirmIrreversible: true,
     expected: { status: "escalated" },
-    knownGap: `Playwright silently dismisses the confirm() dialog, so the submit is cancelled; replay only notices one step later as element-not-found`,
+  },
+  {
+    id: "A5",
+    title: "irreversible submit without caller confirmation",
+    artifact: openSubAccount,
+    params: { memberId: "12345", accountType: "Savings", deposit: "500" },
+    expected: { status: "escalated" },
   },
 
   // --- manage-account-by-type ---
@@ -159,7 +169,6 @@ const SCENARIOS: Scenario[] = [
     artifact: manageAccountByType,
     params: { memberId: "12345", accountType: "Savings" },
     expected: { status: "success", outputs: { balance: "$12,847.00" } },
-    knownGap: `ambiguous "Manage" links resolve to the first row (Checking); the artifact cannot bind a param to row context`,
   },
   {
     id: "M2",
@@ -167,7 +176,6 @@ const SCENARIOS: Scenario[] = [
     artifact: manageAccountByType,
     params: { memberId: "45678", accountType: "Checking" },
     expected: { status: "success", outputs: { balance: "$2,340.00" } },
-    knownGap: `ambiguous "Manage" links resolve to the first row, and the extract target is the literal discovery value`,
   },
 ];
 
@@ -198,8 +206,11 @@ async function replay(scenario: Scenario): Promise<ReplayResult> {
   const surface = new PlaywrightSurface({ headless: true, screenshotDir: evidence.screenshotDir });
   await surface._start();
   try {
-    const engine = new ReplayEngine({ surface, evidenceCollector: evidence });
-    return await engine.run(scenario.artifact(baseUrl), scenario.params);
+    const profile = (scenario.profile ?? ((p) => p))(KEYSTONE_PROFILE);
+    const engine = new ReplayEngine({ surface, evidenceCollector: evidence, profile });
+    return await engine.run(scenario.artifact(baseUrl), scenario.params, {
+      confirmIrreversible: scenario.confirmIrreversible,
+    });
   } finally {
     await surface.close();
   }

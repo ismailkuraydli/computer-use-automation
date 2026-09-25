@@ -12,7 +12,8 @@
  * browser's real AX tree.
  */
 
-import { chromium, type Browser, type Page, type Frame } from "playwright";
+import { chromium, type Browser, type Page, type Locator } from "playwright";
+import { resolveTarget } from "./playwright-resolver.js";
 import type {
   Surface,
   ScreenState,
@@ -31,6 +32,35 @@ const ACTION_TIMEOUT_MS = 5000;
  * another element covers the target (overlay, modal) — the caller decides
  * whether that is a known interstitial or something a human must look at.
  */
+function invalid(detail: string): ActionResult {
+  return { ok: false, error: "invalid-action", detail };
+}
+
+/** Visible text of an element, falling back to its accessible label. */
+async function readText(locator: Locator): Promise<string> {
+  const text = (await locator.innerText({ timeout: ACTION_TIMEOUT_MS }).catch(() => "")).trim();
+  if (text) return text;
+  return ((await locator.getAttribute("aria-label")) ?? (await locator.inputValue().catch(() => ""))).trim();
+}
+
+/** Select the option whose visible text matches, case-insensitively. */
+async function selectOptionByText(locator: Locator, text: string): Promise<void> {
+  // No named helpers inside evaluate(): some bundlers wrap them in a
+  // `__name()` call that does not exist in the page.
+  const value = await locator.evaluate((el, wanted) => {
+    const target = wanted.replace(/\s+/g, " ").trim().toLowerCase();
+    const options = Array.from((el as HTMLSelectElement).options ?? []);
+    const match = options.find(
+      (o) =>
+        o.text.replace(/\s+/g, " ").trim().toLowerCase() === target ||
+        o.value.replace(/\s+/g, " ").trim().toLowerCase() === target
+    );
+    return match ? match.value : null;
+  }, text);
+  if (value === null) throw new Error(`No option "${text}"`);
+  await locator.selectOption(value, { timeout: ACTION_TIMEOUT_MS });
+}
+
 function actionFailure(e: unknown): ActionResult {
   const message = e instanceof Error ? e.message : String(e);
   const interceptor = message.match(/(<[^\n]*?>)[^\n]*? intercepts pointer events/);
@@ -133,41 +163,27 @@ const BUILD_AX_TREE_JS = `(() => {
     return '';
   }
 
-  function getCssSelector(el) {
-    // If element has an id, use it (most reliable)
-    if (el.id) return '#' + CSS.escape(el.id);
-
-    // Build a path from tag, classes, and nth-child
-    var parts = [];
-    var current = el;
-    var depth = 0;
-    while (current && current !== document.body && depth < 10) {
-      var part = current.tagName.toLowerCase();
-      // Add classes for specificity
-      if (current.className && typeof current.className === 'string') {
-        var classes = current.className.trim().split(/\\s+/).filter(function(c) { return c.length > 0; });
-        if (classes.length > 0) {
-          part += '.' + classes.slice(0, 2).map(function(c) { return CSS.escape(c); }).join('.');
-        }
-      }
-      // Add aria-label if present (very specific)
-      if (current.getAttribute('aria-label')) {
-        part += '[aria-label="' + CSS.escape(current.getAttribute('aria-label')) + '"]';
-      }
-      // Add nth-child for disambiguation
-      var parent = current.parentElement;
-      if (parent) {
-        var siblings = Array.from(parent.children).filter(function(s) { return s.tagName === current.tagName; });
-        if (siblings.length > 1) {
-          var idx = siblings.indexOf(current) + 1;
-          part += ':nth-of-type(' + idx + ')';
-        }
-      }
-      parts.unshift(part);
-      current = current.parentElement;
-      depth++;
+  // Where the element sits in a table, in operator terms: the texts of its
+  // row, the header of its column, and the label cell just before it.
+  function cellText(c) {
+    return (c.textContent || '').replace(/\\s+/g, ' ').trim().substring(0, 60);
+  }
+  function getTableContext(el) {
+    var cell = el.closest('td, th');
+    if (!cell || !cell.parentElement || cell.parentElement.tagName !== 'TR') return undefined;
+    var tr = cell.parentElement;
+    var ctx = { row: Array.from(tr.cells).slice(0, 8).map(cellText) };
+    var table = tr.closest('table');
+    var header = table && Array.from(table.rows).find(function(r) {
+      return Array.from(r.cells).some(function(c) { return c.tagName === 'TH'; });
+    });
+    if (header && header !== tr && header.cells[cell.cellIndex]) {
+      ctx.column = cellText(header.cells[cell.cellIndex]);
     }
-    return parts.join(' > ');
+    var prev = cell.previousElementSibling;
+    if (prev && !header) ctx.label = cellText(prev);
+    else if (prev && header && header.cells.length === 2) ctx.label = cellText(prev);
+    return ctx;
   }
 
   var result = [];
@@ -192,12 +208,7 @@ const BUILD_AX_TREE_JS = `(() => {
       name: name.substring(0, 200),
       value: (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') ? (el.value || '') : undefined,
       children: [],
-      cssSelector: getCssSelector(el),
-      id: el.id || undefined,
-      ariaLabel: el.getAttribute('aria-label') || undefined,
-      text: ((el.textContent || '').trim()).substring(0, 100),
-      href: el.tagName === 'A' ? (el.getAttribute('href') || undefined) : undefined,
-      dataTestId: el.getAttribute('data-testid') || el.getAttribute('data-test-id') || undefined,
+      context: getTableContext(el),
     });
   }
   return result;
@@ -209,6 +220,7 @@ export class PlaywrightSurface implements Surface {
   private screenshotDir: string;
   private headless: boolean;
   private remoteDebuggingPort?: number;
+  private dialogs: string[] = [];
 
   constructor(options: PlaywrightSurfaceOptions = {}) {
     this.headless = options.headless ?? true;
@@ -227,6 +239,13 @@ export class PlaywrightSurface implements Surface {
     this.browser = await chromium.launch(launchOptions);
     this.page = await this.browser.newPage({ viewport: { width: 1280, height: 720 } });
 
+    // Native dialogs are never accepted implicitly. Dismissing (cancel) is the
+    // safe default; the action that opened one reports "unexpected-dialog".
+    this.page.on("dialog", (dialog) => {
+      this.dialogs.push(`${dialog.type()}: ${dialog.message()}`);
+      dialog.dismiss().catch(() => {});
+    });
+
     if (url) {
       await this.page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
     }
@@ -236,16 +255,16 @@ export class PlaywrightSurface implements Surface {
     if (!this.page) throw new Error("Surface not started — call _start() first");
 
     const url = this.page.url();
-    const title = await this.page.title();
+    const title = await this.page.title().catch(() => "");
 
     // Build unified AX tree across all frames
     const axTree = await this._buildUnifiedAXTree();
     const frameUrls = this.page.frames().map((f) => f.url());
 
     // DOM snapshot (simplified — just the body HTML)
-    const domSnapshot = await this.page.evaluate(() => {
-      return document.body ? document.body.innerHTML.substring(0, 50000) : "";
-    });
+    const domSnapshot = await this.page
+      .evaluate(() => (document.body ? document.body.innerHTML.substring(0, 50000) : ""))
+      .catch(() => "");
 
     // Screenshot
     const screenshotPath = path.join(this.screenshotDir, `screen-${randomUUID().slice(0, 8)}.png`);
@@ -268,40 +287,12 @@ export class PlaywrightSurface implements Surface {
   async act(action: Action): Promise<ActionResult> {
     if (!this.page) throw new Error("Surface not started — call _start() first");
 
-    switch (action.type) {
-      case "navigate":
-        if (!action.value) return { ok: false, error: "navigate requires a URL" };
-        return this._navigate(action.value);
-
-      case "click":
-        if (!action.target) return { ok: false, error: "click requires a target" };
-        return this._click(action.target);
-
-      case "type":
-        if (!action.target) return { ok: false, error: "type requires a target" };
-        if (action.value === undefined) return { ok: false, error: "type requires a value" };
-        return this._type(action.target, action.value);
-
-      case "extract":
-        if (!action.target) return { ok: false, error: "extract requires a target" };
-        return this._extract(action.target);
-
-      case "submit":
-        if (!action.target) return { ok: false, error: "submit requires a target" };
-        return this._click(action.target);
-
-      case "wait":
-        return this._wait(action.value ? parseInt(action.value, 10) : 1000);
-
-      case "scroll":
-        return this._scroll(action.value || "down");
-
-      case "read_page_text":
-        return this._readPageText();
-
-      default:
-        return { ok: false, error: `Unknown action type: ${action.type}` };
+    this.dialogs = [];
+    const result = await this._perform(action);
+    if (this.dialogs.length > 0) {
+      return { ok: false, error: "unexpected-dialog", detail: `Dismissed ${this.dialogs.join("; ")}` };
     }
+    return result;
   }
 
   async navigate(url: string): Promise<ActionResult> {
@@ -326,90 +317,73 @@ export class PlaywrightSurface implements Surface {
 
   // --- Private implementation ---
 
+  private async _perform(action: Action): Promise<ActionResult> {
+    switch (action.type) {
+      case "navigate":
+        if (!action.value) return invalid("navigate requires a URL");
+        return this._navigate(action.value);
+
+      case "click":
+      case "submit":
+        return this._withTarget(action, (locator) => locator.click({ timeout: ACTION_TIMEOUT_MS }));
+
+      case "type":
+        if (action.value === undefined) return invalid("type requires a value");
+        return this._withTarget(action, (locator) => locator.fill(action.value!, { timeout: ACTION_TIMEOUT_MS }));
+
+      case "select":
+        if (action.value === undefined) return invalid("select requires a value");
+        return this._withTarget(action, (locator) => selectOptionByText(locator, action.value!));
+
+      case "extract":
+        return this._withTarget(action, readText);
+
+      case "wait":
+        return this._wait(action.value ? parseInt(action.value, 10) : 1000);
+
+      case "scroll":
+        return this._scroll(action.value || "down");
+
+      case "read_page_text":
+        return this._readPageText();
+
+      default:
+        return invalid(`Unknown action type: ${action.type}`);
+    }
+  }
+
+  /**
+   * Resolve the action's target, then run `perform` on it. Playwright waits
+   * until the element is visible, stable, enabled and actually receives the
+   * input. Never force it: a forced click lands on whatever sits on top (an
+   * overlay, a dialog button) and reports success.
+   */
+  private async _withTarget(
+    action: Action,
+    perform: (locator: Locator) => Promise<string | void>
+  ): Promise<ActionResult> {
+    if (!action.target) return invalid(`${action.type} requires a target`);
+    try {
+      const resolved = await resolveTarget(this.page!, action.target);
+      if (!resolved.ok) return { ok: false, error: resolved.error, detail: resolved.detail };
+      const extractedValue = await perform(resolved.locator);
+      await this.page!.waitForLoadState("domcontentloaded").catch(() => {});
+      return typeof extractedValue === "string" ? { ok: true, extractedValue } : { ok: true };
+    } catch (e) {
+      return actionFailure(e);
+    }
+  }
+
   private async _navigate(url: string): Promise<ActionResult> {
     if (!this.page) throw new Error("Surface not started");
     try {
       await this.page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
-      // Wait for network activity to settle — dynamic content (settings panels,
-      // SPA widgets, lazy-loaded elements) may not be in the DOM at domcontentloaded.
+      // Wait for network activity to settle — dynamic content may not be in
+      // the DOM at domcontentloaded.
       await this.page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
       return { ok: true };
     } catch (e) {
       return { ok: false, error: "navigation-failed", detail: String(e) };
-    }
-  }
-
-  private async _click(target: AXNode): Promise<ActionResult> {
-    if (!this.page) throw new Error("Surface not started");
-    try {
-      const locator = await this._findElementByAX(target);
-      if (!locator) {
-        return { ok: false, error: "element-not-found", detail: `Could not find ${target.role} "${target.name}"` };
-      }
-      // Playwright waits until the element is visible, stable, enabled and
-      // actually receives the click. Never force it: a forced click lands on
-      // whatever sits on top (an overlay, a dialog button) and reports success.
-      await locator.click({ timeout: ACTION_TIMEOUT_MS });
-      return { ok: true };
-    } catch (e) {
-      return actionFailure(e);
-    }
-  }
-
-  private async _type(target: AXNode, value: string): Promise<ActionResult> {
-    if (!this.page) throw new Error("Surface not started");
-    try {
-      const locator = await this._findElementByAX(target);
-      if (!locator) {
-        return { ok: false, error: "element-not-found", detail: `Could not find ${target.role} "${target.name}"` };
-      }
-      await locator.fill(value, { timeout: ACTION_TIMEOUT_MS });
-      return { ok: true };
-    } catch (e) {
-      return actionFailure(e);
-    }
-  }
-
-  private async _extract(target: AXNode): Promise<ActionResult> {
-    if (!this.page) throw new Error("Surface not started");
-    try {
-      const locator = await this._findElementByAX(target);
-      if (!locator) {
-        return { ok: false, error: "element-not-found", detail: `Could not find ${target.role} "${target.name}"` };
-      }
-      // Try textContent first
-      let text = await locator.textContent({ timeout: 5000 });
-      text = text?.trim() ?? "";
-
-      // If empty (e.g. link wrapping an image), try innerText, then aria-label, then alt text
-      if (!text) {
-        try {
-          text = await locator.innerText({ timeout: 3000 });
-          text = text.trim();
-        } catch { /* not visible */ }
-      }
-      if (!text) {
-        // Try aria-label attribute
-        try {
-          const ariaLabel = await locator.getAttribute("aria-label", { timeout: 3000 });
-          if (ariaLabel) text = ariaLabel.trim();
-        } catch { /* ignore */ }
-      }
-      if (!text) {
-        // Try alt text from child images
-        try {
-          const alt = await locator.locator("img").first().getAttribute("alt", { timeout: 3000 });
-          if (alt) text = alt.trim();
-        } catch { /* no img */ }
-      }
-      // If still empty, use the target name from the AX tree (it was found by name, so it has one)
-      if (!text && target.name) {
-        text = target.name;
-      }
-
-      return { ok: true, extractedValue: text };
-    } catch (e) {
-      return { ok: false, error: "extract-failed", detail: String(e) };
     }
   }
 
@@ -426,158 +400,19 @@ export class PlaywrightSurface implements Surface {
       await this.page.waitForTimeout(500); // Let content load after scroll
       return { ok: true };
     } catch (e) {
-      return { ok: false, error: "scroll-failed", detail: String(e) };
+      return actionFailure(e);
     }
   }
 
   private async _readPageText(): Promise<ActionResult> {
     if (!this.page) throw new Error("Surface not started");
     try {
-      const text = await this.page.evaluate(() => {
-        // Get all visible text content, limited to a reasonable size
-        const body = document.body;
-        if (!body) return "";
-        // Use innerText to get only visible text (not hidden, not script/style)
-        const text = body.innerText || "";
-        // Limit to first 5000 chars to avoid overwhelming the LLM
-        return text.substring(0, 5000);
-      });
+      // Visible text only, capped to keep LLM prompts bounded
+      const text = await this.page.evaluate(() => (document.body?.innerText || "").substring(0, 5000));
       return { ok: true, extractedValue: text };
     } catch (e) {
-      return { ok: false, error: "read-page-text-failed", detail: String(e) };
+      return actionFailure(e);
     }
-  }
-
-  /**
-   * Find an element on the page using the identity fields captured during
-   * discovery. Resolution order:
-   *   1. CSS selector (if recorded — most specific, like a Playwright test selector)
-   *   2. id (if recorded)
-   *   3. data-testid (if recorded)
-   *   4. Role + name via getByRole (exact match)
-   *   5. Role + name via getByRole (partial match — handles param-substituted
-   *      names where the actual page text differs, e.g. "More {{genre}} books..."
-   *      on a page that says "More horror books...")
-   *   6. Text content via getByText (for non-standard roles: labels, spans)
-   *
-   * If the name contains {{param}} templates, they are stripped and the
-   * remaining key words are used for partial matching. This handles replay
-   * with different params where the page text doesn't match the substituted name.
-   *
-   * Retries once after 1 second for dynamically loaded content.
-   */
-  private async _findElementByAX(target: AXNode): Promise<ReturnType<Page["locator"]> | null> {
-    if (!this.page) return null;
-
-    const result = await this._tryFindElement(target);
-    if (result) return result;
-
-    // Wait and retry for dynamically loaded content
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    return this._tryFindElement(target);
-  }
-
-  /**
-   * Build a "search name" from the target name: strip {{param}} templates
-   * and return the remaining text. If the name is entirely a template
-   * (e.g. "{{topic}}"), return the original name (it will be substituted
-   * by the replay engine before reaching here).
-   */
-  private _searchName(name: string): string {
-    const stripped = name.replace(/\{\{[^}]+\}\}/g, "").trim();
-    // If stripping removed everything, keep original (replay engine substitutes it)
-    return stripped.length >= 3 ? stripped : name;
-  }
-
-  /** Anchored, case-insensitive pattern matching the whole name. */
-  private _exactNamePattern(name: string): RegExp {
-    const escaped = name.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return new RegExp(`^\\s*${escaped}\\s*$`, "i");
-  }
-
-  private async _tryFindElement(target: AXNode): Promise<ReturnType<Page["locator"]> | null> {
-    if (!this.page) return null;
-
-    // Determine which frame to search in
-    let frame: Page | Frame = this.page;
-    const framePath = target.framePath || [];
-    if (framePath.length > 0 && this.page) {
-      const allFrames = this.page.frames();
-      for (const frameName of framePath) {
-        const childFrame = allFrames.find((f: Frame) => f.name() === frameName);
-        if (childFrame) frame = childFrame;
-      }
-    }
-
-    // If the target name still contains an unsubstituted {{param}} template,
-    // the CSS selector and id point to the discovery element. Skip them.
-    // (The replay engine also strips cssSelector/id when the original name
-    // had a template, but this catches cases where the surface is called
-    // directly during discovery.)
-    const hasParamTemplate = /\{\{[^}]+\}\}/.test(target.name);
-    const searchName = this._searchName(target.name);
-
-    // 1. CSS selector (most specific) — skip if name has {{param}} (wrong element)
-    if (target.cssSelector && !hasParamTemplate) {
-      try {
-        const locator = frame.locator(target.cssSelector);
-        if (await locator.count() > 0) return locator.first();
-      } catch { /* invalid or not found */ }
-    }
-
-    // 2. id — skip if name has {{param}} (wrong element)
-    if (target.id && !hasParamTemplate) {
-      try {
-        const escapedId = target.id.replace(/[^a-zA-Z0-9_-]/g, (c) => '\\' + c);
-        const locator = frame.locator(`#${escapedId}`);
-        if (await locator.count() > 0) return locator.first();
-      } catch { /* not found */ }
-    }
-
-    // 3. data-testid — always safe (test IDs are param-independent)
-    if (target.dataTestId) {
-      try {
-        const locator = frame.getByTestId(target.dataTestId);
-        if (await locator.count() > 0) return locator.first();
-      } catch { /* not found */ }
-    }
-
-    // 4. getByRole with full-name match, case-insensitive (user may pass
-    //    "fantasy" when the page says "Fantasy")
-    const exactName = this._exactNamePattern(target.name);
-    try {
-      const locator = frame.getByRole(target.role as any, { name: exactName });
-      if (await locator.count() > 0) return locator.first();
-    } catch { /* non-standard role */ }
-
-    // 5. getByRole with partial name match (handles param-substituted names)
-    if (searchName !== target.name) {
-      try {
-        const locator = frame.getByRole(target.role as any, { name: searchName });
-        if (await locator.count() > 0) return locator.first();
-      } catch { /* not found */ }
-    }
-
-    // 6. getByText (for non-standard roles: labels, spans, settings text)
-    try {
-      // Exact match first
-      const exactLocator = frame.getByText(exactName);
-      if (await exactLocator.count() > 0) return exactLocator.first();
-
-      // Partial match with stripped name
-      if (searchName !== target.name) {
-        const partialLocator = frame.getByText(searchName);
-        if (await partialLocator.count() > 0) return partialLocator.first();
-      }
-
-      // getByLabel for form fields
-      if (target.role === "textbox" || target.role === "combobox" || target.role === "searchbox") {
-        const labelLocator = frame.getByLabel(target.name, { exact: true });
-        if (await labelLocator.count() > 0) return labelLocator.first();
-      }
-    } catch { /* not found */ }
-
-    return null;
   }
 
   /**
@@ -605,12 +440,11 @@ export class PlaywrightSurface implements Surface {
       // CDP may not be available
     }
 
-    // --- Supplement with JS scan to add identity fields and missing elements ---
+    // --- Supplement with JS scan to add table context and missing elements ---
     // CDP's AX tree doesn't expose label/span elements without aria-label or
-    // explicit role attributes, and CDP nodes don't have CSS selectors.
-    // We run the JS builder to:
-    // 1. Add CSS selectors, id, ariaLabel, text, href, dataTestId to existing CDP nodes
-    // 2. Add missing label/span/div elements that CDP doesn't expose
+    // explicit role attributes, and has no table context. The JS builder:
+    // 1. Adds table context (row cells, column header, label) to CDP nodes
+    // 2. Adds label/span/div elements that CDP doesn't expose
     try {
       const supplementNodes = await this.page.evaluate(BUILD_AX_TREE_JS) as any[];
       // Track which CDP nodes have already been merged (by index) to handle
@@ -627,15 +461,10 @@ export class PlaywrightSurface implements Surface {
           }
         }
         if (matchIdx >= 0) {
-          // Merge identity fields into existing CDP node
+          // Merge table context into the existing CDP node
           const existing = result[matchIdx];
           mergedCdpIndices.add(matchIdx);
-          if (node.cssSelector && !existing.cssSelector) existing.cssSelector = node.cssSelector;
-          if (node.id && !existing.id) existing.id = node.id;
-          if (node.ariaLabel && !existing.ariaLabel) existing.ariaLabel = node.ariaLabel;
-          if (node.text && !existing.text) existing.text = node.text;
-          if (node.href && !existing.href) existing.href = node.href;
-          if (node.dataTestId && !existing.dataTestId) existing.dataTestId = node.dataTestId;
+          if (node.context && !existing.context) existing.context = node.context;
         } else {
           // New element not in CDP tree — add it
           result.push({ ...node, framePath: [] as string[] });

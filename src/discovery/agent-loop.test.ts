@@ -59,7 +59,7 @@ describe("AgentLoop", () => {
       surface: makeMockSurface(),
       safetyGuard: new SafetyGuard(allowlist),
       evidenceCollector: new EvidenceCollector(TEST_EVIDENCE_DIR),
-      recorder: new Recorder("test-goal", "Test goal", allowlist),
+      recorder: new Recorder({ capability: "test-goal", description: "Test goal", allowlist: allowlist }),
       maxSteps: 10,
       timeoutMs: 15000,
     });
@@ -89,7 +89,7 @@ describe("AgentLoop", () => {
       surface: makeMockSurface(),
       safetyGuard: new SafetyGuard(allowlist),
       evidenceCollector: new EvidenceCollector(TEST_EVIDENCE_DIR),
-      recorder: new Recorder("test-max-steps", "Test max steps", allowlist),
+      recorder: new Recorder({ capability: "test-max-steps", description: "Test max steps", allowlist: allowlist }),
       maxSteps: 3,
       timeoutMs: 10000,
     });
@@ -108,7 +108,7 @@ describe("AgentLoop", () => {
       surface: makeMockSurface(),
       safetyGuard: new SafetyGuard(allowlist),
       evidenceCollector: new EvidenceCollector(TEST_EVIDENCE_DIR),
-      recorder: new Recorder("test-dead-end", "Test dead end", allowlist),
+      recorder: new Recorder({ capability: "test-dead-end", description: "Test dead end", allowlist: allowlist }),
       maxSteps: 10,
       timeoutMs: 10000,
     });
@@ -134,7 +134,7 @@ describe("AgentLoop", () => {
       surface: makeMockSurface(),
       safetyGuard: new SafetyGuard(allowlist),
       evidenceCollector: new EvidenceCollector(TEST_EVIDENCE_DIR),
-      recorder: new Recorder("test-loop", "Test loop", allowlist),
+      recorder: new Recorder({ capability: "test-loop", description: "Test loop", allowlist: allowlist }),
       maxSteps: 10,
       timeoutMs: 10000,
     });
@@ -173,7 +173,7 @@ describe("AgentLoop", () => {
       surface: makeMockSurface(),
       safetyGuard: new SafetyGuard(restrictiveAllowlist),
       evidenceCollector: new EvidenceCollector(TEST_EVIDENCE_DIR),
-      recorder: new Recorder("test-allowlist", "Test allowlist", restrictiveAllowlist),
+      recorder: new Recorder({ capability: "test-allowlist", description: "Test allowlist", allowlist: restrictiveAllowlist }),
       maxSteps: 10,
       timeoutMs: 10000,
     });
@@ -203,7 +203,7 @@ describe("AgentLoop", () => {
       surface: makeMockSurface(),
       safetyGuard: new SafetyGuard(allowlist),
       evidenceCollector: new EvidenceCollector(TEST_EVIDENCE_DIR),
-      recorder: new Recorder("test-risky", "Test risky action", allowlist),
+      recorder: new Recorder({ capability: "test-risky", description: "Test risky action", allowlist: allowlist }),
       maxSteps: 10,
       timeoutMs: 10000,
     });
@@ -244,7 +244,7 @@ describe("AgentLoop", () => {
       surface: makeMockSurface(),
       safetyGuard: new SafetyGuard(irreversibleAllowlist),
       evidenceCollector: new EvidenceCollector(TEST_EVIDENCE_DIR),
-      recorder: new Recorder("test-irreversible", "Test irreversible", irreversibleAllowlist),
+      recorder: new Recorder({ capability: "test-irreversible", description: "Test irreversible", allowlist: irreversibleAllowlist }),
       maxSteps: 10,
       timeoutMs: 10000,
     });

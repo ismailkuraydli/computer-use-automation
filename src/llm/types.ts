@@ -31,7 +31,16 @@ export interface ActionHistoryEntry {
 }
 
 export type LLMResponse =
-  | { ok: true; action: Action; reasoning: string; goalMet: boolean; subGoalComplete?: boolean; outputComplete?: boolean }
+  | {
+      ok: true;
+      action: Action;
+      /** Text the model expects to see once the action worked — becomes the step checkpoint. */
+      expect?: string;
+      reasoning: string;
+      goalMet: boolean;
+      subGoalComplete?: boolean;
+      outputComplete?: boolean;
+    }
   | { ok: false; error: string };
 
 export interface CapabilityPlan {

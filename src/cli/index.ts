@@ -19,6 +19,8 @@ const { values, positionals } = parseArgs({
     headed: { type: "boolean", default: false },
     config: { type: "string" },
     allowlist: { type: "string" },
+    app: { type: "string" },
+    confirm: { type: "boolean", default: false },
     help: { type: "boolean", default: false },
   },
 });
@@ -29,8 +31,8 @@ if (values.help || !command) {
   console.log(`cua — Computer-Use Automation CLI
 
 Usage:
-  cua discover --goal "Look up member 12345" --target http://localhost:3000 --output ./artifacts/test.json
-  cua replay --artifact ./artifacts/lookup-member-balance/v1.json --params '{"memberId":"12345"}' --target http://localhost:3000
+  cua discover --goal "Look up member 12345 and read their savings balance" --target http://localhost:3000/search --app keystone-cu
+  cua replay --artifact ./artifacts/lookup-savings-balance/v1.json --params '{"memberId":"23456"}' --target http://localhost:3000
   cua escalate --session <session-id>
 
 Options:
@@ -43,6 +45,8 @@ Options:
   --headed     Show the browser window (discover, replay)
   --config     Path to cua.config.json (default: ./cua.config.json)
   --allowlist  Path to allowlist JSON file (discover)
+  --app        App profile name in ./profiles (discover; stored in the artifact)
+  --confirm    Allow the artifact's irreversible steps to run (replay)
   --help       Show this help
 
 Config (cua.config.json):

@@ -12,12 +12,40 @@ import { readdirSync, readFileSync, existsSync, statSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { spawn } from "child_process";
+import { loadArtifactFile } from "../artifact/artifact-store.js";
+
+/** Artifact names and version files are plain identifiers — never paths. */
+const SAFE_NAME = /^[\w-]+$/;
+const SAFE_VERSION = /^v\d+\.json$/;
+const SAFE_SCREENSHOT = /^[\w-]+\.png$/;
+/** Replay may only load artifacts from the store, as the UI addresses them. */
+const SAFE_ARTIFACT_PATH = /^\.\/artifacts\/[\w-]+\/v\d+\.json$/;
+const MAX_GOAL_LENGTH = 2000;
+
+function isHttpUrl(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.values(value).every((v) => typeof v === "string")
+  );
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-const PORT = 3001;
+const PORT = Number(process.env.CUA_UI_PORT) || 3001;
 
 app.use(express.json());
 app.use(express.static(join(__dirname, "public")));
@@ -62,13 +90,16 @@ app.get("/api/artifacts", (_req, res) => {
 app.get("/api/artifacts/:name/:version", (req, res) => {
   try {
     const { name, version } = req.params;
+    if (!SAFE_NAME.test(name) || !SAFE_VERSION.test(version)) {
+      res.status(400).json({ error: "Invalid artifact name or version" });
+      return;
+    }
     const filePath = join(process.cwd(), "artifacts", name, version);
     if (!existsSync(filePath)) {
       res.status(404).json({ error: "Artifact not found" });
       return;
     }
-    const content = readFileSync(filePath, "utf-8");
-    res.json(JSON.parse(content));
+    res.json(loadArtifactFile(filePath));
   } catch (e) {
     res.status(500).json({ error: String(e) });
   }
@@ -102,6 +133,10 @@ app.get("/api/evidence", (_req, res) => {
 app.get("/api/evidence/:id", (req, res) => {
   try {
     const { id } = req.params;
+    if (!SAFE_NAME.test(id)) {
+      res.status(400).json({ error: "Invalid evidence id" });
+      return;
+    }
     const dir = join(process.cwd(), "evidence", id);
     if (!existsSync(dir)) {
       res.status(404).json({ error: "Evidence not found" });
@@ -148,6 +183,10 @@ app.get("/api/evidence/:id", (req, res) => {
 app.get("/api/evidence/:id/screenshots/:file", (req, res) => {
   try {
     const { id, file } = req.params;
+    if (!SAFE_NAME.test(id) || !SAFE_SCREENSHOT.test(file)) {
+      res.status(400).send("Invalid path");
+      return;
+    }
     const filePath = join(process.cwd(), "evidence", id, "screenshots", file);
     if (!existsSync(filePath)) {
       res.status(404).send("Not found");
@@ -165,10 +204,14 @@ app.get("/api/evidence/:id/screenshots/:file", (req, res) => {
  * Body: { goal: string, target: string, headed?: boolean }
  */
 app.post("/api/discover", (req, res) => {
-  const { goal, target, headed } = req.body;
+  const { goal, target, headed } = req.body ?? {};
 
-  if (!goal || !target) {
-    res.status(400).json({ error: "goal and target are required" });
+  if (typeof goal !== "string" || !goal.trim() || goal.length > MAX_GOAL_LENGTH || goal.startsWith("-")) {
+    res.status(400).json({ error: "goal must be a non-empty string" });
+    return;
+  }
+  if (!isHttpUrl(target)) {
+    res.status(400).json({ error: "target must be an http(s) URL" });
     return;
   }
 
@@ -185,7 +228,7 @@ app.post("/api/discover", (req, res) => {
     "--goal", goal,
     "--target", target,
   ];
-  if (headed) args.push("--headed");
+  if (headed === true) args.push("--headed");
 
   const child = spawn(process.execPath, ["--import", "tsx", ...args], {
     cwd: process.cwd(),
@@ -228,10 +271,18 @@ app.post("/api/discover", (req, res) => {
  * Body: { artifact: string, params: Record<string, string>, target: string, headed?: boolean }
  */
 app.post("/api/replay", (req, res) => {
-  const { artifact, params, target, headed } = req.body;
+  const { artifact, params, target, headed } = req.body ?? {};
 
-  if (!artifact || !target) {
-    res.status(400).json({ error: "artifact and target are required" });
+  if (typeof artifact !== "string" || !SAFE_ARTIFACT_PATH.test(artifact)) {
+    res.status(400).json({ error: "artifact must be ./artifacts/<name>/v<N>.json" });
+    return;
+  }
+  if (!isHttpUrl(target)) {
+    res.status(400).json({ error: "target must be an http(s) URL" });
+    return;
+  }
+  if (params !== undefined && !isStringRecord(params)) {
+    res.status(400).json({ error: "params must be an object of strings" });
     return;
   }
 
@@ -250,7 +301,7 @@ app.post("/api/replay", (req, res) => {
   if (params && Object.keys(params).length > 0) {
     args.push("--params", JSON.stringify(params));
   }
-  if (headed) args.push("--headed");
+  if (headed === true) args.push("--headed");
 
   const child = spawn(process.execPath, ["--import", "tsx", ...args], {
     cwd: process.cwd(),

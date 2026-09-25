@@ -7,6 +7,13 @@
 
 // --- AX Tree types ---
 
+/** Where a node sits in a table, as an operator would describe it. */
+export interface NodeContext {
+  row?: string[];      // texts of the cells in the node's table row
+  column?: string;     // header text of the node's column
+  label?: string;      // text of the cell just before it (key/value tables)
+}
+
 export interface AXNode {
   role: string;          // "textbox", "button", "cell", "link", "table", etc.
   name: string;         // accessible name
@@ -14,17 +21,8 @@ export interface AXNode {
   value?: string;        // current value (for text inputs)
   children?: AXNode[];
   framePath?: string[];  // which frame this node lives in (empty = main frame)
-  // Backend-specific handle for acting on this element (opaque to callers)
-  // In PlaywrightSurface, this is the element handle — but the type is generic
-  // so it doesn't leak Playwright types into the interface.
   backendNodeId?: number;
-  // Exact element identity captured during discovery (Change 3)
-  cssSelector?: string;   // unique CSS selector for the element
-  id?: string;            // element's id attribute
-  ariaLabel?: string;     // element's aria-label attribute
-  text?: string;          // trimmed text content (first 100 chars)
-  href?: string;          // for links
-  dataTestId?: string;    // any data-testid attribute
+  context?: NodeContext;  // table context, for row/column/label targets
 }
 
 // --- Screen State (output of observe()) ---
@@ -40,20 +38,39 @@ export interface ScreenState {
 
 // --- Actions (input to act()) ---
 
-export type ActionType = "navigate" | "click" | "type" | "extract" | "wait" | "submit" | "scroll" | "read_page_text";
+export type { ActionType, TargetSpec } from "../artifact/types.js";
+import type { ActionType, TargetSpec } from "../artifact/types.js";
 
 export interface Action {
   type: ActionType;
-  target?: AXNode;         // which element to act on (for click/type/extract/submit)
-  value?: string;          // text to type, URL to navigate to, etc.
+  target?: TargetSpec;     // which element to act on; params already substituted
+  value?: string;          // text to type, option to select, URL to navigate to
   output?: string;         // name of the output to store (for extract)
 }
 
 // --- Action Result (output of act()) ---
 
+/**
+ * Why an action did not happen. The replay engine maps these to the error
+ * taxonomy; the surface only reports what it saw.
+ * - element-not-found / ambiguous: the target did not resolve to one element
+ * - blocked: something else covers the target (overlay, modal)
+ * - not-actionable: found but hidden/disabled/not editable
+ * - unexpected-dialog: a native dialog opened; it was dismissed (cancelled)
+ * - navigation-failed: the page did not load
+ */
+export type SurfaceError =
+  | "element-not-found"
+  | "ambiguous"
+  | "blocked"
+  | "not-actionable"
+  | "unexpected-dialog"
+  | "navigation-failed"
+  | "invalid-action";
+
 export type ActionResult =
   | { ok: true; extractedValue?: string }
-  | { ok: false; error: string; detail?: string };
+  | { ok: false; error: SurfaceError; detail?: string };
 
 // --- Surface Interface ---
 
