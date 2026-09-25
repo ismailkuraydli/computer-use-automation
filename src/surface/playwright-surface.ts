@@ -503,18 +503,24 @@ export class PlaywrightSurface implements Surface {
       }
     }
 
+    // If the target name still contains an unsubstituted {{param}} template,
+    // the CSS selector and id point to the discovery element. Skip them.
+    // (The replay engine also strips cssSelector/id when the original name
+    // had a template, but this catches cases where the surface is called
+    // directly during discovery.)
+    const hasParamTemplate = /\{\{[^}]+\}\}/.test(target.name);
     const searchName = this._searchName(target.name);
 
-    // 1. CSS selector (most specific)
-    if (target.cssSelector) {
+    // 1. CSS selector (most specific) — skip if name has {{param}} (wrong element)
+    if (target.cssSelector && !hasParamTemplate) {
       try {
         const locator = frame.locator(target.cssSelector);
         if (await locator.count() > 0) return locator.first();
       } catch { /* invalid or not found */ }
     }
 
-    // 2. id
-    if (target.id) {
+    // 2. id — skip if name has {{param}} (wrong element)
+    if (target.id && !hasParamTemplate) {
       try {
         const escapedId = target.id.replace(/[^a-zA-Z0-9_-]/g, (c) => '\\' + c);
         const locator = frame.locator(`#${escapedId}`);
@@ -522,7 +528,7 @@ export class PlaywrightSurface implements Surface {
       } catch { /* not found */ }
     }
 
-    // 3. data-testid
+    // 3. data-testid — always safe (test IDs are param-independent)
     if (target.dataTestId) {
       try {
         const locator = frame.getByTestId(target.dataTestId);
