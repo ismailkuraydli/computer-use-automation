@@ -1,0 +1,6 @@
+{
+  "permittedDomains": ["localhost", "127.0.0.1"],
+  "permittedUrlPatterns": ["/search*", "/detail*", "/account-action*", "/new-account*", "/nav.html"],
+  "permittedActions": ["navigate", "click", "type", "select", "extract", "wait", "scroll", "read_page_text", "submit"],
+  "irreversibleActions": ["submit"]
+}

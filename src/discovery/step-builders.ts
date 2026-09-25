@@ -49,8 +49,14 @@ export function buildCheckpoint(
 ): StateGuard | undefined {
   if (!PAGE_CHANGING_ACTIONS.has(action.type)) return undefined;
 
+  // The model's expectation must be UI text, not record data that changes
+  // per invocation (a member's name in a results table, a balance).
+  // It must also be on the page right now — models predict text that never appears.
+  const usableExpect =
+    expect && !isTableData(expect, before, after) && pageText(after).includes(norm(expect)) ? expect : undefined;
+
   const sig: ScreenSignature = {};
-  if (expect) sig.textContains = expect;
+  if (usableExpect) sig.textContains = usableExpect;
 
   const urlChanged = urlKey(after.url) !== urlKey(before.url) || action.type === "navigate";
   if (urlChanged) {
@@ -58,12 +64,24 @@ export function buildCheckpoint(
     if (pattern) sig.urlPattern = pattern;
   }
 
-  if (!expect) {
+  if (!usableExpect) {
     const anchors = newAnchors(before, after);
     if (anchors.length > 0) sig.axContains = anchors;
   }
 
   return Object.keys(sig).length > 0 ? { anyOf: [sig] } : undefined;
+}
+
+function pageText(state: ScreenState): string {
+  return norm(state.axTree.map((n) => n.name).join(" "));
+}
+
+/** Text that is the content of a data cell (a cell under a column header). */
+function isTableData(text: string, ...states: ScreenState[]): boolean {
+  const wanted = norm(text);
+  return states.some((s) =>
+    s.axTree.some((n) => n.role === "cell" && n.context?.column && norm(n.name) === wanted)
+  );
 }
 
 function findNode(tree: AXNode[], role: string, name?: string, row?: string): AXNode | undefined {

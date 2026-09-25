@@ -6,6 +6,7 @@
  */
 
 import type { LLMClient, LLMRequest, LLMResponse, PlanResponse, CapabilityPlan } from "./types.js";
+import type { Action } from "../surface/types.js";
 import type { CuaConfig } from "../config.js";
 import { redactPII, redactPIIInObject } from "../safety/pii-redactor.js";
 
@@ -189,7 +190,7 @@ Critical rules:
 - Do NOT set goalMet to true until ALL sub-goals are complete AND you have extracted meaningful data using the extract action AND outputComplete is true.
 - If you need to click a link or button to reach a sub-task's target, do that FIRST, then perform the sub-task on the NEXT step.
 - Use the exact role and name from the AX tree for targets.
-- Elements inside a table show their row as "row": [cell texts]. When several elements share the same role and name (e.g. a "Manage" link on every row), add "row": "<the cell text that identifies the intended row>" to the target, e.g. { role: "link", name: "Manage", row: "Savings" }.
+- Elements inside a table show their row as "row": "<cell> | <cell> | ...". When several elements share the same role and name (e.g. a "Manage" link on every row), add "row": "<ONE cell text that identifies the intended row>" to the target, e.g. { role: "link", name: "Manage", row: "Savings" }. The row value is a single string, never the whole row.
 - To read a value from a table, extract the cell that holds the value itself.
 - Optionally add "expect": "<short text that will be visible once this action worked>" next to "action" — a stable label or heading, not data that changes per record.
 
@@ -204,7 +205,7 @@ ${request.outputNames && request.outputNames.length > 0 ? `\nOutputs to extract:
 ${request.subGoals && request.subGoals.length > 0 ? `\nSub-goals:\n${request.subGoals.map(sg => `  [${request.completedSubGoals?.includes(sg.id) ? "DONE" : request.currentSubGoal === sg.id ? "CURRENT" : "PENDING"}] ${sg.id}: ${sg.description}`).join("\n")}\n\nCurrent sub-goal: ${request.subGoals.find(sg => sg.id === request.currentSubGoal)?.description || "none"}\nFocus on completing the CURRENT sub-goal. When it is done, set subGoalComplete=true.\n` : ""}
 ${request.paramNames && request.paramNames.length > 0 ? `\nInput parameters available: ${request.paramNames.join(", ")}\n` : ""}
 AX Tree (${request.screenState.axTree.length} total elements, showing most relevant):
-${JSON.stringify(this._prioritizeAXTree(request.screenState.axTree, 100, request.subGoals?.find(sg => sg.id === request.currentSubGoal)?.keywords).map(n => redactPIIInObject({ role: n.role, name: n.name, value: n.value, row: n.context?.row }))
+${JSON.stringify(this._prioritizeAXTree(request.screenState.axTree, 100, request.subGoals?.find(sg => sg.id === request.currentSubGoal)?.keywords).map(n => redactPIIInObject({ role: n.role, name: n.name, value: n.value, row: n.context?.row?.join(" | ") }))
       // Regulated data (SSNs, account numbers) never leaves the process: the
       // model sees [REDACTED] instead.
       , null, 2)}
@@ -246,9 +247,11 @@ REMEMBER: Review the goal, sub-goals, and the actions above. Focus on the CURREN
       });
 
       const parsed = JSON.parse(jsonStr);
+      const action = toAction(parsed.action);
+      if (!action) return { ok: false, error: `Invalid action in LLM response: ${JSON.stringify(parsed.action)}` };
       return {
         ok: true,
-        action: parsed.action,
+        action,
         expect: typeof parsed.expect === "string" && parsed.expect.trim() ? parsed.expect.trim() : undefined,
         reasoning: parsed.reasoning || "",
         goalMet: parsed.goalMet || false,
@@ -346,4 +349,32 @@ REMEMBER: Review the goal, sub-goals, and the actions above. Focus on the CURREN
     const result = [...keywordMatched, ...controls, ...buttons, ...inputs, ...labels, ...headings, ...content, ...links, ...other];
     return result.slice(0, limit);
   }
+}
+
+const ACTION_TYPES = new Set(["navigate", "click", "type", "select", "extract", "wait", "submit", "scroll", "read_page_text"]);
+
+/**
+ * Validate the model's action at the boundary: known type, string fields
+ * only. A malformed "row" (e.g. the whole row as an array) is dropped rather
+ * than passed on; the resolver still refuses ambiguous targets.
+ */
+function toAction(raw: unknown): Action | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const a = raw as Record<string, unknown>;
+  if (typeof a.type !== "string" || !ACTION_TYPES.has(a.type)) return null;
+
+  const action: Action = { type: a.type as Action["type"] };
+  if (a.value !== undefined && a.value !== null) action.value = String(a.value);
+  if (typeof a.output === "string") action.output = a.output;
+
+  if (typeof a.target === "object" && a.target !== null) {
+    const t = a.target as Record<string, unknown>;
+    if (typeof t.role !== "string") return null;
+    action.target = {
+      role: t.role,
+      ...(typeof t.name === "string" ? { name: t.name } : {}),
+      ...(typeof t.row === "string" && t.row.trim() ? { row: t.row.trim() } : {}),
+    };
+  }
+  return action;
 }

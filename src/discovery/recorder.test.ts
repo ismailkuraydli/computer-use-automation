@@ -109,6 +109,15 @@ describe("Recorder", () => {
     expect(finalize(r).steps[0].checkpoint?.anyOf?.[0].textContains).toBe("Member Detail");
   });
 
+  it("ignores an expectation that never appeared on the page", () => {
+    const r = recorder();
+    r.recordAction({ type: "click", target: { role: "button", name: "Search" } }, SEARCH, DETAIL, "success", "Member Profile");
+
+    const sig = finalize(r).steps[0].checkpoint?.anyOf?.[0];
+    expect(sig?.textContains).toBeUndefined();
+    expect(sig?.axContains).toEqual([{ role: "columnheader", name: "Balance" }]);
+  });
+
   it("falls back to static controls and headers that appeared, skipping data", () => {
     const r = recorder();
     r.recordAction({ type: "click", target: { role: "button", name: "Search" } }, SEARCH, DETAIL, "success");
@@ -154,5 +163,19 @@ describe("Recorder", () => {
     r.recordAction({ type: "click", target: { role: "link", name: "Member Search", frame: ["navFrame"] } }, SEARCH, SEARCH, "success");
 
     expect(finalize(r).steps[0].target).toEqual({ role: "link", name: "Member Search", frame: ["navFrame"] });
+  });
+
+  it("ignores an expectation that is record data rather than UI text", () => {
+    const results = screen("http://localhost:3000/search?q=23456", [
+      { role: "columnheader", name: "Name" },
+      { role: "cell", name: "Maria B. Johnson", context: { row: ["23456", "Maria B. Johnson"], column: "Name" } },
+    ]);
+    const r = recorder({ memberId: "23456" });
+    const detail = screen("http://localhost:3000/detail?id=23456", DETAIL.axTree);
+    r.recordAction({ type: "click", target: { role: "link", name: "23456" } }, results, detail, "success", "Maria B. Johnson");
+
+    const sig = finalize(r).steps[0].checkpoint?.anyOf?.[0];
+    expect(sig?.textContains).toBeUndefined();
+    expect(sig?.urlPattern).toBe("/detail?id={{memberId}}");
   });
 });

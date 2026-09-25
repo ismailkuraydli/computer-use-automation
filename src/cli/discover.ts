@@ -18,15 +18,20 @@ import { loadConfig, getApiKey, checkModelAccessible } from "../config.js";
 import type { AllowlistConfig } from "../artifact/types.js";
 import { readFileSync } from "fs";
 
-const DEFAULT_ALLOWLIST: AllowlistConfig = {
-  // Permissive defaults for discovery — the agent needs to explore freely.
-  // Replay can use a stricter allowlist via --allowlist flag.
-  permittedDomains: [],
-  permittedUrlPatterns: [],
-  permittedActions: ["navigate", "click", "type", "extract", "wait", "submit", "scroll", "read_page_text"],
-  riskyActions: ["submit"],
-  irreversibleActions: [],
-};
+/**
+ * Default allowlist when none is given: the target's own host only, every
+ * action type, submit flagged as risky. It is stored in the artifact, so it
+ * also bounds every replay.
+ */
+function defaultAllowlist(target: string): AllowlistConfig {
+  return {
+    permittedDomains: [new URL(target).hostname],
+    permittedUrlPatterns: ["/*"],
+    permittedActions: ["navigate", "click", "type", "select", "extract", "wait", "submit", "scroll", "read_page_text"],
+    riskyActions: ["submit"],
+    irreversibleActions: [],
+  };
+}
 
 export async function runDiscover(opts: Record<string, any>): Promise<void> {
   const goal = opts.goal as string;
@@ -91,7 +96,7 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
   }
 
   // Load allowlist
-  let allowlist = DEFAULT_ALLOWLIST;
+  let allowlist = defaultAllowlist(target);
   if (opts.allowlist) {
     try {
       allowlist = JSON.parse(readFileSync(opts.allowlist, "utf-8"));
