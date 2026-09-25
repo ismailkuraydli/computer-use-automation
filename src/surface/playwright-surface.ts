@@ -449,28 +449,44 @@ export class PlaywrightSurface implements Surface {
   }
 
   /**
-   * Find an element by AX role and name using Playwright's native getByRole.
-   * Searches the appropriate frame based on the target's framePath.
+   * Find an element on the page using the identity fields captured during
+   * discovery. Resolution order:
+   *   1. CSS selector (if recorded — most specific, like a Playwright test selector)
+   *   2. id (if recorded)
+   *   3. data-testid (if recorded)
+   *   4. Role + name via getByRole (exact match)
+   *   5. Role + name via getByRole (partial match — handles param-substituted
+   *      names where the actual page text differs, e.g. "More {{genre}} books..."
+   *      on a page that says "More horror books...")
+   *   6. Text content via getByText (for non-standard roles: labels, spans)
    *
-   * Resolution order (Change 3):
-   * 1. CSS selector (if available) — most reliable, like a Playwright test selector
-   * 2. data-testid (if available)
-   * 3. id (if available)
-   * 4. getByRole + name (existing AX-based resolution)
-   * 5. getByLabel / getByText fallbacks
+   * If the name contains {{param}} templates, they are stripped and the
+   * remaining key words are used for partial matching. This handles replay
+   * with different params where the page text doesn't match the substituted name.
+   *
+   * Retries once after 1 second for dynamically loaded content.
    */
   private async _findElementByAX(target: AXNode): Promise<ReturnType<Page["locator"]> | null> {
     if (!this.page) return null;
 
-    // Try to find the element. If not found immediately, wait 1 second and
-    // retry — dynamic content (settings panels, SPA widgets, lazy-loaded
-    // elements) may not be in the DOM immediately after navigation.
     const result = await this._tryFindElement(target);
     if (result) return result;
 
-    // Wait and retry
+    // Wait and retry for dynamically loaded content
     await new Promise((resolve) => setTimeout(resolve, 1000));
     return this._tryFindElement(target);
+  }
+
+  /**
+   * Build a "search name" from the target name: strip {{param}} templates
+   * and return the remaining text. If the name is entirely a template
+   * (e.g. "{{topic}}"), return the original name (it will be substituted
+   * by the replay engine before reaching here).
+   */
+  private _searchName(name: string): string {
+    const stripped = name.replace(/\{\{[^}]+\}\}/g, "").trim();
+    // If stripping removed everything, keep original (replay engine substitutes it)
+    return stripped.length >= 3 ? stripped : name;
   }
 
   private async _tryFindElement(target: AXNode): Promise<ReturnType<Page["locator"]> | null> {
@@ -483,116 +499,69 @@ export class PlaywrightSurface implements Surface {
       const allFrames = this.page.frames();
       for (const frameName of framePath) {
         const childFrame = allFrames.find((f: Frame) => f.name() === frameName);
-        if (childFrame) {
-          frame = childFrame;
-        }
+        if (childFrame) frame = childFrame;
       }
     }
 
-    // 1. CSS selector (most reliable)
+    const searchName = this._searchName(target.name);
+
+    // 1. CSS selector (most specific)
     if (target.cssSelector) {
       try {
         const locator = frame.locator(target.cssSelector);
-        const count = await locator.count();
-        if (count > 0) return locator.first();
-      } catch {
-        // Invalid selector or element not found — fall through
-      }
+        if (await locator.count() > 0) return locator.first();
+      } catch { /* invalid or not found */ }
     }
 
-    // 2. data-testid
+    // 2. id
+    if (target.id) {
+      try {
+        const escapedId = target.id.replace(/[^a-zA-Z0-9_-]/g, (c) => '\\' + c);
+        const locator = frame.locator(`#${escapedId}`);
+        if (await locator.count() > 0) return locator.first();
+      } catch { /* not found */ }
+    }
+
+    // 3. data-testid
     if (target.dataTestId) {
       try {
         const locator = frame.getByTestId(target.dataTestId);
-        const count = await locator.count();
-        if (count > 0) return locator.first();
-      } catch {
-        // fall through
-      }
+        if (await locator.count() > 0) return locator.first();
+      } catch { /* not found */ }
     }
 
-    // 3. id
-    if (target.id) {
-      try {
-        // Escape the id for CSS selector (simple escape — handle special chars)
-        const escapedId = target.id.replace(/[^a-zA-Z0-9_-]/g, (c) => '\\' + c);
-        const locator = frame.locator(`#${escapedId}`);
-        const count = await locator.count();
-        if (count > 0) return locator.first();
-      } catch {
-        // fall through
-      }
-    }
-
-    // 4. getByRole (uses the browser's real AX tree)
+    // 4. getByRole with exact name match
     try {
       const locator = frame.getByRole(target.role as any, { name: target.name, exact: true });
-      const count = await locator.count();
-      if (count > 0) {
-        return locator.first();
-      }
-    } catch {
-      // getByRole may fail for non-standard roles — fall through to fallbacks
+      if (await locator.count() > 0) return locator.first();
+    } catch { /* non-standard role */ }
+
+    // 5. getByRole with partial name match (handles param-substituted names)
+    if (searchName !== target.name) {
+      try {
+        const locator = frame.getByRole(target.role as any, { name: searchName });
+        if (await locator.count() > 0) return locator.first();
+      } catch { /* not found */ }
     }
 
-    // 5. Fallback: try getByLabel for textboxes
+    // 6. getByText (for non-standard roles: labels, spans, settings text)
     try {
+      // Exact match first
+      const exactLocator = frame.getByText(target.name, { exact: true });
+      if (await exactLocator.count() > 0) return exactLocator.first();
+
+      // Partial match with stripped name
+      if (searchName !== target.name) {
+        const partialLocator = frame.getByText(searchName);
+        if (await partialLocator.count() > 0) return partialLocator.first();
+      }
+
+      // getByLabel for form fields
       if (target.role === "textbox" || target.role === "combobox" || target.role === "searchbox") {
         const labelLocator = frame.getByLabel(target.name, { exact: true });
-        const count = await labelLocator.count();
-        if (count > 0) return labelLocator.first();
+        if (await labelLocator.count() > 0) return labelLocator.first();
       }
-      // Try getByText for buttons, links, and labels
-      if (target.role === "button" || target.role === "link" || target.role === "label") {
-        const textLocator = frame.getByText(target.name, { exact: true });
-        const count = await textLocator.count();
-        if (count > 0) return textLocator.first();
-      }
-      // Try getByRole with partial name match
-      const locator = frame.getByRole(target.role as any, { name: target.name });
-      const count = await locator.count();
-      if (count > 0) return locator.first();
-    } catch {
-      // ignore
-    }
-
-    // 6. Last resort: try getByText for any role (settings labels, spans, etc.)
-    try {
-      const textLocator = frame.getByText(target.name, { exact: true });
-      const count = await textLocator.count();
-      if (count > 0) return textLocator.first();
-    } catch {
-      // ignore
-    }
-
-    // 7. Final fallback: partial text match with key words
-    // Extract meaningful words from the target name (skip {{param}} templates)
-    // e.g. "More {{genre}} books..." -> search for elements containing "More" AND "books"
-    try {
-      const cleanName = target.name.replace(/\{\{[^}]+\}\}/g, "").trim();
-      const words = cleanName.split(/\s+/).filter(w => w.length >= 4 && !["this", "that", "with", "from"].includes(w.toLowerCase()));
-      if (words.length >= 1) {
-        // Try finding links/buttons containing the first significant word
-        for (const word of words.slice(0, 3)) {
-          const partialLocator = frame.getByText(word, { exact: false });
-          const count = await partialLocator.count();
-          if (count > 0) {
-            // Filter to elements that also contain another key word if possible
-            for (let i = 0; i < Math.min(count, 5); i++) {
-              const el = partialLocator.nth(i);
-              const text = await el.textContent().catch(() => "");
-              if (text && words.every(w => text.toLowerCase().includes(w.toLowerCase()))) {
-                return el;
-              }
-            }
-            // If no exact match, return first partial match
-            return partialLocator.first();
-          }
-        }
-      }
-    } catch {
-      // ignore
-    }
+    } catch { /* not found */ }
 
     return null;
   }
