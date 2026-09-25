@@ -20,6 +20,7 @@
   },
   "34567": {
     "name": "Robert C. Lee",
+    "restricted": true,
     "ssn": "345-67-8901",
     "dob": "1968-11-30",
     "accounts": [
