@@ -12,7 +12,8 @@
  */
 
 import type { LLMClient, LLMRequest, ActionHistoryEntry, SubGoal } from "../llm/types.js";
-import type { Surface, Action, ScreenState } from "../surface/types.js";
+import type { Surface, Action, ScreenState, TargetSpec, AXNode } from "../surface/types.js";
+import { redactPII } from "../safety/pii-redactor.js";
 import type { SafetyGuard } from "../safety/safety-guard.js";
 import type { EvidenceCollector } from "../evidence/evidence-collector.js";
 import type { Recorder } from "./recorder.js";
@@ -126,8 +127,7 @@ export class AgentLoop {
           ok: llmResponse.ok,
           action: llmResponse.ok ? {
             type: llmResponse.action.type,
-            targetRole: llmResponse.action.target?.role,
-            targetName: llmResponse.action.target?.name,
+            target: llmResponse.action.target,
             value: llmResponse.action.value,
           } : undefined,
           reasoning: llmResponse.ok ? llmResponse.reasoning : undefined,
@@ -145,15 +145,17 @@ export class AgentLoop {
 
       const action = llmResponse.action;
 
-      // Enrich action with framePath from the AX tree — the LLM doesn't know
-      // about frames, but the AX tree has framePath on each node. Look up the
-      // target element and copy its framePath into the action.
+      // Keep the model's row scope only where it is needed, and as one cell.
+      if (action.target) action.target = normalizeRowScope(action.target, screenState.axTree);
+
+      // Enrich the target with its frame from the AX tree — the LLM doesn't
+      // know about frames, but every AX node carries its framePath.
       if (action.target && screenState.axTree.length > 0) {
         const match = screenState.axTree.find(
           (n) => n.role === action.target!.role && n.name === action.target!.name
         );
         if (match && match.framePath && match.framePath.length > 0) {
-          action.target = { ...action.target, framePath: match.framePath };
+          action.target = { ...action.target, frame: match.framePath };
         }
       }
 
@@ -213,7 +215,7 @@ export class AgentLoop {
       const afterState = await surface.observe();
 
       // Record in artifact
-      recorder.recordAction(action, beforeState, afterState, actResult.ok ? "success" : "failure");
+      recorder.recordAction(action, beforeState, afterState, actResult.ok ? "success" : "failure", llmResponse.expect);
 
       // Log in evidence
       evidenceCollector.logStep({
@@ -224,7 +226,10 @@ export class AgentLoop {
         url: afterState.url,
         screenshotPath: afterState.screenshotPath,
         axSnapshot: afterState.axTree,
-        detail: safety.flagged ? `Flagged as risky: ${safety.classification}` : undefined,
+        detail: [
+          !actResult.ok ? `${actResult.error}: ${actResult.detail ?? ""}` : "",
+          safety.flagged ? `Flagged as risky: ${safety.classification}` : "",
+        ].filter(Boolean).join("; ") || undefined,
       });
 
       // Capture extracted output — normalize the output name to match declared outputs
@@ -270,7 +275,14 @@ export class AgentLoop {
 
       stepNumber++;
 
-      // Check if goal is met — only if all sub-goals are complete AND output is verified
+      // Check if goal is met — only if all sub-goals are complete AND output is verified.
+      // A claim of success on a failed action, or with declared outputs still
+      // missing, is not accepted: the model sees the failure and continues.
+      const outputsMissing = outputs.some((o) => !extractedOutputs[o.name]);
+      if (llmResponse.goalMet && (!actResult.ok || outputsMissing)) {
+        console.log(`  [Goal not met: ${!actResult.ok ? "last action failed" : "outputs missing"} — continuing]`);
+        continue;
+      }
       if (llmResponse.goalMet) {
         if (currentSubGoalIndex < allSubGoals.length - 1) {
           // Can't declare goal met — there are remaining sub-goals
@@ -343,4 +355,26 @@ export class AgentLoop {
     if (a.target?.name !== b.target?.name) return false;
     return true;
   }
+}
+
+const normText = (t: string) => t.replace(/\s+/g, " ").trim().toLowerCase();
+
+/**
+ * Models often copy the whole row line ("Savings | 2003004005 | ...") or add a
+ * row to a target that is already unique. Drop the row when role + name is
+ * unique; replace a full-row copy with the row's first other cell.
+ */
+export function normalizeRowScope(target: TargetSpec, tree: AXNode[]): TargetSpec {
+  if (!target.row) return target;
+  const { row, ...rest } = target;
+  const same = tree.filter((n) => n.role === target.role && (!target.name || normText(n.name) === normText(target.name)));
+  if (same.length <= 1) return rest;
+
+  const cells = (n: AXNode) => (n.context?.row ?? []).map(normText);
+  if (same.some((n) => cells(n).includes(normText(row)))) return target;
+
+  // The model saw the row redacted, so compare against the redacted form
+  const copied = same.find((n) => normText(redactPII((n.context?.row ?? []).join(" | "))) === normText(row));
+  const key = copied?.context?.row?.find((c) => c && normText(c) !== normText(target.name ?? ""));
+  return key ? { ...rest, row: key } : target;
 }

@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "2.0",
+  "artifactVersion": 1,
+  "surface": {
+    "type": "web",
+    "baseUrl": "http://localhost:3000",
+    "app": "keystone-cu"
+  },
+  "allowlist": {
+    "permittedDomains": [
+      "localhost",
+      "127.0.0.1"
+    ],
+    "permittedUrlPatterns": [
+      "/*"
+    ],
+    "permittedActions": [
+      "navigate",
+      "click",
+      "type",
+      "select",
+      "extract",
+      "submit"
+    ],
+    "irreversibleActions": [
+      "submit"
+    ]
+  },
+  "metadata": {
+    "recordedAt": "2026-09-24T00:00:00Z",
+    "recordedBy": "scenario-fixture"
+  },
+  "capability": "manage-account-by-type",
+  "description": "Open the account of the given type and read its current balance",
+  "params": [
+    {
+      "name": "memberId",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "accountType",
+      "type": "string",
+      "required": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "balance",
+      "type": "string"
+    }
+  ],
+  "steps": [
+    {
+      "id": 1,
+      "action": "navigate",
+      "value": "http://localhost:3000/detail?id={{memberId}}",
+      "checkpoint": {
+        "anyOf": [
+          {
+            "textContains": "Member Detail"
+          }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "action": "click",
+      "target": {
+        "role": "link",
+        "name": "Manage",
+        "row": "{{accountType}}"
+      },
+      "checkpoint": {
+        "anyOf": [
+          {
+            "urlPattern": "/account-action?id={{memberId}}",
+            "textContains": "Account Maintenance"
+          }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "action": "extract",
+      "target": {
+        "role": "cell",
+        "label": "Current Balance"
+      },
+      "output": "balance"
+    }
+  ],
+  "checkpoint": {
+    "outputsExtracted": true
+  }
+}

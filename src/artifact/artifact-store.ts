@@ -7,6 +7,7 @@
 import { mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync } from "fs";
 import path from "path";
 import type { CapabilityArtifact } from "./types.js";
+import { toCurrentArtifact } from "./migrate.js";
 import { redactPIIInObject } from "../safety/pii-redactor.js";
 
 export class ArtifactStore {
@@ -53,15 +54,17 @@ export class ArtifactStore {
 
     if (files.length === 0) return null;
 
-    const filePath = path.join(capabilityDir, files[0]);
-    const content = readFileSync(filePath, "utf-8");
-    return JSON.parse(content) as CapabilityArtifact;
+    return loadArtifactFile(path.join(capabilityDir, files[0]));
   }
 
   loadVersion(capability: string, version: number): CapabilityArtifact | null {
     const filePath = path.join(this.baseDir, capability, `v${version}.json`);
     if (!existsSync(filePath)) return null;
-    const content = readFileSync(filePath, "utf-8");
-    return JSON.parse(content) as CapabilityArtifact;
+    return loadArtifactFile(filePath);
   }
+}
+
+/** Read, validate and migrate an artifact file to the current schema. */
+export function loadArtifactFile(filePath: string): CapabilityArtifact {
+  return toCurrentArtifact(JSON.parse(readFileSync(filePath, "utf-8")));
 }

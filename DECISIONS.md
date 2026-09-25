@@ -264,3 +264,40 @@ The AX prioritizer boosts elements matching the current sub-goal's keywords to t
 **Rationale:** The LLM needs both the ability to access more content (scroll, read_page_text) and the judgment to verify its output. Prompt-based tools work with any OpenRouter model without API format changes. Output verification prevents the recurring problem of the LLM extracting a title or link label and declaring success.
 
 **Consequences:** The LLM can now scroll pages, read all visible text, and verify its output before declaring success. This should prevent the "extracted 'Flower' instead of the research text" problem. Watch for: scroll and read_page_text are not recorded in the artifact (they're discovery-only tools, not replayable steps — replay uses the locators from the recorded steps). The outputComplete signal is per-extract — if the LLM extracts multiple outputs, each must be verified.
+
+---
+
+### ADR-014: Mock back-office app as the primary target, gated by a scenario matrix
+
+**Context:** After the core landed, most commits were fixes for one public site's quirks (Wikipedia dropdowns, Goodreads A/B layouts, sign-up modals, bot detection). The brief says the real environment is the opposite: stable enterprise UIs whose hard problems are *runtime conditions* (not found, validation, permission denied, unexpected dialogs, session expiry, slow or failed loads).
+
+**Decision:** The Keystone CU mock app (legacy tables, iframes, no test IDs) is the primary target. It injects the brief's runtime conditions per instance (`createMockApp().setFaults`, or `POST /__faults`). `src/scenarios/scenario-matrix.test.ts` replays fixed artifacts under each condition and asserts the exact `ReplayResult`; every engine change must keep it green. Rows that fail are declared as known gaps (`it.fails`) with the reason, so a fix flips them loudly.
+
+**Consequences:** Progress is measured against a fixed set of conditions instead of whichever site broke last. Public sites become a demonstration of the escalation path for unknown UI, not a source of engine special cases.
+
+---
+
+### ADR-015: Artifact schema v2 — semantic targets, enforced checkpoints, app profiles
+
+**Supersedes:** the DOM-identity parts of ADR-003, the pre-step guards of ADR-002, and the handler kinds of ADR-004.
+
+**Context:** v1 targets carried positional CSS paths (`a:nth-of-type(7)`) that picked the discovery element regardless of params; checkpoints were auto-built from whatever links were on the page and had been made non-fatal; the "recoverable" tier was classified but never executed; runtime-condition handlers only existed if discovery happened to see the error; two element finders disagreed.
+
+**Decision:**
+- **Targets** say what an operator sees: `role` + `name`, optional `row` (the table row containing a cell), `column` (the cell under a header) or `label` (the value next to a label), and `frame`. Matching is whole-text and case-insensitive; ambiguity is an error, never "the first match". One resolver, in the surface.
+- **Checkpoints** are enforced after every step with a bounded wait. The recorder builds them from stable evidence only: the model's `expect` (kept only if it is on the page, in one element, and not table data), controls and column headers that appeared, and the URL shape with non-param values wildcarded.
+- **App profiles** (`profiles/<app>.json`) hold interstitials to dismiss and runtime conditions (`business-outcome | retry | escalate | hard-failure`), shared by every artifact for that app. A known error page overrides a matching checkpoint.
+- **Unknown blocking UI** (overlay, native dialog) escalates; everything else unrecognized is a hard failure with expected vs observed. Irreversible steps are never retried and need caller confirmation.
+- v1 artifacts are migrated on load (positional selectors dropped).
+
+**Consequences:** Site knowledge lives in data. A new popup or error page is a profile entry, or an escalation whose human fix can be promoted into the profile — never an engine change. The same profile is the unit of multi-tenant reuse (vendor profile + tenant overlay).
+
+---
+
+### ADR-016: Handoff on the live replay session
+
+**Supersedes:** the separate-browser `cua escalate` flow of ADR-006 (the state machine is kept).
+
+**Decision:** `ReplayEngine` routes every escalation through an optional handoff (`EscalationManager.handoff`): pause, send an intervention request (capability, step, reason, screenshot, CDP endpoint) through an `OperatorChannel`, capture the human's clicks/edits/navigations on the *same* page (never typed values), then on `done` verify the step's checkpoint and continue (or re-run the step the human unblocked); `complete`/`abort` end the run with that resolution. An unconfirmed irreversible step becomes a human approval. Bounded to two handoffs per step. `replay --handoff` wires a terminal operator channel.
+
+**Consequences:** The control transfer is real end to end; only the operator UI is minimal (a terminal prompt). A web console or queue can implement `OperatorChannel` without touching the engine.

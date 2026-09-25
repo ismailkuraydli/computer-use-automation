@@ -19,6 +19,6 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/**/*.ts", "mock-app/**/*.ts"],
+  "include": ["src/**/*.ts", "mock-app/**/*.ts", "scripts/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

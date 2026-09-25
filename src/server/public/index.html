@@ -208,7 +208,7 @@
               <th>Action</th>
               <th>Target</th>
               <th>Value</th>
-              <th>CSS Selector</th>
+              <th>Checkpoint</th>
             </tr>
           </thead>
           <tbody id="artifact-steps"></tbody>
@@ -429,14 +429,19 @@
       tbody.innerHTML = '';
       for (const step of artifact.steps) {
         const tr = document.createElement('tr');
-        const css = step.target?.primary?.cssSelector;
-        tr.innerHTML = `
-          <td>${step.id}</td>
-          <td>${step.action}</td>
-          <td>${step.target?.primary?.role || ''}:${step.target?.primary?.name || ''}</td>
-          <td>${step.value || ''}</td>
-          <td>${css ? '<span class="badge yes">YES</span>' : '<span class="badge no">NO</span>'}</td>
-        `;
+        const t = step.target;
+        const target = t
+          ? [t.role, t.name && `"${t.name}"`, t.label && `label "${t.label}"`, t.row && `row "${t.row}"`, t.column && `column "${t.column}"`]
+              .filter(Boolean).join(' ')
+          : '';
+        for (const text of [step.id, step.action, target, step.value || '']) {
+          const td = document.createElement('td');
+          td.textContent = String(text);
+          tr.appendChild(td);
+        }
+        const cp = document.createElement('td');
+        cp.innerHTML = step.checkpoint ? '<span class="badge yes">YES</span>' : '<span class="badge no">NO</span>';
+        tr.appendChild(cp);
         tbody.appendChild(tr);
       }
     }

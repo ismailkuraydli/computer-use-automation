@@ -1,26 +1,37 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { PlaywrightSurface } from "./playwright-surface.js";
+import type { Server } from "http";
+import type { AddressInfo } from "net";
+import { mkdtempSync, rmSync } from "fs";
+import { tmpdir } from "os";
+import path from "path";
+import { createMockApp, type MockApp } from "../../mock-app/app.js";
 import type { ScreenState, Action } from "./types.js";
 
-// These tests require the mock app to be running on localhost:3000
-// Start it with: npm run mock-app
-
-const MOCK_APP_URL = "http://localhost:3000";
-const SURFACE_OPTIONS = { headless: true, screenshotDir: "./screenshots" };
-
-// Skip tests if mock app is not running
 const shouldRun = process.env.SKIP_INTEGRATION !== "true";
 
 describe.skipIf(!shouldRun)("PlaywrightSurface", () => {
   let surface: PlaywrightSurface;
+  let mock: MockApp;
+  let server: Server;
+  let MOCK_APP_URL: string;
+  let screenshotDir: string;
 
   beforeAll(async () => {
-    surface = new PlaywrightSurface(SURFACE_OPTIONS);
+    mock = createMockApp();
+    server = await new Promise<Server>((resolve) => {
+      const s = mock.app.listen(0, "127.0.0.1", () => resolve(s));
+    });
+    MOCK_APP_URL = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    screenshotDir = mkdtempSync(path.join(tmpdir(), "surface-test-"));
+    surface = new PlaywrightSurface({ headless: true, screenshotDir });
     await surface._start(MOCK_APP_URL);
   }, 30000);
 
   afterAll(async () => {
     await surface.close();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    rmSync(screenshotDir, { recursive: true, force: true });
   });
 
   // AC1: Given a running mock app, when I call PlaywrightSurface.observe(),
@@ -28,7 +39,7 @@ describe.skipIf(!shouldRun)("PlaywrightSurface", () => {
   it("observe() returns a ScreenState with AX tree, DOM snapshot, URL, and screenshot", async () => {
     const state: ScreenState = await surface.observe();
 
-    expect(state.url).toContain("localhost:3000");
+    expect(state.url).toContain(MOCK_APP_URL);
     expect(state.title).toBeTruthy();
     expect(state.axTree).toBeDefined();
     expect(Array.isArray(state.axTree)).toBe(true);
@@ -118,4 +129,46 @@ describe.skipIf(!shouldRun)("PlaywrightSurface", () => {
       }
     }
   }, 30000);
+  it("reports a click on a covered element as blocked instead of forcing it", async () => {
+    mock.setFaults({ interstitialPaths: ["/search"] });
+    try {
+      await surface.act({ type: "navigate", value: `${MOCK_APP_URL}/search` });
+      const result = await surface.act({ type: "click", target: { role: "button", name: "Search" } });
+      expect(result).toMatchObject({ ok: false, error: "blocked" });
+    } finally {
+      mock.resetFaults();
+    }
+  });
+
+  it("dismisses a native confirm() and reports it instead of accepting", async () => {
+    mock.setFaults({ confirmOnSubmit: true });
+    try {
+      await surface.act({ type: "navigate", value: `${MOCK_APP_URL}/new-account?id=12345` });
+      await surface.act({ type: "type", target: { role: "textbox", name: "Initial Deposit" }, value: "100" });
+      const result = await surface.act({ type: "submit", target: { role: "button", name: "Continue" } });
+      expect(result).toMatchObject({ ok: false, error: "unexpected-dialog" });
+      expect((await surface.observe()).url).toContain("/new-account");
+    } finally {
+      mock.resetFaults();
+    }
+  });
+
+  it("selects an option by its visible text", async () => {
+    await surface.act({ type: "navigate", value: `${MOCK_APP_URL}/new-account?id=12345` });
+    const result = await surface.act({ type: "select", target: { role: "combobox", name: "Account Type" }, value: "certificate of deposit" });
+    expect(result.ok).toBe(true);
+  });
+
+  it("captures what a human does during a handoff, without typed values", async () => {
+    await surface.act({ type: "navigate", value: `${MOCK_APP_URL}/new-account?id=12345` });
+    await surface.startHumanCapture();
+    await surface.act({ type: "type", target: { role: "textbox", name: "Initial Deposit" }, value: "999.99" });
+    await surface.act({ type: "select", target: { role: "combobox", name: "Account Type" }, value: "Checking" });
+    await surface.act({ type: "click", target: { role: "button", name: "Cancel" } });
+    const actions = await surface.stopHumanCapture();
+
+    expect(actions.map((a) => a.action)).toEqual(expect.arrayContaining(["type", "select", "click"]));
+    expect(actions.find((a) => a.action === "type")?.target).toBe('textbox "Initial Deposit"');
+    expect(JSON.stringify(actions)).not.toContain("999.99");
+  });
 });

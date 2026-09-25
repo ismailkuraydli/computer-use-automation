@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "1.0",
+  "app": "keystone-cu",
+  "version": 1,
+  "description": "Keystone CU member servicing (legacy server-rendered back office). Runtime conditions any screen can show.",
+  "interstitials": [
+    {
+      "name": "System Notice",
+      "when": { "anyOf": [{ "axContains": [{ "role": "button", "name": "Acknowledge" }], "textContains": "System Notice" }] },
+      "dismiss": { "role": "button", "name": "Acknowledge" }
+    }
+  ],
+  "conditions": [
+    {
+      "when": { "anyOf": [{ "textContains": "No records found" }, { "textContains": "Member not found" }] },
+      "kind": "business-outcome",
+      "outcome": "not-found",
+      "description": "Member does not exist"
+    },
+    {
+      "when": { "anyOf": [{ "textContains": "Validation Error" }] },
+      "kind": "business-outcome",
+      "outcome": "validation-error",
+      "description": "The form rejected the input"
+    },
+    {
+      "when": { "anyOf": [{ "textContains": "Access Denied" }] },
+      "kind": "business-outcome",
+      "outcome": "permission-denied",
+      "description": "Operator lacks permission for this member"
+    },
+    {
+      "when": { "anyOf": [{ "textContains": "Session Expired" }] },
+      "kind": "escalate",
+      "description": "Session expired — a human must re-authenticate"
+    },
+    {
+      "when": { "anyOf": [{ "textContains": "Service Temporarily Unavailable" }] },
+      "kind": "retry",
+      "maxRetries": 2,
+      "description": "Transient server error"
+    }
+  ]
+}

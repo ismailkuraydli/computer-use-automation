@@ -1,145 +1,116 @@
 # Computer-Use Automation System
 
-A backend integration layer that lets AI agents operate legacy bank/credit-union applications with no API. The system uses an LLM to discover how to accomplish a goal the first time, records the run as a reusable **capability artifact**, and replays it **deterministically** (no LLM) in production.
+A backend integration layer that lets AI agents operate legacy bank and credit-union applications that have no API. An LLM works out how to reach a goal the first time; the run is recorded as a typed, versioned **capability artifact**; the artifact is then replayed **deterministically, without the LLM**, as the production path. When replay meets something it cannot handle safely, a human takes over the same live session and hands control back.
 
-**The model discovers. The artifact becomes a reusable capability. Deterministic replay is how the AI agent invokes it in production.**
+> **The model discovers. The artifact becomes a reusable capability. Deterministic replay is how the AI agent invokes it in production.**
+
+Design write-up: [REPORT.md](./REPORT.md). Decision log: [DECISIONS.md](./DECISIONS.md). Evidence: [evidence/demo](./evidence/demo/README.md).
 
 ## Setup
 
 ```bash
-# Clone and install
 git clone https://github.com/ismailkuraydli/computer-use-automation.git
 cd computer-use-automation
 npm install
 npx playwright install chromium
+```
 
-# Build (optional — tsx runs TypeScript directly)
-npm run build
+Real LLM discovery needs an OpenRouter key in `.env` (the model is set in `cua.config.json`):
+
+```bash
+echo "OPENROUTER_API_KEY=sk-or-..." > .env
 ```
 
 ## Running without live services
 
-All automated tests use `MockLLMClient` and `MockSurface` — **zero API calls, zero browser required**:
-
 ```bash
-npm test
+npm test                 # everything: unit tests + Playwright tests against an in-process mock app
+npm run test:scenarios   # just the replay acceptance matrix (16 runtime-condition scenarios)
+npm run typecheck
 ```
 
-For integration tests that need the mock app:
-
-```bash
-# Terminal 1: start the mock app
-npm run mock-app
-
-# Terminal 2: run tests
-npm test
-```
+No API key, no running server needed: tests start their own mock app on a random port and use scripted LLM responses.
 
 ## Demo path
 
-The demo uses a hostile mock app ("Keystone Credit Union Member Servicing Portal") with iframes, table layouts, no test IDs, and non-semantic markup.
-
-### Step 1: Start the mock app
+The target is **Keystone CU**, a deliberately hostile stand-in for a legacy back office (iframes, table layouts, no test IDs, non-semantic markup). It can inject the runtime conditions the brief describes: blocking notices, slow loads, transient 503s, session expiry, native confirm dialogs. "Not found", validation errors and permission denials are always on.
 
 ```bash
-npm run mock-app
-# → Keystone CU mock app running on http://localhost:3000
+# Terminal 1
+npm run mock-app                                  # http://localhost:3000
 ```
 
-### Step 2: Run a discovery (with mock LLM)
+**1. Discover** (real LLM) a capability from a goal:
 
 ```bash
-npm run discover -- --goal "Look up member 12345 and read their savings balance" \
-                    --target http://localhost:3000 \
-                    --mock-llm \
-                    --output ./artifacts
+npm run discover -- --goal "Look up member 23456 and read the balance of their Savings account" \
+  --target http://localhost:3000/search --app keystone-cu --allowlist allowlists/keystone-cu.json
 ```
 
-This runs the agent loop with scripted LLM responses (no real API calls), records the flow as a `CapabilityArtifact`, and saves it to `./artifacts/lookup-member-balance/v1.json`.
+This plans params/outputs, drives the app, records the artifact to `artifacts/<capability>/vN.json`, then **replays it once as a self-check** (result in `metadata.selfCheck`).
 
-### Step 2b: Run a discovery (with real LLM)
+**2. Replay** it deterministically with other inputs:
 
 ```bash
-export OPENROUTER_API_KEY=your-key
-npm run discover -- --goal "Look up member 12345 and read their savings balance" \
-                    --target http://localhost:3000 \
-                    --output ./artifacts
+A=artifacts/lookup-member-savings-balance/v1.json
+npm run replay -- --artifact $A --params '{"memberId":"45678"}'   # success → Savings balance "$45,200.00"
+npm run replay -- --artifact $A --params '{"memberId":"99999"}'   # business-outcome: not-found
 ```
 
-This uses Claude via OpenRouter for real LLM-driven discovery (~$0.05-0.20 per run).
-
-### Step 3: Replay the artifact
+**3. Inject a runtime condition** and replay again:
 
 ```bash
-npm run replay -- --artifact ./artifacts/lookup-member-balance/v1.json \
-                  --params '{"memberId":"12345"}' \
-                  --target http://localhost:3000
+curl -X POST localhost:3000/__faults -H 'content-type: application/json' -d '{"interstitialPaths":["/search"]}'
+npm run replay -- --artifact $A --params '{"memberId":"12345"}'   # known notice → dismissed, success
+curl -X POST localhost:3000/__faults -H 'content-type: application/json' -d '{"expireSessionAfter":2}'
+npm run replay -- --artifact $A --params '{"memberId":"12345"}'   # session expired → escalated
+curl -X DELETE localhost:3000/__faults
 ```
 
-This replays the artifact deterministically (no LLM) and prints a structured `ReplayResult`.
-
-### Step 4: Replay with error state (business outcome)
+**4. Hand the live session to a human** on escalation. This opens a visible browser; automation pauses and prints an intervention request:
 
 ```bash
-npm run replay -- --artifact ./artifacts/lookup-member-balance/v1.json \
-                  --params '{"memberId":"99999"}' \
-                  --target http://localhost:3000
+curl -X POST localhost:3000/__faults -H 'content-type: application/json' -d '{"expireSessionAfter":2}'
+npm run replay -- --artifact $A --params '{"memberId":"12345"}' --handoff
+# While paused, "log in again": in another terminal run  curl -X DELETE localhost:3000/__faults
+# then type `done` → the step is re-checked, re-run, and the replay completes.
+# (`complete` = you finished the task yourself, `abort` = stop.)
 ```
 
-This should return `business-outcome` with `outcome: "member-not-found"` — a legitimate result, not a crash.
+**5. Irreversible actions** need explicit confirmation from the caller:
 
-### Step 5: Review evidence
+```bash
+npx tsx scripts/export-fixture-artifacts.ts ./artifacts/fixtures
+F=artifacts/fixtures/open-sub-account/v1.json
+P='{"memberId":"12345","accountType":"Checking","deposit":"250"}'
+npm run replay -- --artifact $F --params "$P"             # escalated: irreversible step not confirmed
+npm run replay -- --artifact $F --params "$P" --confirm   # success → {"accountNumber": ...}
+```
 
-Evidence from each run is saved to `./evidence/{run-id}/`:
-- `structured-log.json` — step-by-step log of what happened
-- `step-N-ax.json` — AX tree snapshot per step
-- `run-summary.json` — run outcome and outputs
+Every run writes `evidence/<run-id>/`: `structured-log.json`, per-step accessibility snapshots, masked screenshots, and for discovery the (redacted) LLM conversation. The curated set in [`evidence/demo`](./evidence/demo/README.md) is regenerated by `scripts/generate-evidence.sh`.
 
 ## CLI reference
 
 ```
-cua discover  --goal "..." --target URL [--mock-llm] [--output path] [--allowlist file]
-cua replay    --artifact path --params JSON --target URL
-cua escalate  (exposes CDP endpoint for operator to connect)
+cua discover --goal "..." --target URL [--app PROFILE] [--allowlist FILE] [--mock-llm] [--headed]
+cua replay   --artifact FILE --params JSON [--target URL] [--confirm] [--handoff] [--headed]
+npm run ui   # local web UI: discovery, artifacts, replay, evidence (http://localhost:3001)
 ```
 
-## Architecture
-
-See [REPORT.md](./REPORT.md) for the full design write-up with seven sections:
-1. Architecture
-2. Artifact schema
-3. Determinism & error handling
-4. Heterogeneity & multi-tenant
-5. Escalation & handoff
-6. Safety
-7. Cuts
+| Path | What it is |
+|---|---|
+| `profiles/<app>.json` | App profile: interstitials to dismiss, runtime conditions → business outcome / retry / escalate / hard failure |
+| `allowlists/<app>.json` | Domains, URL patterns, action types, irreversible actions |
+| `artifacts/<capability>/vN.json` | Recorded capabilities (schema v2; v1 files are migrated on load) |
+| `mock-app/` | Keystone CU mock app with fault injection (`POST/DELETE /__faults`) |
+| `src/scenarios/` | Scenario matrix: the replay acceptance gate |
 
 ## Tech stack
 
-- **TypeScript** + Node.js — typed contracts for the artifact schema and replay result
-- **Playwright** — browser automation with AX-tree access and iframe traversal
-- **Vitest** — test runner with TDD red-green-refactor
-- **Express** — mock app server
-- **OpenRouter** (Claude) — LLM for discovery runs (manual only, not in tests)
-
-## Design decisions
-
-See [DECISIONS.md](./DECISIONS.md) for 10 ADRs covering every major design choice.
-
-## Testing
-
-```bash
-npm test          # all tests (unit + integration with mock app running)
-npm run typecheck # TypeScript compilation check
-```
-
-**102 tests** covering: PII redaction, locator strategy, PlaywrightSurface, locator spike, SafetyGuard, EvidenceCollector, ArtifactStore, Recorder, AgentLoop, GuardChecker, ErrorClassifier, ReplayEngine, ControlState, HumanActionRecorder, EscalationManager.
-
-Zero real API calls in tests — `MockLLMClient` provides scripted responses (ADR-010).
+TypeScript on Node.js · Playwright (Chromium, accessibility tree, frames) · Vitest · Express (mock app, UI) · OpenRouter for the discovery model.
 
 ## Limitations
 
-- **CAPTCHAs and bot detection** — the system uses Playwright with a real Chromium browser, but many online applications employ CAPTCHAs, Cloudflare bot protection, or similar anti-automation measures. The system has no built-in mechanism to solve or bypass these. When a CAPTCHA is encountered during discovery, the LLM will see it in the AX tree but cannot interact with it — the run will likely hit a dead-end or timeout. For production use against real sites, you would need to either: (a) use the `--headed` flag and solve CAPTCHAs manually during discovery (the human-in-the-loop escalation path supports this), (b) use a proxy service that handles CAPTCHA solving, or (c) target internal/sandbox environments that don't have bot protection.
-- **No anti-detection stealth** — Playwright's default browser fingerprint is detectable by bot protection services. No stealth plugins (e.g. playwright-extra, puppeteer-stealth) are included.
-- **Single browser session** — no concurrent sessions, no session pooling. Each discover/replay run opens and closes its own browser.
-- **Local only** — the system runs as a single process. No remote execution, no queuing, no horizontal scaling.
+- **Public consumer sites** use bot detection, CAPTCHAs and marketing overlays. The system does not try to get around them. An unknown overlay or dialog escalates to a human (`--handoff`), and the fix can become a profile entry.
+- **PII redaction is pattern-based** (SSNs, account and card numbers). Names and dates of birth still appear in the (fake) mock data's snapshots and screenshots. See REPORT §6.
+- **One browser session per run.** It runs as a single local process, with no queueing or session pooling.

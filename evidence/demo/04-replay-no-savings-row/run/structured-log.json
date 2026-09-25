@@ -1,0 +1,1696 @@
+{
+  "steps": [
+    {
+      "step": 1,
+      "action": "navigate",
+      "target": "http://localhost:3000/search",
+      "result": "success",
+      "url": "http://localhost:3000/search",
+      "screenshotPath": "evidence/ab8f3b1a/screenshots/screen-b7fb117c.png",
+      "axSnapshot": [
+        {
+          "role": "RootWebArea",
+          "name": "Keystone CU - Member Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "heading",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member Servicing - Search"
+            ]
+          }
+        },
+        {
+          "role": "StaticText",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Member ID:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "textbox",
+          "name": "Member ID",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member ID:",
+              "",
+              ""
+            ],
+            "label": "Member ID:"
+          }
+        },
+        {
+          "role": "button",
+          "name": "Search",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member ID:",
+              "",
+              ""
+            ],
+            "label": ""
+          }
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Member ID:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "context": {
+            "row": [
+              "Member Servicing - Search"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Member ID:",
+          "children": [],
+          "context": {
+            "row": [
+              "Member ID:"
+            ]
+          },
+          "framePath": []
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "action": "type",
+      "target": "textbox \"Member ID\"",
+      "result": "success",
+      "url": "http://localhost:3000/search",
+      "screenshotPath": "evidence/ab8f3b1a/screenshots/screen-f165afcd.png",
+      "axSnapshot": [
+        {
+          "role": "RootWebArea",
+          "name": "Keystone CU - Member Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "heading",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member Servicing - Search"
+            ]
+          }
+        },
+        {
+          "role": "StaticText",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Member ID:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "textbox",
+          "name": "Member ID",
+          "value": "34567",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member ID:",
+              "",
+              ""
+            ],
+            "label": "Member ID:"
+          }
+        },
+        {
+          "role": "button",
+          "name": "Search",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member ID:",
+              "",
+              ""
+            ],
+            "label": ""
+          }
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Member ID:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "34567",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "34567",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "context": {
+            "row": [
+              "Member Servicing - Search"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Member ID:",
+          "children": [],
+          "context": {
+            "row": [
+              "Member ID:"
+            ]
+          },
+          "framePath": []
+        }
+      ]
+    },
+    {
+      "step": 3,
+      "action": "click",
+      "target": "button \"Search\"",
+      "result": "success",
+      "url": "http://localhost:3000/search?q=34567&btnSearch=Search",
+      "screenshotPath": "evidence/ab8f3b1a/screenshots/screen-aeaf3de2.png",
+      "axSnapshot": [
+        {
+          "role": "RootWebArea",
+          "name": "Keystone CU - Member Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "heading",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member Servicing - Search"
+            ]
+          }
+        },
+        {
+          "role": "StaticText",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "columnheader",
+          "name": "Member ID",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member ID",
+              "Name",
+              "SSN",
+              "Accounts"
+            ]
+          }
+        },
+        {
+          "role": "columnheader",
+          "name": "Name",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member ID",
+              "Name",
+              "SSN",
+              "Accounts"
+            ]
+          }
+        },
+        {
+          "role": "columnheader",
+          "name": "SSN",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member ID",
+              "Name",
+              "SSN",
+              "Accounts"
+            ]
+          }
+        },
+        {
+          "role": "columnheader",
+          "name": "Accounts",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member ID",
+              "Name",
+              "SSN",
+              "Accounts"
+            ]
+          }
+        },
+        {
+          "role": "cell",
+          "name": "34567",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "34567",
+              "Robert C. Lee",
+              "[REDACTED]",
+              "1"
+            ],
+            "column": "Member ID"
+          }
+        },
+        {
+          "role": "cell",
+          "name": "Robert C. Lee",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "34567",
+              "Robert C. Lee",
+              "[REDACTED]",
+              "1"
+            ],
+            "column": "Name"
+          }
+        },
+        {
+          "role": "cell",
+          "name": "[REDACTED]",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "34567",
+              "Robert C. Lee",
+              "[REDACTED]",
+              "1"
+            ],
+            "column": "SSN"
+          }
+        },
+        {
+          "role": "cell",
+          "name": "1",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "34567",
+              "Robert C. Lee",
+              "[REDACTED]",
+              "1"
+            ],
+            "column": "Accounts"
+          }
+        },
+        {
+          "role": "StaticText",
+          "name": "Member ID",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Name",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "SSN",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Accounts",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "link",
+          "name": "34567",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "34567",
+              "Robert C. Lee",
+              "[REDACTED]",
+              "1"
+            ],
+            "column": "Member ID"
+          }
+        },
+        {
+          "role": "StaticText",
+          "name": "Robert C. Lee",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "[REDACTED]",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "1",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Member ID:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "textbox",
+          "name": "Member ID",
+          "value": "34567",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member ID:",
+              "",
+              ""
+            ],
+            "label": "Member ID:"
+          }
+        },
+        {
+          "role": "button",
+          "name": "Search",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member ID:",
+              "",
+              ""
+            ],
+            "label": ""
+          }
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Member ID",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Name",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "SSN",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Accounts",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "34567",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Robert C. Lee",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "[REDACTED]",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "1",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Member ID:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "34567",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "34567",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "34567",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "context": {
+            "row": [
+              "Member Servicing - Search"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Member ID:",
+          "children": [],
+          "context": {
+            "row": [
+              "Member ID:"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Member IDNameSSNAccounts\n          34567\n          Robert C. Lee[REDACTED]\n          1",
+          "children": [],
+          "context": {
+            "row": [
+              "Member IDNameSSNAccounts 34567 Robert C. Lee[REDACTED] 1"
+            ]
+          },
+          "framePath": []
+        }
+      ]
+    },
+    {
+      "step": 4,
+      "action": "click",
+      "target": "link \"{{memberId}}\"",
+      "result": "success",
+      "url": "http://localhost:3000/detail?id=34567",
+      "screenshotPath": "evidence/ab8f3b1a/screenshots/screen-09c7702e.png",
+      "axSnapshot": [
+        {
+          "role": "RootWebArea",
+          "name": "Keystone CU - Member Detail",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "heading",
+          "name": "Member Detail - Robert C. Lee",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member Detail - Robert C. Lee"
+            ]
+          }
+        },
+        {
+          "role": "StaticText",
+          "name": "Accounts",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "link",
+          "name": "Back to Search",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Back to Search | Open New Sub-Account"
+            ]
+          }
+        },
+        {
+          "role": "StaticText",
+          "name": " | ",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "link",
+          "name": "Open New Sub-Account",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Back to Search | Open New Sub-Account"
+            ]
+          }
+        },
+        {
+          "role": "StaticText",
+          "name": "Member Detail - Robert C. Lee",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Accounts",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Back to Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": " | ",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Open New Sub-Account",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Member Detail - Robert C. Lee",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "columnheader",
+          "name": "Member ID",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member ID",
+              "SSN",
+              "DOB"
+            ]
+          }
+        },
+        {
+          "role": "columnheader",
+          "name": "SSN",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member ID",
+              "SSN",
+              "DOB"
+            ]
+          }
+        },
+        {
+          "role": "columnheader",
+          "name": "DOB",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member ID",
+              "SSN",
+              "DOB"
+            ]
+          }
+        },
+        {
+          "role": "cell",
+          "name": "34567",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "34567",
+              "[REDACTED]",
+              "1968-11-30"
+            ],
+            "column": "Member ID"
+          }
+        },
+        {
+          "role": "cell",
+          "name": "[REDACTED]",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "34567",
+              "[REDACTED]",
+              "1968-11-30"
+            ],
+            "column": "SSN"
+          }
+        },
+        {
+          "role": "cell",
+          "name": "1968-11-30",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "34567",
+              "[REDACTED]",
+              "1968-11-30"
+            ],
+            "column": "DOB"
+          }
+        },
+        {
+          "role": "columnheader",
+          "name": "Type",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Type",
+              "Account Number",
+              "Balance",
+              "Action"
+            ]
+          }
+        },
+        {
+          "role": "columnheader",
+          "name": "Account Number",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Type",
+              "Account Number",
+              "Balance",
+              "Action"
+            ]
+          }
+        },
+        {
+          "role": "columnheader",
+          "name": "Balance",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Type",
+              "Account Number",
+              "Balance",
+              "Action"
+            ]
+          }
+        },
+        {
+          "role": "columnheader",
+          "name": "Action",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Type",
+              "Account Number",
+              "Balance",
+              "Action"
+            ]
+          }
+        },
+        {
+          "role": "cell",
+          "name": "Checking",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Checking",
+              "[REDACTED]",
+              "$3,421.00",
+              "Manage"
+            ],
+            "column": "Type"
+          }
+        },
+        {
+          "role": "cell",
+          "name": "[REDACTED]",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Checking",
+              "[REDACTED]",
+              "$3,421.00",
+              "Manage"
+            ],
+            "column": "Account Number"
+          }
+        },
+        {
+          "role": "cell",
+          "name": "$3,421.00",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Checking",
+              "[REDACTED]",
+              "$3,421.00",
+              "Manage"
+            ],
+            "column": "Balance"
+          }
+        },
+        {
+          "role": "cell",
+          "name": "Manage",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Checking",
+              "[REDACTED]",
+              "$3,421.00",
+              "Manage"
+            ],
+            "column": "Action"
+          }
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Back to Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Open New Sub-Account",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Member ID",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "SSN",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "DOB",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "34567",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "[REDACTED]",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "1968-11-30",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Type",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Account Number",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Balance",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Action",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Checking",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "[REDACTED]",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "$3,421.00",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "link",
+          "name": "Manage",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Checking",
+              "[REDACTED]",
+              "$3,421.00",
+              "Manage"
+            ],
+            "column": "Action"
+          }
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Member ID",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "SSN",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "DOB",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "34567",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "[REDACTED]",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "1968-11-30",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Type",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Account Number",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Balance",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Action",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Checking",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "[REDACTED]",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "$3,421.00",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Manage",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Manage",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Member Detail - Robert C. Lee",
+          "children": [],
+          "context": {
+            "row": [
+              "Member Detail - Robert C. Lee"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Member IDSSNDOB\n      34567[REDACTED]1968-11-30",
+          "children": [],
+          "context": {
+            "row": [
+              "Member IDSSNDOB 34567[REDACTED]1968-11-30"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Accounts",
+          "children": [],
+          "context": {
+            "row": [
+              "Accounts"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "TypeAccount NumberBalanceAction\n      Checking[REDACTED]$3,421.00\n        Manage",
+          "children": [],
+          "context": {
+            "row": [
+              "TypeAccount NumberBalanceAction Checking[REDACTED]$3,421.00 "
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Back to Search |\n      Open New Sub-Account",
+          "children": [],
+          "context": {
+            "row": [
+              "Back to Search | Open New Sub-Account"
+            ]
+          },
+          "framePath": []
+        }
+      ]
+    },
+    {
+      "step": 5,
+      "action": "extract",
+      "target": "cell in row \"Savings\" under column \"Balance\"",
+      "result": "failure",
+      "url": "http://localhost:3000/detail?id=34567",
+      "screenshotPath": "evidence/ab8f3b1a/screenshots/screen-58909b29.png",
+      "axSnapshot": [
+        {
+          "role": "RootWebArea",
+          "name": "Keystone CU - Member Detail",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "heading",
+          "name": "Member Detail - Robert C. Lee",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member Detail - Robert C. Lee"
+            ]
+          }
+        },
+        {
+          "role": "StaticText",
+          "name": "Accounts",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "link",
+          "name": "Back to Search",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Back to Search | Open New Sub-Account"
+            ]
+          }
+        },
+        {
+          "role": "StaticText",
+          "name": " | ",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "link",
+          "name": "Open New Sub-Account",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Back to Search | Open New Sub-Account"
+            ]
+          }
+        },
+        {
+          "role": "StaticText",
+          "name": "Member Detail - Robert C. Lee",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Accounts",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Back to Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": " | ",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Open New Sub-Account",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Member Detail - Robert C. Lee",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "columnheader",
+          "name": "Member ID",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member ID",
+              "SSN",
+              "DOB"
+            ]
+          }
+        },
+        {
+          "role": "columnheader",
+          "name": "SSN",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member ID",
+              "SSN",
+              "DOB"
+            ]
+          }
+        },
+        {
+          "role": "columnheader",
+          "name": "DOB",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member ID",
+              "SSN",
+              "DOB"
+            ]
+          }
+        },
+        {
+          "role": "cell",
+          "name": "34567",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "34567",
+              "[REDACTED]",
+              "1968-11-30"
+            ],
+            "column": "Member ID"
+          }
+        },
+        {
+          "role": "cell",
+          "name": "[REDACTED]",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "34567",
+              "[REDACTED]",
+              "1968-11-30"
+            ],
+            "column": "SSN"
+          }
+        },
+        {
+          "role": "cell",
+          "name": "1968-11-30",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "34567",
+              "[REDACTED]",
+              "1968-11-30"
+            ],
+            "column": "DOB"
+          }
+        },
+        {
+          "role": "columnheader",
+          "name": "Type",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Type",
+              "Account Number",
+              "Balance",
+              "Action"
+            ]
+          }
+        },
+        {
+          "role": "columnheader",
+          "name": "Account Number",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Type",
+              "Account Number",
+              "Balance",
+              "Action"
+            ]
+          }
+        },
+        {
+          "role": "columnheader",
+          "name": "Balance",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Type",
+              "Account Number",
+              "Balance",
+              "Action"
+            ]
+          }
+        },
+        {
+          "role": "columnheader",
+          "name": "Action",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Type",
+              "Account Number",
+              "Balance",
+              "Action"
+            ]
+          }
+        },
+        {
+          "role": "cell",
+          "name": "Checking",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Checking",
+              "[REDACTED]",
+              "$3,421.00",
+              "Manage"
+            ],
+            "column": "Type"
+          }
+        },
+        {
+          "role": "cell",
+          "name": "[REDACTED]",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Checking",
+              "[REDACTED]",
+              "$3,421.00",
+              "Manage"
+            ],
+            "column": "Account Number"
+          }
+        },
+        {
+          "role": "cell",
+          "name": "$3,421.00",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Checking",
+              "[REDACTED]",
+              "$3,421.00",
+              "Manage"
+            ],
+            "column": "Balance"
+          }
+        },
+        {
+          "role": "cell",
+          "name": "Manage",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Checking",
+              "[REDACTED]",
+              "$3,421.00",
+              "Manage"
+            ],
+            "column": "Action"
+          }
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Back to Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Open New Sub-Account",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Member ID",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "SSN",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "DOB",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "34567",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "[REDACTED]",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "1968-11-30",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Type",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Account Number",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Balance",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Action",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Checking",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "[REDACTED]",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "$3,421.00",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "link",
+          "name": "Manage",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Checking",
+              "[REDACTED]",
+              "$3,421.00",
+              "Manage"
+            ],
+            "column": "Action"
+          }
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Member ID",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "SSN",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "DOB",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "34567",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "[REDACTED]",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "1968-11-30",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Type",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Account Number",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Balance",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Action",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Checking",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "[REDACTED]",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "$3,421.00",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Manage",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Manage",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Member Detail - Robert C. Lee",
+          "children": [],
+          "context": {
+            "row": [
+              "Member Detail - Robert C. Lee"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Member IDSSNDOB\n      34567[REDACTED]1968-11-30",
+          "children": [],
+          "context": {
+            "row": [
+              "Member IDSSNDOB 34567[REDACTED]1968-11-30"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Accounts",
+          "children": [],
+          "context": {
+            "row": [
+              "Accounts"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "TypeAccount NumberBalanceAction\n      Checking[REDACTED]$3,421.00\n        Manage",
+          "children": [],
+          "context": {
+            "row": [
+              "TypeAccount NumberBalanceAction Checking[REDACTED]$3,421.00 "
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Back to Search |\n      Open New Sub-Account",
+          "children": [],
+          "context": {
+            "row": [
+              "Back to Search | Open New Sub-Account"
+            ]
+          },
+          "framePath": []
+        }
+      ],
+      "detail": "element-not-found: No table row containing \"Savings\""
+    }
+  ]
+}

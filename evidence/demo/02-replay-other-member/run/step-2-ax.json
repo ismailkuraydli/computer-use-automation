@@ -1,0 +1,118 @@
+[
+  {
+    "role": "RootWebArea",
+    "name": "Keystone CU - Member Search",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "heading",
+    "name": "Member Servicing - Search",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Member Servicing - Search"
+      ]
+    }
+  },
+  {
+    "role": "StaticText",
+    "name": "Member Servicing - Search",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Member Servicing - Search",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Member ID:",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "textbox",
+    "name": "Member ID",
+    "value": "45678",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Member ID:",
+        "",
+        ""
+      ],
+      "label": "Member ID:"
+    }
+  },
+  {
+    "role": "button",
+    "name": "Search",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Member ID:",
+        "",
+        ""
+      ],
+      "label": ""
+    }
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Member ID:",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Search",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "45678",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Search",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "45678",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "Member Servicing - Search",
+    "children": [],
+    "context": {
+      "row": [
+        "Member Servicing - Search"
+      ]
+    },
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "Member ID:",
+    "children": [],
+    "context": {
+      "row": [
+        "Member ID:"
+      ]
+    },
+    "framePath": []
+  }
+]

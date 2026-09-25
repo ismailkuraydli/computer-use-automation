@@ -1,168 +1,107 @@
 /**
- * Recorder — transforms agent actions into typed artifact steps.
- * Per ADR-002: Hybrid Step-List with State Guards.
- * Extracts locators from AX tree, generates guards from before-state,
- * checkpoints from after-state.
+ * Recorder — turns the successful actions of a discovery run into a
+ * schema-v2 capability artifact.
+ *
+ * Failed actions are not recorded: they changed nothing, and the model
+ * retries with a different action. Runtime conditions (not found, session
+ * expired, notices) are not recorded per step either — they belong to the
+ * app profile.
  */
 
 import type { Action, ScreenState } from "../surface/types.js";
-import type {
-  CapabilityArtifact,
-  ArtifactStep,
-  LocatorSpec,
-  StateGuard,
-  ScreenSignature,
-  ParamSpec,
-  OutputSpec,
-  SuccessCondition,
-  AllowlistConfig,
-  ErrorHandler,
+import {
+  ARTIFACT_SCHEMA_VERSION,
+  type AllowlistConfig,
+  type ArtifactStep,
+  type CapabilityArtifact,
+  type OutputSpec,
+  type ParamSpec,
+  type SuccessCondition,
 } from "../artifact/types.js";
+import { buildCheckpoint, buildTarget } from "./step-builders.js";
+import { parameterizeSteps } from "./parameterize.js";
+
+const MIN_INFERRED_PARAM_LENGTH = 3;
+/** Actions that only feed the model during discovery; replay does not need them. */
+const DISCOVERY_ONLY_ACTIONS = new Set(["read_page_text"]);
+
+export interface RecorderOptions {
+  capability: string;
+  description: string;
+  allowlist: AllowlistConfig;
+  params?: ParamSpec[];
+  outputs?: OutputSpec[];
+  /** paramName → concrete value used during discovery. */
+  paramValues?: Record<string, string>;
+  /** Goal text — used to infer param values the plan did not name. */
+  goal?: string;
+  /** App profile name for the artifact. */
+  app?: string;
+}
 
 export class Recorder {
-  private capability: string;
-  private description: string;
-  private allowlist: AllowlistConfig;
+  private readonly opts: RecorderOptions;
+  private readonly paramValues: Record<string, string>;
   private steps: ArtifactStep[] = [];
-  private stepCounter = 0;
-  private baseUrl: string = "";
-  private knownParams: ParamSpec[];
-  private knownOutputs: OutputSpec[];
-  private paramValues: Record<string, string>; // paramName → concrete value used during discovery
-  private goal: string; // goal text — used to infer paramValues from LLM actions
+  private baseUrl = "";
 
-  constructor(
-    capability: string,
-    description: string,
-    allowlist: AllowlistConfig,
-    params: ParamSpec[] = [],
-    outputs: OutputSpec[] = [],
-    paramValues: Record<string, string> = {},
-    goal: string = ""
-  ) {
-    this.capability = capability;
-    this.description = description;
-    this.allowlist = allowlist;
-    this.knownParams = params;
-    this.knownOutputs = outputs;
-    this.paramValues = paramValues;
-    this.goal = goal;
+  constructor(opts: RecorderOptions) {
+    this.opts = opts;
+    this.paramValues = { ...(opts.paramValues ?? {}) };
   }
 
   recordAction(
     action: Action,
     beforeState: ScreenState,
     afterState: ScreenState,
-    _result: "success" | "failure"
+    result: "success" | "failure",
+    expect?: string
   ): void {
-    this.stepCounter++;
+    if (result === "failure" || DISCOVERY_ONLY_ACTIONS.has(action.type)) return;
 
-    // Infer paramValues from LLM type actions: if the LLM types a value that
-    // appears in the goal text, map it to a declared param. This handles the
-    // case where the LLM plan didn't return paramValues explicitly.
-    if (action.type === "type" && action.value && this.goal) {
-      const goalLower = this.goal.toLowerCase();
-      const valueLower = action.value.toLowerCase();
-      if (goalLower.includes(valueLower) && valueLower.length >= 3) {
-        // Find a param that doesn't already have a value
-        for (const param of this.knownParams) {
-          if (!(param.name in this.paramValues)) {
-            this.paramValues[param.name] = action.value;
-            break;
-          }
-        }
-      }
+    this._inferParamValue(action);
+    if (this.steps.length === 0 && action.type === "navigate" && action.value) {
+      this.baseUrl = originOf(action.value);
     }
 
-    // Extract baseUrl from first navigation
-    if (this.stepCounter === 1 && action.type === "navigate" && action.value) {
-      try {
-        const url = new URL(action.value);
-        this.baseUrl = `${url.protocol}//${url.host}`;
-      } catch {
-        this.baseUrl = action.value;
-      }
-    }
+    const values = Object.values(this.paramValues);
+    const target = buildTarget(action, beforeState, values);
+    const checkpoint = buildCheckpoint(action, beforeState, afterState, expect, values);
+    const classification = this._classify(action);
+    const output = action.type === "extract" ? this._outputName(action.output) : undefined;
 
-    // Build locator from the action target
-    const target = this._buildLocator(action, beforeState);
+    // Re-reading the same value adds nothing to the capability
+    const duplicate = this.steps.some(
+      (s) => s.action === "extract" && s.output === output && JSON.stringify(s.target) === JSON.stringify(target)
+    );
+    if (duplicate) return;
 
-    // Build guard from before-state (not for the first step)
-    const guard = this.stepCounter > 1 ? this._buildGuard(beforeState) : undefined;
-
-    // Build checkpoint from after-state
-    const checkpoint = this._buildCheckpoint(afterState, action);
-
-    const step: ArtifactStep = {
-      id: this.stepCounter,
+    this.steps.push({
+      id: this.steps.length + 1,
       action: action.type,
-      target,
-      value: action.value,
-      output: action.output,
-      guard,
-      checkpoint,
-      onError: this._generateErrorHandlers(afterState),
-    };
-
-    // If extract action has no output name, assign from known outputs
-    if (action.type === "extract" && this.knownOutputs.length > 0) {
-      if (!step.output) {
-        step.output = this.knownOutputs[0].name;
-      } else {
-        // Normalize: if the LLM's output name doesn't exactly match a declared output,
-        // find the closest match (case-insensitive, ignoring underscores/hyphens)
-        const normalize = (s: string) => s.toLowerCase().replace(/[-_]/g, "");
-        const match = this.knownOutputs.find(o => normalize(o.name) === normalize(step.output!));
-        if (match) {
-          step.output = match.name;
-        }
-      }
-    }
-
-    // Add default "not found" handler for click steps that follow a search/type action
-    // (these steps might encounter "no results" if the search returns nothing)
-    if (action.type === "click" && this.stepCounter > 1) {
-      if (!step.onError) step.onError = [];
-      step.onError.push({
-        when: {
-          anyOf: [{
-            textContains: "not found",
-          }, {
-            textContains: "No records found",
-          }, {
-            textContains: "No results",
-          }],
-        },
-        handler: "fail",
-        outcome: "not-found",
-        description: "No results found for the search query",
-      });
-    }
-
-    this.steps.push(step);
+      ...(target ? { target } : {}),
+      ...(action.value !== undefined ? { value: action.value } : {}),
+      ...(output !== undefined ? { output } : {}),
+      ...(checkpoint ? { checkpoint } : {}),
+      ...(classification !== "safe" ? { classification } : {}),
+    });
   }
 
-  finalize(
-    params: ParamSpec[],
-    outputs: OutputSpec[],
-    checkpoint: SuccessCondition
-  ): CapabilityArtifact {
-    // Canonicalize: parameterize concrete values in steps
-    this._parameterizeSteps(params);
-
+  finalize(params: ParamSpec[], outputs: OutputSpec[], checkpoint: SuccessCondition): CapabilityArtifact {
     return {
-      schemaVersion: "1.0",
+      schemaVersion: ARTIFACT_SCHEMA_VERSION,
       artifactVersion: 1,
-      capability: this.capability,
-      description: this.description,
+      capability: this.opts.capability,
+      description: this.opts.description,
       surface: {
         type: "web",
         baseUrl: this.baseUrl,
+        ...(this.opts.app ? { app: this.opts.app } : {}),
       },
       params,
       outputs,
-      allowlist: this.allowlist,
-      steps: this.steps,
+      allowlist: this.opts.allowlist,
+      steps: parameterizeSteps(this.steps, this.paramValues),
       checkpoint,
       metadata: {
         recordedAt: new Date().toISOString(),
@@ -171,267 +110,39 @@ export class Recorder {
     };
   }
 
-  /**
-   * Parameterize steps: replace concrete param values with {{paramName}}.
-   *
-   * Uses the paramValues map (paramName → concrete value from discovery).
-   * For each step, replaces all occurrences of the concrete value with
-   * {{paramName}} in step.value and step.target.primary.name.
-   *
-   * This is simple string replacement — no name matching needed. If the
-   * LLM typed "bananas" and paramValues is {"topic": "bananas"}, then
-   * "bananas" becomes "{{topic}}" everywhere in the artifact.
-   */
-  private _parameterizeSteps(_params: ParamSpec[]): void {
-    for (const step of this.steps) {
-      // Replace concrete values in step.value (case-sensitive — search text matters)
-      if (step.value && typeof step.value === "string") {
-        for (const [paramName, concreteValue] of Object.entries(this.paramValues)) {
-          if (concreteValue && step.value.includes(concreteValue)) {
-            step.value = step.value.split(concreteValue).join(`{{${paramName}}}`);
-          }
-        }
-      }
-      // Replace concrete values in target name (case-insensitive — page titles
-      // may differ in case from the search term, e.g. "Banana" vs "bananas")
-      if (step.target && step.target.primary.name && typeof step.target.primary.name === "string") {
-        for (const [paramName, concreteValue] of Object.entries(this.paramValues)) {
-          if (concreteValue) {
-            const lowerName = step.target.primary.name.toLowerCase();
-            const lowerValue = concreteValue.toLowerCase();
-            if (lowerName.includes(lowerValue)) {
-              const regex = new RegExp(concreteValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-              step.target.primary.name = step.target.primary.name.replace(regex, `{{${paramName}}}`);
-            }
-          }
-        }
-      }
-      // Replace concrete values in guard URL patterns and AX element names
-      if (step.guard) {
-        this._parameterizeStateGuard(step.guard);
-      }
-      // Replace concrete values in checkpoint URL patterns and AX element names
-      if (step.checkpoint) {
-        this._parameterizeStateGuard(step.checkpoint);
-      }
-    }
+  /** Concrete param values used in this run (declared or inferred). */
+  get discoveryParams(): Record<string, string> {
+    return { ...this.paramValues };
   }
 
-  /**
-   * Replace concrete param values with {{paramName}} in a StateGuard's
-   * URL patterns and AX element names. Case-insensitive for URLs.
-   */
-  private _parameterizeStateGuard(guard: StateGuard): void {
-    if (!guard.anyOf) return;
-    for (const sig of guard.anyOf) {
-      // Parameterize URL pattern (case-insensitive)
-      if (sig.urlPattern) {
-        for (const [paramName, concreteValue] of Object.entries(this.paramValues)) {
-          if (concreteValue) {
-            const regex = new RegExp(concreteValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-            sig.urlPattern = sig.urlPattern.replace(regex, `{{${paramName}}}`);
-          }
-        }
-      }
-      // Parameterize AX element names (case-insensitive)
-      if (sig.axContains) {
-        for (const ax of sig.axContains) {
-          if (ax.name) {
-            for (const [paramName, concreteValue] of Object.entries(this.paramValues)) {
-              if (concreteValue) {
-                const regex = new RegExp(concreteValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-                ax.name = ax.name.replace(regex, `{{${paramName}}}`);
-              }
-            }
-          }
-        }
-      }
-      // Parameterize textContains
-      if (sig.textContains) {
-        for (const [paramName, concreteValue] of Object.entries(this.paramValues)) {
-          if (concreteValue) {
-            const regex = new RegExp(concreteValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-            sig.textContains = sig.textContains.replace(regex, `{{${paramName}}}`);
-          }
-        }
-      }
-    }
+  /** A typed value that appears in the goal fills the first param without a value. */
+  private _inferParamValue(action: Action): void {
+    const goal = (this.opts.goal ?? "").toLowerCase();
+    if (action.type !== "type" || !action.value || action.value.length < MIN_INFERRED_PARAM_LENGTH) return;
+    if (!goal.includes(action.value.toLowerCase())) return;
+    const free = (this.opts.params ?? []).find((p) => !(p.name in this.paramValues));
+    if (free) this.paramValues[free.name] = action.value;
   }
 
-  private _buildLocator(action: Action, state: ScreenState): LocatorSpec {
-    // If the action has a target (click, type, extract, submit), build from it
-    if (action.target) {
-      const loc: LocatorSpec = {
-        primary: {
-          role: action.target.role,
-          name: action.target.name,
-        },
-      };
-
-      // Capture exact element identity from the AX tree for replay reliability.
-      // Look up the action's target in the before-state AX tree and copy all
-      // identifying fields (CSS selector, id, aria-label, text, href, data-testid).
-      // This is like a Playwright test selector — the replay engine uses these
-      // to find the exact element without guessing.
-      const axNode = state.axTree.find(
-        (n) => n.role === action.target!.role && n.name === action.target!.name
-      );
-      if (axNode) {
-        if (axNode.cssSelector) loc.primary.cssSelector = axNode.cssSelector;
-        if (axNode.id) loc.primary.id = axNode.id;
-        if (axNode.ariaLabel) loc.primary.ariaLabel = axNode.ariaLabel;
-        if (axNode.text) loc.primary.text = axNode.text;
-        if (axNode.href) loc.primary.href = axNode.href;
-        if (axNode.dataTestId) loc.primary.dataTestId = axNode.dataTestId;
-      }
-
-      // Also capture DOM fallback if we have a CSS selector
-      if (axNode?.cssSelector) {
-        loc.fallback = {
-          selector: axNode.cssSelector,
-          text: axNode.text,
-        };
-      }
-
-      if (action.target.framePath && action.target.framePath.length > 0) {
-        loc.framePath = action.target.framePath;
-      }
-      return loc;
-    }
-
-    // For navigate actions, use the URL as target
-    if (action.type === "navigate" && action.value) {
-      return {
-        primary: {
-          role: "RootWebArea",
-          name: action.value,
-        },
-      };
-    }
-
-    // Fallback
-    return {
-      primary: { role: "unknown", name: "unknown" },
-    };
+  private _outputName(requested: string | undefined): string | undefined {
+    const outputs = this.opts.outputs ?? [];
+    if (!requested) return outputs[0]?.name;
+    const normalize = (s: string) => s.toLowerCase().replace(/[-_]/g, "");
+    return outputs.find((o) => normalize(o.name) === normalize(requested))?.name ?? requested;
   }
 
-  private _buildGuard(state: ScreenState): StateGuard | undefined {
-    // Build a guard from the key elements in the before-state
-    const keyElements = state.axTree
-      .filter((n) => ["textbox", "button", "link", "heading"].includes(n.role))
-      .slice(0, 3); // Top 3 key elements
-
-    if (keyElements.length === 0) return undefined;
-
-    const signature: ScreenSignature = {
-      axContains: keyElements.map((n) => ({
-        role: n.role,
-        name: n.name,
-      })),
-      urlPattern: this._urlToPattern(state.url),
-    };
-
-    return { anyOf: [signature] };
+  private _classify(action: Action): "safe" | "risky" | "irreversible" {
+    if (this.opts.allowlist.irreversibleActions?.includes(action.type)) return "irreversible";
+    if (this.opts.allowlist.riskyActions?.includes(action.type)) return "risky";
+    return "safe";
   }
+}
 
-  private _buildCheckpoint(state: ScreenState, _action: Action): StateGuard | undefined {
-    // Build a checkpoint from the key elements in the after-state
-    // Exclude elements whose names contain param values (they're data-dependent)
-    const paramConcreteValues = Object.values(this.paramValues).filter(v => v.length > 0);
-    const keyElements = state.axTree
-      .filter((n) => ["textbox", "button", "link", "heading", "table"].includes(n.role))
-      .filter((n) => {
-        // Skip elements whose name contains a param concrete value (data-dependent)
-        return !paramConcreteValues.some((pv) => n.name.includes(pv));
-      })
-      .slice(0, 3);
-
-    if (keyElements.length === 0) return undefined;
-
-    const signature: ScreenSignature = {
-      axContains: keyElements.map((n) => ({
-        role: n.role,
-        name: n.name,
-      })),
-      urlPattern: this._urlToPattern(state.url),
-    };
-
-    return { anyOf: [signature] };
-  }
-
-  /**
-   * Generate default error handlers for a step based on the page state.
-   * Detects common error patterns ("not found", "error", "invalid") in the
-   * after-state and creates onError handlers that classify them as business outcomes.
-   */
-  private _generateErrorHandlers(state: ScreenState): ErrorHandler[] {
-    const handlers: ErrorHandler[] = [];
-    const allText = state.axTree.map((n) => n.name).join(" ").toLowerCase();
-
-    // Common "not found" patterns → business outcome
-    if (allText.includes("not found") || allText.includes("no records found") || allText.includes("no results")) {
-      handlers.push({
-        when: {
-          anyOf: [{
-            textContains: "not found",
-          }, {
-            textContains: "No records found",
-          }, {
-            textContains: "No results",
-          }],
-        },
-        handler: "fail",
-        outcome: "not-found",
-        description: "Member or record not found",
-      });
-    }
-
-    // Validation error pattern → business outcome
-    if (allText.includes("validation error") || allText.includes("must be")) {
-      handlers.push({
-        when: {
-          anyOf: [{
-            textContains: "Validation Error",
-          }],
-        },
-        handler: "fail",
-        outcome: "validation-error",
-        description: "Validation error on form submission",
-      });
-    }
-
-    // Session timeout pattern → escalate
-    if (allText.includes("session expired") || allText.includes("timed out")) {
-      handlers.push({
-        when: {
-          anyOf: [{
-            textContains: "Session Expired",
-          }, {
-            textContains: "timed out",
-          }],
-        },
-        handler: "escalate",
-        description: "Session expired — requires re-authentication",
-      });
-    }
-
-    return handlers;
-  }
-
-  private _urlToPattern(url: string): string {
-    // Normalize URL to a pattern — replace dynamic values with wildcards
-    try {
-      const parsed = new URL(url);
-      let path = parsed.pathname;
-      // Replace numeric IDs with wildcards
-      path = path.replace(/\/\d+/g, "/*");
-      // Replace query params with wildcards
-      if (parsed.search) {
-        path += "*";
-      }
-      return path;
-    } catch {
-      return url;
-    }
+function originOf(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return url;
   }
 }

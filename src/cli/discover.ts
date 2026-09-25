@@ -8,6 +8,9 @@ import { MockLLMClient } from "../llm/mock-client.js";
 import { OpenRouterClient } from "../llm/openrouter-client.js";
 import { AgentLoop } from "../discovery/agent-loop.js";
 import { Recorder } from "../discovery/recorder.js";
+import { ReplayEngine } from "../replay/replay-engine.js";
+import { loadProfile } from "../artifact/profile-store.js";
+import type { CapabilityArtifact } from "../artifact/types.js";
 import { SafetyGuard } from "../safety/safety-guard.js";
 import { EvidenceCollector } from "../evidence/evidence-collector.js";
 import { ArtifactStore } from "../artifact/artifact-store.js";
@@ -15,15 +18,20 @@ import { loadConfig, getApiKey, checkModelAccessible } from "../config.js";
 import type { AllowlistConfig } from "../artifact/types.js";
 import { readFileSync } from "fs";
 
-const DEFAULT_ALLOWLIST: AllowlistConfig = {
-  // Permissive defaults for discovery — the agent needs to explore freely.
-  // Replay can use a stricter allowlist via --allowlist flag.
-  permittedDomains: [],
-  permittedUrlPatterns: [],
-  permittedActions: ["navigate", "click", "type", "extract", "wait", "submit", "scroll", "read_page_text"],
-  riskyActions: ["submit"],
-  irreversibleActions: [],
-};
+/**
+ * Default allowlist when none is given: the target's own host only, every
+ * action type, submit flagged as risky. It is stored in the artifact, so it
+ * also bounds every replay.
+ */
+function defaultAllowlist(target: string): AllowlistConfig {
+  return {
+    permittedDomains: [new URL(target).hostname],
+    permittedUrlPatterns: ["/*"],
+    permittedActions: ["navigate", "click", "type", "select", "extract", "wait", "submit", "scroll", "read_page_text"],
+    riskyActions: ["submit"],
+    irreversibleActions: [],
+  };
+}
 
 export async function runDiscover(opts: Record<string, any>): Promise<void> {
   const goal = opts.goal as string;
@@ -88,7 +96,7 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
   }
 
   // Load allowlist
-  let allowlist = DEFAULT_ALLOWLIST;
+  let allowlist = defaultAllowlist(target);
   if (opts.allowlist) {
     try {
       allowlist = JSON.parse(readFileSync(opts.allowlist, "utf-8"));
@@ -137,7 +145,16 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
   // value before executing actions (safety net in case the LLM uses templates).
   const paramValues = plan.paramValues || {};
 
-  const recorder = new Recorder(plan.capability, plan.description, allowlist, plan.params, plan.outputs, paramValues, goal);
+  const recorder = new Recorder({
+    capability: plan.capability,
+    description: plan.description,
+    allowlist,
+    params: plan.params,
+    outputs: plan.outputs,
+    paramValues,
+    goal,
+    app: opts.app as string | undefined,
+  });
   const safetyGuard = new SafetyGuard(allowlist);
 
   const loop = new AgentLoop({
@@ -174,10 +191,41 @@ export async function runDiscover(opts: Record<string, any>): Promise<void> {
   console.log(`Evidence: ${evidence.runDir}`);
 
   if (result.success) {
+    const selfCheck = await selfCheckReplay(result.artifact, recorder.discoveryParams, headless);
+    console.log(`Self-check replay: ${selfCheck}`);
     const store = new ArtifactStore(outputPath.includes(".json") ? "./artifacts" : outputPath);
-    const savedPath = store.save(result.artifact);
+    const savedPath = store.save({ ...result.artifact, metadata: { ...result.artifact.metadata, selfCheck } });
     console.log(`Artifact saved: ${savedPath}`);
   }
 
   console.log(`\nEvidence directory: ${evidence.runDir}`);
+}
+
+/**
+ * Replay the fresh artifact once with the discovery params, so a capability
+ * that cannot replay is flagged before any agent relies on it. Artifacts with
+ * irreversible steps are not replayed: that would repeat the real action.
+ */
+async function selfCheckReplay(
+  artifact: CapabilityArtifact,
+  params: Record<string, string>,
+  headless: boolean
+): Promise<string> {
+  if (artifact.steps.some((s) => s.classification === "irreversible")) {
+    return "skipped: artifact has irreversible steps";
+  }
+  const evidence = new EvidenceCollector("./evidence");
+  const surface = new PlaywrightSurface({ headless, screenshotDir: evidence.screenshotDir });
+  try {
+    await surface._start();
+    const engine = new ReplayEngine({ surface, evidenceCollector: evidence, profile: loadProfile(artifact.surface.app) });
+    const result = await engine.run(artifact, params);
+    return result.status === "success"
+      ? `passed (${evidence.runDir})`
+      : `failed: ${result.status} (${evidence.runDir})`;
+  } catch (e) {
+    return `failed: ${(e as Error).message}`;
+  } finally {
+    await surface.close();
+  }
 }

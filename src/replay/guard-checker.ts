@@ -1,71 +1,48 @@
 /**
- * GuardChecker — checks whether a StateGuard matches the current ScreenState.
- * Per ADR-002: guards detect runtime errors before and after each step.
+ * GuardChecker — does a StateGuard / ScreenSignature match a ScreenState?
+ * Params must already be substituted. Element names match whole-text and
+ * case-insensitively; text and URL patterns match case-insensitively.
  */
 
 import type { ScreenState, AXNode } from "../surface/types.js";
-import type { StateGuard, ScreenSignature } from "../artifact/types.js";
-import type { AXLocator } from "../locator/types.js";
+import type { StateGuard, ScreenSignature, ElementRef } from "../artifact/types.js";
+
+const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
 
 export class GuardChecker {
   static check(guard: StateGuard | undefined, state: ScreenState): boolean {
     if (!guard) return true;
-
-    // anyOf: at least one signature must match
-    if (guard.anyOf) {
-      return guard.anyOf.some((sig) => GuardChecker._matchSignature(sig, state));
-    }
-
-    // allOf: all signatures must match
-    if (guard.allOf) {
-      return guard.allOf.every((sig) => GuardChecker._matchSignature(sig, state));
-    }
-
-    // expect: page-level state
-    if (guard.expect === "loaded") {
-      return state.axTree.length > 0;
-    }
-    if (guard.expect === "unloaded") {
-      return state.axTree.length === 0;
-    }
-
+    if (guard.anyOf && !guard.anyOf.some((sig) => GuardChecker.matches(sig, state))) return false;
+    if (guard.allOf && !guard.allOf.every((sig) => GuardChecker.matches(sig, state))) return false;
     return true;
   }
 
-  private static _matchSignature(sig: ScreenSignature, state: ScreenState): boolean {
-    // Check AX elements
-    if (sig.axContains) {
-      for (const locator of sig.axContains) {
-        if (!GuardChecker._hasAXElement(state.axTree, locator)) {
-          return false;
-        }
-      }
-    }
-
-    // Check URL pattern
-    if (sig.urlPattern) {
-      try {
-        const parsedUrl = new URL(state.url);
-        const path = parsedUrl.pathname + parsedUrl.search;
-        const regex = sig.urlPattern
-          .replace(/[.+^${}()|[\]\\]/g, "\\$&")
-          .replace(/\*/g, ".*");
-        if (!new RegExp(regex).test(path)) return false;
-      } catch {
-        if (!state.url.includes(sig.urlPattern)) return false;
-      }
-    }
-
-    // Check text contains
-    if (sig.textContains) {
-      const allText = state.axTree.map((n) => n.name).join(" ");
-      if (!allText.includes(sig.textContains)) return false;
-    }
-
+  static matches(sig: ScreenSignature, state: ScreenState): boolean {
+    if (sig.axContains && !sig.axContains.every((ref) => hasElement(state.axTree, ref))) return false;
+    if (sig.urlPattern && !matchesUrl(sig.urlPattern, state.url)) return false;
+    if (sig.textContains && !pageText(state).includes(norm(sig.textContains))) return false;
     return true;
   }
+}
 
-  private static _hasAXElement(tree: AXNode[], locator: AXLocator): boolean {
-    return tree.some((n) => n.role === locator.role && n.name === locator.name);
+function hasElement(tree: AXNode[], ref: ElementRef): boolean {
+  const name = norm(ref.name);
+  return tree.some((n) => n.role === ref.role && norm(n.name) === name);
+}
+
+function pageText(state: ScreenState): string {
+  return norm(state.axTree.map((n) => n.name).join(" "));
+}
+
+/** `*` is a wildcard; matched against path + query, case-insensitively. */
+function matchesUrl(pattern: string, url: string): boolean {
+  let target = url;
+  try {
+    const parsed = new URL(url);
+    target = parsed.pathname + parsed.search;
+  } catch {
+    // not an absolute URL — match against it as-is
   }
+  const regex = pattern.replace(/[.+^${}()|[\]\\?]/g, "\\$&").replace(/\*/g, ".*");
+  return new RegExp(regex, "i").test(target);
 }

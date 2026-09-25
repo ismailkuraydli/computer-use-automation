@@ -1,5 +1,7 @@
 # Architecture Spec: Computer-Use Automation System
 
+> **Note (2026-09-25):** this is the original design spec. The artifact schema, locator strategy, error handling and handoff have since been revised. See [DECISIONS.md](./DECISIONS.md) ADR-014–016 and [REPORT.md](./REPORT.md) for the current design.
+
 ## Requirements
 
 ### Functional Requirements

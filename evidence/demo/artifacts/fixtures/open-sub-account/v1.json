@@ -1,0 +1,124 @@
+{
+  "schemaVersion": "2.0",
+  "artifactVersion": 1,
+  "surface": {
+    "type": "web",
+    "baseUrl": "http://localhost:3000",
+    "app": "keystone-cu"
+  },
+  "allowlist": {
+    "permittedDomains": [
+      "localhost",
+      "127.0.0.1"
+    ],
+    "permittedUrlPatterns": [
+      "/*"
+    ],
+    "permittedActions": [
+      "navigate",
+      "click",
+      "type",
+      "select",
+      "extract",
+      "submit"
+    ],
+    "irreversibleActions": [
+      "submit"
+    ]
+  },
+  "metadata": {
+    "recordedAt": "2026-09-24T00:00:00Z",
+    "recordedBy": "scenario-fixture"
+  },
+  "capability": "open-sub-account",
+  "description": "Open a new sub-account for a member and return the new account number",
+  "params": [
+    {
+      "name": "memberId",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "accountType",
+      "type": "string",
+      "required": true,
+      "description": "Savings, Checking or Certificate of Deposit"
+    },
+    {
+      "name": "deposit",
+      "type": "string",
+      "required": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "accountNumber",
+      "type": "string"
+    }
+  ],
+  "steps": [
+    {
+      "id": 1,
+      "action": "navigate",
+      "value": "http://localhost:3000/new-account?id={{memberId}}",
+      "checkpoint": {
+        "anyOf": [
+          {
+            "axContains": [
+              {
+                "role": "textbox",
+                "name": "Initial Deposit"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "action": "select",
+      "target": {
+        "role": "combobox",
+        "name": "Account Type"
+      },
+      "value": "{{accountType}}"
+    },
+    {
+      "id": 3,
+      "action": "type",
+      "target": {
+        "role": "textbox",
+        "name": "Initial Deposit"
+      },
+      "value": "{{deposit}}"
+    },
+    {
+      "id": 4,
+      "action": "submit",
+      "target": {
+        "role": "button",
+        "name": "Continue"
+      },
+      "classification": "irreversible",
+      "checkpoint": {
+        "anyOf": [
+          {
+            "textContains": "Sub-Account Opened Successfully"
+          }
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "action": "extract",
+      "target": {
+        "role": "cell",
+        "label": "Account Number"
+      },
+      "output": "accountNumber"
+    }
+  ],
+  "checkpoint": {
+    "outputsExtracted": true
+  }
+}

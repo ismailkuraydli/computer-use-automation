@@ -1,0 +1,25 @@
+[operator] step 3: Unknown blocking UI at step 3: Target is covered by <div id="noticeOverlay">
+[operator] step 4: Unknown blocking UI at step 4: Target is covered by <div id="noticeOverlay">
+Status: success
+{
+  "status": "success",
+  "outputs": {
+    "savingsBalance": "$12,847.00"
+  },
+  "humanActions": [
+    {
+      "action": "click",
+      "target": "button \"Acknowledge\"",
+      "timestamp": "2026-09-25T04:06:43.817Z",
+      "result": "success"
+    },
+    {
+      "action": "click",
+      "target": "button \"Acknowledge\"",
+      "timestamp": "2026-09-25T04:06:49.089Z",
+      "result": "success"
+    }
+  ],
+  "evidencePath": "evidence/fbb5a923"
+}
+Evidence: evidence/fbb5a923

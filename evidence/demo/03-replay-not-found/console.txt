@@ -1,0 +1,16 @@
+◇ injected env (6) from .env
+Browser: headless
+
+Replaying artifact: lookup-member-savings-balance
+Params expected: ["memberId"]
+App profile: keystone-cu
+Params provided: {"memberId":"99999"}
+Target: about:blank
+
+
+--- Replay Result ---
+Status: business-outcome
+Outcome: not-found
+Detail: Member does not exist
+
+Evidence: evidence/e50e3a91

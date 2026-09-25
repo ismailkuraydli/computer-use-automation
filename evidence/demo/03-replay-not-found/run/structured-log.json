@@ -1,0 +1,393 @@
+{
+  "steps": [
+    {
+      "step": 1,
+      "action": "navigate",
+      "target": "http://localhost:3000/search",
+      "result": "success",
+      "url": "http://localhost:3000/search",
+      "screenshotPath": "evidence/e50e3a91/screenshots/screen-29e69c7c.png",
+      "axSnapshot": [
+        {
+          "role": "RootWebArea",
+          "name": "Keystone CU - Member Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "heading",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member Servicing - Search"
+            ]
+          }
+        },
+        {
+          "role": "StaticText",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Member ID:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "textbox",
+          "name": "Member ID",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member ID:",
+              "",
+              ""
+            ],
+            "label": "Member ID:"
+          }
+        },
+        {
+          "role": "button",
+          "name": "Search",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member ID:",
+              "",
+              ""
+            ],
+            "label": ""
+          }
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Member ID:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "context": {
+            "row": [
+              "Member Servicing - Search"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Member ID:",
+          "children": [],
+          "context": {
+            "row": [
+              "Member ID:"
+            ]
+          },
+          "framePath": []
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "action": "type",
+      "target": "textbox \"Member ID\"",
+      "result": "success",
+      "url": "http://localhost:3000/search",
+      "screenshotPath": "evidence/e50e3a91/screenshots/screen-1e1b1e70.png",
+      "axSnapshot": [
+        {
+          "role": "RootWebArea",
+          "name": "Keystone CU - Member Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "heading",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member Servicing - Search"
+            ]
+          }
+        },
+        {
+          "role": "StaticText",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Member ID:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "textbox",
+          "name": "Member ID",
+          "value": "99999",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member ID:",
+              "",
+              ""
+            ],
+            "label": "Member ID:"
+          }
+        },
+        {
+          "role": "button",
+          "name": "Search",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member ID:",
+              "",
+              ""
+            ],
+            "label": ""
+          }
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Member ID:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "99999",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "99999",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "context": {
+            "row": [
+              "Member Servicing - Search"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Member ID:",
+          "children": [],
+          "context": {
+            "row": [
+              "Member ID:"
+            ]
+          },
+          "framePath": []
+        }
+      ]
+    },
+    {
+      "step": 3,
+      "action": "click",
+      "target": "button \"Search\"",
+      "result": "failure",
+      "url": "http://localhost:3000/search?q=99999&btnSearch=Search",
+      "screenshotPath": "evidence/e50e3a91/screenshots/screen-2b922fe4.png",
+      "axSnapshot": [
+        {
+          "role": "RootWebArea",
+          "name": "Keystone CU - Member Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "heading",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member Servicing - Search"
+            ]
+          }
+        },
+        {
+          "role": "StaticText",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "No records found for Member ID: 99999",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Member ID:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "textbox",
+          "name": "Member ID",
+          "value": "99999",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member ID:",
+              "",
+              ""
+            ],
+            "label": "Member ID:"
+          }
+        },
+        {
+          "role": "button",
+          "name": "Search",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Member ID:",
+              "",
+              ""
+            ],
+            "label": ""
+          }
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "No records found for Member ID: 99999",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Member ID:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "99999",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Search",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "99999",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Member Servicing - Search",
+          "children": [],
+          "context": {
+            "row": [
+              "Member Servicing - Search"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Member ID:",
+          "children": [],
+          "context": {
+            "row": [
+              "Member ID:"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "No records found for Member ID: 99999",
+          "children": [],
+          "context": {
+            "row": [
+              "No records found for Member ID: 99999"
+            ]
+          },
+          "framePath": []
+        }
+      ],
+      "detail": "Checkpoint not met"
+    }
+  ]
+}

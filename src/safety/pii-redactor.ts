@@ -8,14 +8,22 @@
  * - Credit card numbers: 16 consecutive digits (with or without spaces)
  */
 
-const SSN_PATTERN = /\b\d{3}-\d{2}-\d{4}\b/g;
+// Digit lookarounds instead of \b: legacy layout cells glue text together
+// ("Checking1002003004$4,521.33"), where word boundaries do not exist.
+// The dashed SSN shape is distinctive enough to match even inside digit runs.
+const SSN_PATTERN = /\d{3}-\d{2}-\d{4}/g;
 
 // Account numbers: 10-12 consecutive digits, not preceded/followed by more digits
 // Must NOT match things like $45,200.00 (has commas/decimals) or phone numbers with dashes in different positions
-const ACCOUNT_NUMBER_PATTERN = /\b\d{10,12}\b/g;
+const ACCOUNT_NUMBER_PATTERN = /(?<!\d)\d{10,12}(?!\d)/g;
 
 // Credit card: 16 digits, optionally separated by spaces in groups of 4
-const CREDIT_CARD_PATTERN = /\b(?:\d{4}\s?){3}\d{4}\b/g;
+const CREDIT_CARD_PATTERN = /(?<!\d)(?:\d{4}\s?){3}\d{4}(?!\d)/g;
+
+/** Matches any text that contains a known PII pattern — for masking screenshots. */
+export const PII_TEXT_PATTERN = new RegExp(
+  [CREDIT_CARD_PATTERN, SSN_PATTERN, ACCOUNT_NUMBER_PATTERN].map((p) => p.source).join("|")
+);
 
 /**
  * Redact all known PII patterns from a string, replacing them with [REDACTED].
