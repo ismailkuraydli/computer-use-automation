@@ -53,7 +53,7 @@ export function buildCheckpoint(
   // per invocation (a member's name in a results table, a balance).
   // It must also be on the page right now — models predict text that never appears.
   const usableExpect =
-    expect && !isTableData(expect, before, after) && pageText(after).includes(norm(expect)) ? expect : undefined;
+    expect && !isTableData(expect, before, after) && onOneElement(after, expect) ? expect : undefined;
 
   const sig: ScreenSignature = {};
   if (usableExpect) sig.textContains = usableExpect;
@@ -72,8 +72,10 @@ export function buildCheckpoint(
   return Object.keys(sig).length > 0 ? { anyOf: [sig] } : undefined;
 }
 
-function pageText(state: ScreenState): string {
-  return norm(state.axTree.map((n) => n.name).join(" "));
+/** Inside a single element — not stitched together from neighbouring cells. */
+function onOneElement(state: ScreenState, text: string): boolean {
+  const wanted = norm(text);
+  return state.axTree.some((n) => norm(n.name).includes(wanted));
 }
 
 /** Text that is the content of a data cell (a cell under a column header). */

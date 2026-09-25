@@ -178,4 +178,25 @@ describe("Recorder", () => {
     expect(sig?.textContains).toBeUndefined();
     expect(sig?.urlPattern).toBe("/detail?id={{memberId}}");
   });
+
+  it("skips discovery-only reads and repeated extractions", () => {
+    const r = recorder();
+    r.recordAction({ type: "read_page_text" }, ACCOUNT, ACCOUNT, "success");
+    const extract: Action = { type: "extract", target: { role: "cell", name: "$12,847.00" }, output: "balance" };
+    r.recordAction(extract, ACCOUNT, ACCOUNT, "success");
+    r.recordAction(extract, ACCOUNT, ACCOUNT, "success");
+
+    expect(finalize(r).steps.map((s) => s.action)).toEqual(["extract"]);
+  });
+
+  it("does not accept an expectation stitched from neighbouring cells", () => {
+    const r = recorder();
+    const account = screen("http://localhost:3000/account-action?id=12345&acct=1", [
+      { role: "cell", name: "Savings" },
+      { role: "cell", name: "Account Number" },
+    ]);
+    r.recordAction({ type: "click", target: { role: "link", name: "Manage", row: "Savings" } }, DETAIL, account, "success", "Savings Account");
+
+    expect(finalize(r).steps[0].checkpoint?.anyOf?.[0].textContains).toBeUndefined();
+  });
 });

@@ -22,6 +22,8 @@ import { buildCheckpoint, buildTarget } from "./step-builders.js";
 import { parameterizeSteps } from "./parameterize.js";
 
 const MIN_INFERRED_PARAM_LENGTH = 3;
+/** Actions that only feed the model during discovery; replay does not need them. */
+const DISCOVERY_ONLY_ACTIONS = new Set(["read_page_text"]);
 
 export interface RecorderOptions {
   capability: string;
@@ -55,7 +57,7 @@ export class Recorder {
     result: "success" | "failure",
     expect?: string
   ): void {
-    if (result === "failure") return;
+    if (result === "failure" || DISCOVERY_ONLY_ACTIONS.has(action.type)) return;
 
     this._inferParamValue(action);
     if (this.steps.length === 0 && action.type === "navigate" && action.value) {
@@ -66,13 +68,20 @@ export class Recorder {
     const target = buildTarget(action, beforeState, values);
     const checkpoint = buildCheckpoint(action, beforeState, afterState, expect, values);
     const classification = this._classify(action);
+    const output = action.type === "extract" ? this._outputName(action.output) : undefined;
+
+    // Re-reading the same value adds nothing to the capability
+    const duplicate = this.steps.some(
+      (s) => s.action === "extract" && s.output === output && JSON.stringify(s.target) === JSON.stringify(target)
+    );
+    if (duplicate) return;
 
     this.steps.push({
       id: this.steps.length + 1,
       action: action.type,
       ...(target ? { target } : {}),
       ...(action.value !== undefined ? { value: action.value } : {}),
-      ...(action.type === "extract" ? { output: this._outputName(action.output) } : {}),
+      ...(output !== undefined ? { output } : {}),
       ...(checkpoint ? { checkpoint } : {}),
       ...(classification !== "safe" ? { classification } : {}),
     });
