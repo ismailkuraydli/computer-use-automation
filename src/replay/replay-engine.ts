@@ -214,6 +214,15 @@ export class ReplayEngine {
       return { type: "wait", value: resolvedValue || "1000" };
     }
 
+    // read_page_text and scroll don't need a target — they operate on the whole page
+    if (step.action === "read_page_text") {
+      return { type: "read_page_text" };
+    }
+
+    if (step.action === "scroll") {
+      return { type: "scroll", value: resolvedValue || "down" };
+    }
+
     // Substitute params in the locator before resolving
     const resolvedTarget: LocatorSpec = {
       ...step.target,
