@@ -565,6 +565,35 @@ export class PlaywrightSurface implements Surface {
       // ignore
     }
 
+    // 7. Final fallback: partial text match with key words
+    // Extract meaningful words from the target name (skip {{param}} templates)
+    // e.g. "More {{genre}} books..." -> search for elements containing "More" AND "books"
+    try {
+      const cleanName = target.name.replace(/\{\{[^}]+\}\}/g, "").trim();
+      const words = cleanName.split(/\s+/).filter(w => w.length >= 4 && !["this", "that", "with", "from"].includes(w.toLowerCase()));
+      if (words.length >= 1) {
+        // Try finding links/buttons containing the first significant word
+        for (const word of words.slice(0, 3)) {
+          const partialLocator = frame.getByText(word, { exact: false });
+          const count = await partialLocator.count();
+          if (count > 0) {
+            // Filter to elements that also contain another key word if possible
+            for (let i = 0; i < Math.min(count, 5); i++) {
+              const el = partialLocator.nth(i);
+              const text = await el.textContent().catch(() => "");
+              if (text && words.every(w => text.toLowerCase().includes(w.toLowerCase()))) {
+                return el;
+              }
+            }
+            // If no exact match, return first partial match
+            return partialLocator.first();
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+
     return null;
   }
 
