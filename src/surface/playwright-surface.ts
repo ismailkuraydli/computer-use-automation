@@ -23,6 +23,23 @@ import type {
 import path from "path";
 import { randomUUID } from "crypto";
 
+/** How long an action waits for its element to become actionable. */
+const ACTION_TIMEOUT_MS = 5000;
+
+/**
+ * Map a Playwright action error to a surface error code. "blocked" means
+ * another element covers the target (overlay, modal) — the caller decides
+ * whether that is a known interstitial or something a human must look at.
+ */
+function actionFailure(e: unknown): ActionResult {
+  const message = e instanceof Error ? e.message : String(e);
+  const interceptor = message.match(/(<[^\n]*?>)[^\n]*? intercepts pointer events/);
+  if (interceptor) {
+    return { ok: false, error: "blocked", detail: `Target is covered by ${interceptor[1]}` };
+  }
+  return { ok: false, error: "not-actionable", detail: message.split("\n")[0] };
+}
+
 export interface PlaywrightSurfaceOptions {
   headless?: boolean;
   screenshotDir?: string;
@@ -329,23 +346,13 @@ export class PlaywrightSurface implements Surface {
       if (!locator) {
         return { ok: false, error: "element-not-found", detail: `Could not find ${target.role} "${target.name}"` };
       }
-      // Try normal click first (waits for element to be visible and actionable)
-      try {
-        await locator.click({ timeout: 3000 });
-        return { ok: true };
-      } catch {
-        // Element may be hidden inside a collapsed dropdown panel.
-        // Radio buttons and checkboxes are often in the DOM but not visible
-        // when the dropdown is closed. Force-click works because the element's
-        // onclick handler fires even when hidden.
-        if (target.role === "radio" || target.role === "checkbox" || target.role === "button") {
-          await locator.click({ force: true, timeout: 3000 });
-          return { ok: true };
-        }
-        throw new Error("Element not visible and not a radio/checkbox/button — cannot force-click");
-      }
+      // Playwright waits until the element is visible, stable, enabled and
+      // actually receives the click. Never force it: a forced click lands on
+      // whatever sits on top (an overlay, a dialog button) and reports success.
+      await locator.click({ timeout: ACTION_TIMEOUT_MS });
+      return { ok: true };
     } catch (e) {
-      return { ok: false, error: "click-failed", detail: String(e) };
+      return actionFailure(e);
     }
   }
 
@@ -356,17 +363,10 @@ export class PlaywrightSurface implements Surface {
       if (!locator) {
         return { ok: false, error: "element-not-found", detail: `Could not find ${target.role} "${target.name}"` };
       }
-      // Try normal fill first
-      try {
-        await locator.fill(value, { timeout: 5000 });
-        return { ok: true };
-      } catch {
-        // Element may be hidden — try filling with force
-        await locator.fill(value, { force: true, timeout: 3000 });
-        return { ok: true };
-      }
+      await locator.fill(value, { timeout: ACTION_TIMEOUT_MS });
+      return { ok: true };
     } catch (e) {
-      return { ok: false, error: "type-failed", detail: String(e) };
+      return actionFailure(e);
     }
   }
 

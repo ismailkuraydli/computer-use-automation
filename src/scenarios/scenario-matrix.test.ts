@@ -100,7 +100,7 @@ const SCENARIOS: Scenario[] = [
     params: { memberId: "12345" },
     faults: { interstitialPaths: ["/search"] },
     expected: { status: "success", outputs: { savingsBalance: "$12,847.00" } },
-    knownGap: `force-click on "Search" lands on the overlay and reports ok; the search never runs, and dismiss handlers are never executed`,
+    knownGap: `surface reports "blocked", but the engine never executes dismiss handlers`,
   },
   {
     id: "L7",
@@ -109,7 +109,7 @@ const SCENARIOS: Scenario[] = [
     params: { memberId: "12345" },
     faults: { interstitialPaths: ["/search"] },
     expected: { status: "escalated" },
-    knownGap: `force-click on "Search" lands on the overlay and reports ok; replay fails two steps later instead of escalating`,
+    knownGap: `surface reports "blocked", but the engine turns it into a hard failure instead of escalating`,
   },
   {
     id: "L8",
