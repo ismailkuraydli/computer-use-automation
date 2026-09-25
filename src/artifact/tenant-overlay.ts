@@ -76,7 +76,7 @@ export function applyTenantOverlay(
     throw new TenantOverlayError(`overlay is for app "${overlay.app}", artifact is for "${artifact.surface.app}"`);
   }
   const relabel = labelMapper(overlay.labels ?? {});
-  const reroute = routeMapper(overlay.routes ?? [], artifact.surface.baseUrl, overlay.baseUrl);
+  const reroute = routeMapper(overlay.routes ?? []);
 
   const guard = (g: StateGuard | undefined): StateGuard | undefined =>
     g && {
@@ -84,15 +84,10 @@ export function applyTenantOverlay(
       ...(g.allOf ? { allOf: g.allOf.map((s) => signature(s, relabel, reroute)) } : {}),
     };
 
-  const tenantArtifact: CapabilityArtifact = {
+  const relabelled: CapabilityArtifact = {
     ...artifact,
-    surface: { ...artifact.surface, ...(overlay.baseUrl ? { baseUrl: overlay.baseUrl } : {}) },
     allowlist: {
       ...artifact.allowlist,
-      permittedDomains: unique([
-        ...artifact.allowlist.permittedDomains,
-        ...(overlay.baseUrl ? [new URL(overlay.baseUrl).hostname] : []),
-      ]),
       permittedUrlPatterns: unique([...artifact.allowlist.permittedUrlPatterns, ...(overlay.allowUrlPatterns ?? [])]),
     },
     steps: artifact.steps.map((step) => ({
@@ -104,6 +99,7 @@ export function applyTenantOverlay(
     checkpoint: { ...artifact.checkpoint, ...signature(artifact.checkpoint, relabel, reroute) },
     metadata: { ...artifact.metadata, tenantOverrides: overlay.tenant },
   };
+  const tenantArtifact = overlay.baseUrl ? rebaseArtifact(relabelled, overlay.baseUrl) : relabelled;
 
   const tenantProfile: AppProfile = {
     ...profile,
@@ -126,13 +122,60 @@ function labelMapper(labels: Record<string, string>): Mapper {
   return (text) => map.get(norm(text)) ?? text;
 }
 
-/** Rewrite route shapes, and move absolute URLs from the base host to the tenant's. */
-function routeMapper(routes: RouteRewrite[], baseUrl: string, tenantBaseUrl?: string): Mapper {
-  return (text) => {
-    let out = routes.reduce((acc, r) => acc.split(r.from).join(r.to), text);
-    if (tenantBaseUrl && baseUrl && out.startsWith(baseUrl)) out = tenantBaseUrl + out.slice(baseUrl.length);
-    return out;
+/** Rewrite route shapes (host moves are rebaseArtifact's job). */
+function routeMapper(routes: RouteRewrite[]): Mapper {
+  return (text) => routes.reduce((acc, r) => acc.split(r.from).join(r.to), text);
+}
+
+/**
+ * Point an artifact at the app where it runs now: another host, and an
+ * optional path prefix (https://bank.example/portal). Navigation URLs,
+ * checkpoint URL patterns and the allowlist move with it, so a capability
+ * recorded against one deployment runs against any other.
+ */
+export function rebaseArtifact(artifact: CapabilityArtifact, baseUrl: string): CapabilityArtifact {
+  if (!isHttpUrl(baseUrl)) throw new Error(`Base URL "${baseUrl}" is not an http(s) URL`);
+  const from = artifact.surface.baseUrl.replace(/\/+$/, "");
+  const to = baseUrl.replace(/\/+$/, "");
+  if (from === to) return artifact;
+
+  const fromPath = pathPrefix(from);
+  const toPath = pathPrefix(to);
+  const moveUrl = (url: string) => (from && url.startsWith(from) ? to + url.slice(from.length) : url);
+  const movePath = (pattern: string) =>
+    fromPath === toPath || !pattern.startsWith(`${fromPath}/`) ? pattern : toPath + pattern.slice(fromPath.length);
+  const signature = (sig: ScreenSignature): ScreenSignature =>
+    sig.urlPattern === undefined ? sig : { ...sig, urlPattern: movePath(sig.urlPattern) };
+  const guard = (g: StateGuard | undefined): StateGuard | undefined =>
+    g && {
+      ...(g.anyOf ? { anyOf: g.anyOf.map(signature) } : {}),
+      ...(g.allOf ? { allOf: g.allOf.map(signature) } : {}),
+    };
+
+  return {
+    ...artifact,
+    surface: { ...artifact.surface, baseUrl: to },
+    allowlist: {
+      ...artifact.allowlist,
+      permittedDomains: unique([...artifact.allowlist.permittedDomains, new URL(to).hostname]),
+      permittedUrlPatterns: artifact.allowlist.permittedUrlPatterns.map(movePath),
+    },
+    steps: artifact.steps.map((step) => ({
+      ...step,
+      ...(step.action === "navigate" && step.value !== undefined ? { value: moveUrl(step.value) } : {}),
+      ...(step.checkpoint ? { checkpoint: guard(step.checkpoint) } : {}),
+    })),
+    checkpoint: signature(artifact.checkpoint),
   };
+}
+
+/** "" for an origin, "/portal" for https://bank.example/portal */
+function pathPrefix(url: string): string {
+  try {
+    return new URL(url).pathname.replace(/\/+$/, "");
+  } catch {
+    return "";
+  }
 }
 
 function target(t: TargetSpec, relabel: Mapper): TargetSpec {

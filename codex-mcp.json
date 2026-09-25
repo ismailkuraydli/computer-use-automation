@@ -4,7 +4,7 @@
       "command": "./bin/cua-mcp",
       "args": [],
       "cwd": ".",
-      "env_vars": ["OPENROUTER_API_KEY", "CUA_WORKSPACE", "HOME", "PATH"],
+      "env_vars": ["OPENROUTER_API_KEY", "CUA_TARGET_URL", "CUA_WORKSPACE", "HOME", "PATH"],
       "startup_timeout_sec": 600,
       "tool_timeout_sec": 600
     }

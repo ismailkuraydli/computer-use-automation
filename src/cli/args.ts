@@ -13,6 +13,7 @@ const OPTIONS = {
   artifact: { type: "string" },
   params: { type: "string", default: "{}" },
   tenant: { type: "string" },
+  "base-url": { type: "string" },
   "mock-llm": { type: "boolean", default: false },
   headed: { type: "boolean", default: false },
   config: { type: "string" },

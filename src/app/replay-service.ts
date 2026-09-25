@@ -17,7 +17,7 @@ import { SensitiveDataRedactor } from "../safety/sensitive-data.js";
 import { EscalationManager } from "../escalation/escalation-manager.js";
 import type { OperatorChannel } from "../escalation/operator-channel.js";
 import { resolveWorkspace, loadWorkspaceProfile, type Workspace } from "./workspace.js";
-import { loadTenantOverlay, applyTenantOverlay } from "../artifact/tenant-overlay.js";
+import { loadTenantOverlay, applyTenantOverlay, rebaseArtifact } from "../artifact/tenant-overlay.js";
 import { existsSync } from "fs";
 
 /** CDP port exposed during a handoff so an operator can also attach remotely. */
@@ -31,6 +31,11 @@ export interface ReplayRequest {
   target?: string;
   /** Tenant overlay name, from profiles/tenants/<app>/<tenant>.json. */
   tenant?: string;
+  /**
+   * Where the app runs now (host and optional path prefix). The artifact is
+   * rebased onto it unless a tenant overlay names its own host.
+   */
+  baseUrl?: string;
   confirmIrreversible?: boolean;
   headed?: boolean;
   /** Hand the live session to this operator on escalation (implies headed). */
@@ -98,10 +103,13 @@ function prepare(req: ReplayRequest, ws: Workspace): { artifact: CapabilityArtif
     }
     artifact = typeof req.artifact === "string" ? loadArtifactFile(req.artifact) : req.artifact;
     profile = loadWorkspaceProfile(ws, artifact.surface.app);
+    let tenantHost: string | undefined;
     if (req.tenant) {
       const overlay = loadTenantOverlay(ws, artifact.surface.app, req.tenant);
+      tenantHost = overlay.baseUrl;
       ({ artifact, profile } = applyTenantOverlay(artifact, profile, overlay));
     }
+    if (req.baseUrl && !tenantHost) artifact = rebaseArtifact(artifact, req.baseUrl);
   } catch (e) {
     throw new ReplayRequestError((e as Error).message);
   }

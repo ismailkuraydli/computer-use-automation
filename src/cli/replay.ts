@@ -30,6 +30,7 @@ export async function runReplay(opts: CliValues): Promise<void> {
       params,
       target: opts.target,
       tenant: opts.tenant,
+      baseUrl: opts["base-url"],
       confirmIrreversible: opts.confirm === true,
       headed: opts.headed === true,
       operator: opts.handoff ? new TerminalOperatorChannel() : undefined,

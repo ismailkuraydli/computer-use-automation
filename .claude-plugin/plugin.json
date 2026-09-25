@@ -11,11 +11,18 @@
     "computer-use-automation": {
       "command": "${CLAUDE_PLUGIN_ROOT}/bin/cua-mcp",
       "env": {
-        "OPENROUTER_API_KEY": "${user_config.openrouter_api_key}"
+        "OPENROUTER_API_KEY": "${user_config.openrouter_api_key}",
+        "CUA_TARGET_URL": "${user_config.target_url}"
       }
     }
   },
   "userConfig": {
+    "target_url": {
+      "type": "string",
+      "title": "Application URL",
+      "description": "Where the application runs, e.g. https://core.bank.example or https://bank.example/portal. Capabilities replay here and discovery starts here. Leave empty to use the URL each capability was recorded on.",
+      "sensitive": false
+    },
     "openrouter_api_key": {
       "type": "string",
       "title": "OpenRouter API key",

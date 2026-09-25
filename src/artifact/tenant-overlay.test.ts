@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyTenantOverlay, validateTenantOverlay, type TenantOverlay } from "./tenant-overlay.js";
+import { applyTenantOverlay, rebaseArtifact, validateTenantOverlay, type TenantOverlay } from "./tenant-overlay.js";
 import type { CapabilityArtifact } from "./types.js";
 import type { AppProfile } from "./profile-types.js";
 
@@ -108,6 +108,42 @@ describe("applyTenantOverlay", () => {
 
   it("refuses an overlay written for another app", () => {
     expect(() => applyTenantOverlay(artifact(), PROFILE, { ...SUMMIT, app: "other-app" })).toThrow(/other-app/);
+  });
+});
+
+describe("rebaseArtifact", () => {
+  it("moves an artifact to another host: navigation, allowlist and surface", () => {
+    const a = rebaseArtifact(artifact(), "https://core.bank.example");
+
+    expect(a.surface.baseUrl).toBe("https://core.bank.example");
+    expect(a.steps[0].value).toBe("https://core.bank.example/search");
+    expect(a.allowlist.permittedDomains).toEqual(["keystone.local", "core.bank.example"]);
+    // same path prefix (none): checkpoint patterns and allowlist patterns unchanged
+    expect(a.steps[2].checkpoint?.anyOf?.[0].urlPattern).toBe("/detail?id={{memberId}}");
+    expect(a.allowlist.permittedUrlPatterns).toEqual(["/search*", "/detail*"]);
+  });
+
+  it("carries a path prefix into navigation, checkpoint patterns and allowlist patterns", () => {
+    const a = rebaseArtifact(artifact(), "https://bank.example/portal/");
+
+    expect(a.surface.baseUrl).toBe("https://bank.example/portal");
+    expect(a.steps[0].value).toBe("https://bank.example/portal/search");
+    expect(a.steps[2].checkpoint?.anyOf?.[0].urlPattern).toBe("/portal/detail?id={{memberId}}");
+    expect(a.allowlist.permittedUrlPatterns).toEqual(["/portal/search*", "/portal/detail*"]);
+  });
+
+  it("is a no-op for the recorded base URL and leaves the input untouched", () => {
+    const base = artifact();
+    const before = JSON.stringify(base);
+
+    expect(rebaseArtifact(base, BASE)).toEqual(base);
+    rebaseArtifact(base, "https://core.bank.example");
+    expect(JSON.stringify(base)).toBe(before);
+  });
+
+  it("rejects anything that is not an http(s) URL", () => {
+    expect(() => rebaseArtifact(artifact(), "file:///etc")).toThrow(/http/);
+    expect(() => rebaseArtifact(artifact(), "not a url")).toThrow(/http/);
   });
 });
 

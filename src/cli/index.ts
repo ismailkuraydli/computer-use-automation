@@ -29,6 +29,7 @@ Options:
   --artifact   Path to saved artifact JSON (replay)
   --params     JSON string of input parameters (replay)
   --tenant     Tenant overlay from profiles/tenants/<app>/<tenant>.json (replay)
+  --base-url   Where the app runs now, e.g. https://bank.example/portal (replay; rebases the artifact)
   --mock-llm   Use MockLLMClient instead of real LLM (discover)
   --headed     Show the browser window (discover, replay)
   --config     Path to cua.config.json (default: ./cua.config.json)

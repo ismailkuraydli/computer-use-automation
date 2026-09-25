@@ -104,7 +104,7 @@ The repo is a plugin for both hosts. It runs an MCP server (`bin/cua-mcp`) with 
 |---|---|
 | `list_capabilities` | Saved capabilities with JSON-Schema params, outputs, version, and whether they have irreversible steps |
 | `run_capability` | `{name, params, version?, tenant?, confirmIrreversible?}` → deterministic replay, returns the ReplayResult |
-| `discover_capability` | `{goal, target, app?, allowlist?}` → LLM discovery, self-check, saves a new capability |
+| `discover_capability` | `{goal, target?, app?, allowlist?}` → LLM discovery, self-check, saves a new capability |
 
 **Claude Code**
 
@@ -113,7 +113,7 @@ claude plugin marketplace add ismailkuraydli/computer-use-automation
 claude plugin install computer-use-automation@computer-use-automation
 ```
 
-Claude asks for the OpenRouter key on install (used only by `discover_capability`).
+On install Claude asks for two settings: the **application URL** (`target_url`, where the app you automate runs, e.g. `https://core.bank.example` or `https://bank.example/portal`) and the OpenRouter key (used only by `discover_capability`). Capabilities replay against the configured URL whatever URL they were recorded on, and discovery starts there (`target` can then be omitted or be a path like `/search`). Leave it empty to use each capability's recorded URL.
 
 **Codex**
 
@@ -122,7 +122,7 @@ codex plugin marketplace add ismailkuraydli/computer-use-automation
 codex plugin add computer-use-automation@computer-use-automation
 ```
 
-Codex passes `OPENROUTER_API_KEY` and `CUA_WORKSPACE` through from your environment.
+Codex passes `CUA_TARGET_URL` (the application URL), `OPENROUTER_API_KEY` and `CUA_WORKSPACE` through from your environment.
 
 The first start installs dependencies and Chromium (a minute or two). Artifacts and evidence go to `CUA_WORKSPACE`: in Claude Code the default is the project you are working in; under Codex (which starts the server in the plugin directory) it is `~/.computer-use-automation`. Profiles and allowlists are read from the workspace first, then from the ones shipped with the plugin. Without installing a plugin, any MCP host can run it directly: `claude mcp add cua -- /path/to/repo/bin/cua-mcp`.
 
@@ -130,7 +130,7 @@ The first start installs dependencies and Chromium (a minute or two). Artifacts 
 
 ```
 cua discover --goal "..." --target URL [--app PROFILE] [--allowlist FILE] [--mock-llm] [--headed]
-cua replay   --artifact FILE --params JSON [--tenant NAME] [--target URL] [--confirm] [--handoff] [--headed]
+cua replay   --artifact FILE --params JSON [--base-url URL] [--tenant NAME] [--target URL] [--confirm] [--handoff] [--headed]
 npm run mcp  # the MCP server on stdio (what the plugins start)
 npm run ui   # local web UI: discovery, artifacts, replay, evidence (http://localhost:3001)
 ```
