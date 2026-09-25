@@ -78,4 +78,15 @@ describe("PII Redactor", () => {
     expect(result).toContain("$45,200.00");
     expect(result).toContain("[REDACTED]");
   });
+
+  it("redacts numbers glued to text by legacy layout cells", () => {
+    expect(redactPII("Checking1002003004$4,521.33")).toBe("Checking[REDACTED]$4,521.33");
+    expect(redactPII("SSN123-45-6789DOB")).toBe("SSN[REDACTED]DOB");
+    expect(redactPII("12345123-45-67891975-03-15")).toBe("12345[REDACTED]1975-03-15");
+  });
+
+  it("leaves shorter and longer digit runs alone", () => {
+    expect(redactPII("member 12345")).toBe("member 12345");
+    expect(redactPII("ref 1234567890123")).toBe("ref 1234567890123");
+  });
 });
