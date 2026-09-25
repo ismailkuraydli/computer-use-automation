@@ -1,175 +1,148 @@
 # Computer-Use Automation System — Design Write-Up
 
-The model discovers once; the recorder turns the successful run into a typed capability artifact; deterministic replay is how an agent invokes it. The one rule that shapes everything below: **site knowledge lives in data (the artifact and the app profile), never in engine code.** When replay meets something it does not recognize, a human takes over the live session. Their fix can then be added to the profile as data.
+The model discovers once. The recorder turns the successful run into a typed capability artifact, and deterministic replay is how an agent invokes it. One rule shapes everything below: **site knowledge lives in data (the artifact and the app profile), never in engine code.** When replay meets something it does not recognize, a human takes over the live session, and their fix can become profile data.
 
 ## 1. Architecture
 
-A single TypeScript process with a CLI (and a small local web UI). The seams are interfaces, not services:
+A single TypeScript process with a CLI, a small web UI, and an MCP server. The seams are interfaces, not services:
+- **`Surface`** (`PlaywrightSurface`) is the only Playwright code: `observe()` returns an accessibility snapshot and a screenshot, `act()` performs one action on a semantic target, and it captures human actions during a handoff.
+- **Discovery:** `AgentLoop` + an OpenRouter model plan and act; the `Recorder` turns successful actions into steps, checkpoints and `{{param}}` templates.
+- **`ReplayEngine`** replays with no model: policy check, act, checkpoint, recover, escalate.
+- **App profiles** (`profiles/<app>.json`) hold what every screen of one app can show: interstitials and runtime conditions.
+- **Agent access:** a capability catalog exposed as MCP tools, shipped as a Claude Code and Codex plugin.
 
-| Component | Responsibility |
-|---|---|
-| `Surface` (`PlaywrightSurface`) | `observe()` → accessibility snapshot + screenshot; `act()` → one action on a semantic target; human-action capture. The only Playwright code. |
-| `playwright-resolver` | The single place a target becomes an element. Strict: ambiguous = error. |
-| `AgentLoop` + `OpenRouterClient` | LLM observe → decide → act loop (step budget, timeout, dead-end detection, sub-goals). |
-| `Recorder` (+ `step-builders`, `parameterize`) | Successful actions → schema-v2 steps, targets, checkpoints, `{{param}}` templates. |
-| `ReplayEngine` | Deterministic replay: policy, act, checkpoint, recover, escalate. No LLM. |
-| App profile (`profiles/*.json`) | Interstitials and runtime conditions shared by every artifact of one app. |
-| `EscalationManager` + `OperatorChannel` | Control-transfer state machine and live-session handoff. |
-| `CapabilityCatalog` + MCP server (`src/mcp`) | Agent-facing tools over saved artifacts; shipped as a Claude Code and Codex plugin. |
-| `replay-service`, `discovery-service` (`src/app`) | One replay / one discovery, shared by the CLI and the MCP server. |
-| `SafetyGuard`, `pii-redactor`, `EvidenceCollector` | Allowlist, action classes, redaction, structured evidence. |
-
-**Decisions and trade-offs.**
+Key decisions:
 - **Accessibility tree first.** It is what an operator perceives, it exists on desktop platforms too, and it survives markup churn better than DOM paths.
-- **One process, JSON on disk.** The brief rewards design, not infrastructure. Artifacts and profiles are reviewable in a pull request.
-- **No agent framework.** The loop is short and the evaluated logic stays visible.
-- **The target is a local, deliberately hostile back-office app**, not a public site (ADR-014). Public consumer sites fail through A/B layouts, marketing modals and bot detection. The brief's environment fails through runtime conditions, and the mock app injects exactly those. `src/scenarios/scenario-matrix.test.ts` (19 rows) is the acceptance gate for the replay engine.
+- **One process, JSON on disk, no agent framework.** The brief rewards design, not infrastructure. Artifacts and profiles are reviewable in a pull request, and the evaluated logic stays visible.
+- **A deliberately hostile local target** (framesets, layout tables, no test IDs), not a public site. Public sites fail through A/B layouts and bot detection; the brief's apps fail through runtime conditions. The mock app injects exactly those, and a 19-row scenario matrix (`npm run test:scenarios`) is the replay acceptance gate.
 
 ## 2. Artifact schema
 
 ```
 CapabilityArtifact (schemaVersion "2.0")
 ├── capability, description, artifactVersion
-├── surface { type, baseUrl, app → profiles/<app>.json, appVersion }
-├── params[]  { name, type, required, redact }        ← agent-supplied inputs
-├── outputs[] { name, type }                          ← what the agent gets back
-├── allowlist { domains, urlPatterns, actions, risky/irreversible action types }
+├── surface { type, baseUrl, app → profiles/<app>.json }
+├── params[]  { name, type, required }          ← what the agent supplies
+├── outputs[] { name, type }                    ← what the agent gets back
+├── allowlist { domains, urlPatterns, actions, irreversibleActions }
 ├── steps[]
-│   ├── action: navigate | click | type | select | extract | submit | wait | scroll
-│   ├── target { role, name?, row?, column?, label?, frame? }   (may contain {{param}})
-│   ├── value (may contain {{param}}), output
+│   ├── action: navigate | click | type | select | extract | submit | …
+│   ├── target { role, name?, row?, column?, label?, frame? }   (may use {{param}})
+│   ├── value, output
 │   ├── checkpoint { anyOf/allOf: [{ urlPattern, textContains, axContains[] }] }
-│   ├── onError[] { when, kind: business-outcome | retry | escalate | hard-failure, outcome }
+│   ├── onError[] { when, kind: business-outcome | retry | escalate | hard-failure }
 │   └── classification: safe | risky | irreversible
-├── checkpoint { ..., outputsExtracted }              ← final success condition
-└── metadata { recordedAt, recordedBy, selfCheck, migratedFrom }
+├── checkpoint { …, outputsExtracted }          ← final success condition
+└── metadata { recordedAt, selfCheck, … }
 ```
 
-**Why this shape.**
-- **Targets describe what an operator sees, never DOM position.**
-  - `{role:"link", name:"Manage", row:"{{accountType}}"}` means "the Manage link in the row for this account type".
-  - `{role:"cell", row:"Savings", column:"Balance"}` or `{role:"cell", label:"Current Balance"}` reads a value by its position in the table's meaning. The literal value seen during discovery is never stored.
-  - This removed the bug where a param changed the name but a positional CSS path still clicked the element from discovery.
-- **Checkpoints are few and stable.** They use the model's stated expectation only if it really appeared, in one element, and is not table data. Otherwise they use controls and column headers that appeared, plus the URL shape with non-param values wildcarded. They are enforced, not advisory.
-- **Runtime conditions live in the app profile, not in each artifact.** "Record not found" means the same thing on every Keystone screen. A per-step `onError` is still available for step-specific meanings.
-- **The artifact is reviewable** (the web UI renders its steps) and **callable**: typed params and outputs, and a result contract (§3).
-- v1 artifacts load through a migration that drops positional selectors.
+Why this shape:
+- **Targets describe what an operator sees, never DOM position.** `{role:"link", name:"Manage", row:"{{accountType}}"}` is "the Manage link in the row for this account type". `{role:"cell", row:"Savings", column:"Balance"}` reads a value by its meaning in the table, so the literal value seen during discovery is never stored.
+- **Checkpoints are few, stable and enforced.** They are built from controls and column headers that appeared, the model's stated expectation (kept only if it really appeared and is not record data), and the URL as a route shape (`/member/12345` becomes `/member/:id`).
+- **Runtime conditions live in the app profile.** "No records found" means the same thing on every screen of one app; per-step `onError` stays available for step-specific meanings.
+- **It is a contract, not a transcript:** typed params and outputs, and the result shape in §3. v1 artifacts are migrated on load.
 
 ## 3. Determinism & error handling
 
-For each step, replay: checks policy → builds the action with params substituted → `act()` → waits (bounded) for the checkpoint → decides. The step ends in exactly one of these ways:
+For each step, replay checks policy, acts with params substituted, waits (bounded) for the checkpoint, and then ends the step in exactly one way:
 
-| What is on screen | Result |
+| On screen | Result |
 |---|---|
 | Checkpoint holds, no known condition | next step |
-| Known interstitial (profile) | dismiss it (up front if already visible), then retry or re-check; max 2 per step |
-| Known condition `business-outcome` | `{status:"business-outcome", outcome:"not-found"}`: a legitimate answer, not an error |
-| Known condition `retry` | re-run the step, bounded; **never** for an irreversible step (escalate instead) |
-| Known condition `escalate` (e.g. session expired) | human handoff (§5) or `{status:"escalated"}` |
-| Unknown blocking UI (overlay covering the target, native dialog) | human handoff or `escalated` |
-| Anything else (element missing or ambiguous, checkpoint unmet) | `{status:"failure", stepId, expected, observed, error}` + screenshot |
+| Known interstitial | dismiss it (up front if already visible), then continue; at most 2 per step |
+| Known `business-outcome` condition | `{status:"business-outcome", outcome:"not-found"}`, a legitimate answer |
+| Known `retry` condition | re-run the step, bounded; **never** for an irreversible step |
+| Known `escalate` condition, or unknown blocking UI (overlay, native dialog) | human handoff (§5), or `{status:"escalated"}` |
+| Anything else | `{status:"failure", stepId, expected, observed, error}` plus a screenshot |
 
-**Determinism.**
-- **One resolver.** Matching is whole-text and case-insensitive, and it never picks "the first of several".
-- **No forced clicks.** A forced click lands on whatever covers the target and reports success, which is how the Goodreads sign-up modal silently swallowed clicks.
-- **Waits are polls with deadlines, not sleeps.**
-- **Native dialogs are dismissed and reported**, never accepted implicitly.
-- **A known error page overrides a matching checkpoint**, so a 503 page at the right URL is never a success.
+Determinism comes from:
+- **one strict resolver:** whole-text, case-insensitive matching that never picks "the first of several";
+- **no forced clicks:** a forced click lands on whatever covers the target and reports success;
+- **polls with deadlines, never sleeps;**
+- **native dialogs dismissed and reported,** never accepted;
+- **a known error page overriding a matching checkpoint,** so a 503 page at the right URL is never a success.
 
-**Verified by:**
-- the scenario matrix: happy path for a different member, not found, slow loads, transient 503, known notice, unknown overlay, operator handoff, session expiry, validation error, permission denied, unexpected dialog, unconfirmed irreversible step, row selected by a param. It passed 3 consecutive runs with no flakes.
-- `/evidence/demo`: 12 replays of the artifact produced by the real discovery run, plus the open-account fixture.
+After discovery, the new artifact is replayed once as a self-check, and the result is stored in `metadata.selfCheck`. Artifacts with irreversible steps are skipped, because replaying would repeat the real action.
 
-**Discovery self-checks.** After a successful discovery, the new artifact is replayed once with the discovery params, and the result is stored in `metadata.selfCheck`. Artifacts with irreversible steps are not self-replayed, because that would repeat the real action. Running real discovery against the mock app found several recorder bugs (e.g. the model predicting text that never appeared, copying whole rows into `row`); each is now handled generally and covered by a test.
-
-**Limits.** A missing row such as "member has no Savings account" is reported as a clear hard failure (`No table row containing "Savings"`), not as a business outcome. Expressing "absence means X" needs a per-step condition type we did not build.
+Limit: "member has no Savings account" is reported as a precise hard failure, not a business outcome, because conditions of the form "absence means X" are not modelled.
 
 ## 4. Heterogeneity & multi-tenant
 
-**Surface seam.**
-- The artifact and engine only know `Surface.observe()/act()` and `TargetSpec`.
-- `{role, name, row, column, label, frame}` maps directly onto Windows UI Automation (ControlType + Name, Grid/Table patterns) and macOS AX (AXRole + AXTitle, AXRows/AXColumns), so a desktop surface would implement the resolver on those APIs.
-- Legacy web is already the default case: frames, layout tables, no test IDs, and ARIA gaps covered by label and text fallbacks.
-- A surface with no accessible structure (Citrix, canvas) would need a visual resolver behind the same interface. Its `TargetSpec` would stay semantic, with the resolver doing screenshot grounding. We did not build it.
+**Surface seam.** The engine only knows `observe()/act()` and `TargetSpec`.
+- `{role, name, row, column, label, frame}` maps onto Windows UI Automation and macOS AX, so a desktop surface would implement the resolver on those APIs.
+- Legacy web (frames, layout tables, missing ARIA) is already the default case.
+- A surface with no accessibility structure (Citrix, canvas) would need a visual resolver behind the same interface. Not built.
 
-**Multi-tenant reuse (built).** The unit of reuse is the *vendor product*, not the tenant:
-- Artifacts are recorded once, against the base product. App profiles hold the product's conditions.
-- **Canonical routes.** Checkpoint URLs are recorded as route shapes: param values become `{{param}}`, other ID-like path segments become `:id` (`/member/12345` becomes `/member/:id`), other query values become `*`. A checkpoint recorded on one record holds for every record.
-- **Tenant overlays** (`profiles/tenants/<app>/<tenant>.json`) list only what differs for one institution: its host, relabelled UI text (`"Member ID"` → `"Account Holder #"`), route rewrites (`/detail?id=` → `/members/`), extra interstitials, conditions and sensitive fields. `applyTenantOverlay` derives that tenant's artifact and profile at replay time; the recorded artifact is never copied or edited.
-- **Demonstrated** on a second tenant, Summit FCU: the same mock product with relabelled fields, member pages under `/members/:id` and its own security reminder. The artifact recorded on Keystone runs there with a short overlay (matrix rows T2/T3, evidence run 14). Semantic targets keep overlays small: branding and layout changes do not affect role and name, and configuration changes show up as label diffs.
+**Multi-tenant reuse (built).** The unit of reuse is the vendor product.
+- An artifact is recorded once, against the base product.
+- A **tenant overlay** (`profiles/tenants/<app>/<tenant>.json`) lists only what differs for one institution: host, relabelled UI text (`"Member ID"` → `"Account Holder #"`), route rewrites, extra interstitials and sensitive fields. It is applied at replay time; the artifact is never copied.
+- Demonstrated on a second tenant, Summit FCU, which relabels fields, moves member pages to `/members/:id` and adds a security reminder. The Keystone artifact runs there through a short overlay.
+- **The deployment URL is configuration** (plugin setting `target_url`, `--base-url`), so one capability runs on staging, production or a path-prefixed portal.
 
-**Drift detection falls out of the contract.**
-- An enforced checkpoint or an ambiguous or missing target is a precise, per-step signal. Pointing the Keystone artifact at Summit without its overlay fails at step 1 with `checkpoint-failed` (row T1), not somewhere later.
-- Replaying each capability per tenant on a schedule, as the scenario matrix does, turns drift into a report instead of a production incident.
-
-**Not built:** per-tenant artifact storage, scheduled drift runs, overlay inheritance (tenant → region → product).
+**Drift detection** falls out of enforced checkpoints. The Keystone artifact pointed at Summit without its overlay fails at step 1 with `checkpoint-failed`. Scheduled per-tenant replays would turn drift into a report. Not built: per-tenant storage, scheduled drift runs, overlay inheritance.
 
 ## 5. Escalation & handoff
 
-**Detecting "stuck".** Replay escalates on:
+Replay escalates on:
 - a profile condition of kind `escalate` (e.g. session expired);
-- unknown blocking UI (overlay or native dialog);
-- a step that failed to dismiss an interstitial;
+- unknown blocking UI;
+- a failed dismissal;
 - a transient error on an irreversible step;
-- an irreversible step the caller did not confirm.
+- an unconfirmed irreversible step.
 
-Discovery escalates on dead ends and the step budget.
+Discovery stops on dead ends and on its step budget.
 
-**Control transfer (real, not mocked).** `EscalationManager` runs a state machine: automation → paused → human → resuming → automation | done. The handoff works like this:
-1. Automation pauses on the same browser session.
-2. The operator gets an intervention request with capability, step, reason, the current page, a masked screenshot and the CDP endpoint (`replay --handoff` runs headed with CDP on :9222).
-3. The surface records the operator's clicks, field edits (targets only, never values) and navigations.
-4. The operator signals `done`, `complete` or `abort`.
-   - On `done`, automation takes control back: it continues if the step's checkpoint now holds, otherwise it re-runs the step the human unblocked.
-   - `complete` means the human finished the task; `abort` stops the run.
-   - For an unconfirmed irreversible step, `done` is the human's approval.
+**Control transfer is real; only the operator UI is minimal.** `EscalationManager` runs a state machine: automation → paused → human → resuming → automation | done. With `replay --handoff`:
+1. Automation pauses on the **same** headed browser session (CDP exposed on :9222).
+2. The operator gets the capability, step, reason, page and a masked screenshot.
+3. The surface records their clicks, field edits (targets only, never values) and navigations.
+4. The operator signals `done`, `complete` or `abort`:
+   - `done`: automation takes control back and continues if the step's checkpoint holds, otherwise it re-runs that step. For an unconfirmed irreversible step, `done` is the approval.
+   - `complete`: the human finished the task.
+   - `abort`: the run stops.
 
-Handoffs are limited to two per step. Human actions are returned in the `ReplayResult` and written to evidence with the control-state history.
+Handoffs are capped at 2 per step, and human actions are returned in the result.
 
-**Minimal on purpose.** The operator UI is a terminal prompt (`TerminalOperatorChannel`). A web console or work queue implements the same `OperatorChannel` interface. The next step is promotion: turning "the human clicked `Acknowledge` on an unknown overlay" into a proposed profile interstitial for review.
+The operator channel is a terminal prompt behind an `OperatorChannel` interface that a web console or queue could implement.
+
+Limit: re-running works when the escalated step can be repeated, such as a navigation. After a session expires mid-flow, the page the step needed is gone. The operator should then finish (`complete`); resuming from the last navigation is future work.
 
 ## 6. Safety
 
-**Allowlist.**
-- Enforced in both discovery and replay: domains, URL patterns (prefix match) and action types.
-- Stored in the artifact, so an artifact cannot navigate outside what it was recorded under.
-- The discovery default is the target's own host.
+- **Allowlist:** domains, URL patterns and action types, enforced in discovery and replay and stored in the artifact.
+- **Irreversible actions** run only with `confirmIrreversible` (the caller vouches for user consent); otherwise a human approves them. They are never retried, and native confirmation dialogs are never accepted implicitly.
+- **Regulated data never leaves the process or reaches disk.** Fixed patterns catch SSNs and account and card numbers. For names and dates of birth, the app profile declares where sensitive fields sit; a per-run redactor learns those values from each screen and scrubs them everywhere.
+  - This covers the prompt sent to the model provider, logs, snapshots and artifacts.
+  - Screenshots are masked.
+  - Human capture never records typed values.
+- **Tool inputs:** MCP inputs name profiles, tenants and allowlists by bare name only, and the web server validates paths against traversal.
 
-**Risky vs irreversible.**
-- Risky actions are allowed and flagged.
-- Irreversible actions (e.g. `submit` in `allowlists/keystone-cu.json`) run only when the caller passes `confirmIrreversible` (`--confirm`), meaning the calling agent vouches for the user's consent. Otherwise they go to a human for approval.
-- Irreversible steps are never retried automatically, and native confirmation dialogs are never accepted implicitly.
-- Discovery self-checks skip artifacts with irreversible steps.
-
-**Data handling.** Regulated values never leave the process or reach disk. Two mechanisms cover them:
-- **Fixed patterns:** SSNs and account and card numbers.
-- **Profile classification with value propagation:** for what patterns cannot see, such as names and dates of birth. The app profile says where sensitive data sits: fields (columns or labels such as `Name`, `DOB`, `Member`) and patterns with a capture group (`Member Detail - (.+)`). A per-run `SensitiveDataRedactor` learns the actual values as screens are observed, then scrubs them from all text for the rest of the run.
-
-Both apply to the prompt sent to the model provider, step logs, snapshot files, LLM logs and saved artifacts. Screenshots are masked by Playwright over matching and learned text. Human-action capture records targets, never typed values. The server validates artifact and evidence paths against traversal, and validates run requests.
-
-**Limits.**
-- A value is only learned once it has appeared in a classified field or pattern. Text shown *before* that, or in places the profile does not describe, is covered only by the fixed patterns, so profiles need review per app.
+Limits:
+- Redaction is only as complete as the profile: a value is protected once it has been seen in a classified place.
 - `confirmIrreversible` trusts the caller.
 - No rate limiting.
 - Allowlists are per artifact, not per tenant.
 
 ## 7. Cuts
 
-**Stretch goals done (ISM-818):**
-- **Agent-facing capability interface.** An MCP server (`list_capabilities`, `run_capability`, `discover_capability`) packaged as a plugin for both Claude Code and Codex, with a skill that tells the agent how to read results and when to ask the user. `run_capability` validates params against each artifact's typed params before any browser starts, and returns the ReplayResult unchanged (evidence runs 15–16).
-- **Canonicalization and cross-tenant reuse**, described in §4.
+**Stretch goals done:**
+- **Agent-facing capability interface:** MCP tools `list_capabilities`, `run_capability` (typed params validated before a browser starts) and `discover_capability`, packaged as a Claude Code and Codex plugin with a usage skill.
+- **Canonicalization and cross-tenant reuse** (§4).
 
 **Left out deliberately:**
-- the interactive handoff over MCP (escalations reach the calling agent as `escalated`; the live handoff is CLI-only);
-- per-tenant storage and the drift scheduler (designed in §4);
-- a desktop or visual surface (the seam and target model are ready);
-- a web operator console (the terminal channel implements the real interface);
-- conditions of the form "absence means X";
-- CI and containerisation.
+- the interactive handoff over MCP (the agent receives `escalated`);
+- resuming a handoff from the last navigation;
+- per-tenant storage and drift scheduling;
+- a desktop or visual surface;
+- a web operator console;
+- "absence means X" conditions;
+- CI and containers.
 
-The first public-site work (Wikipedia, Goodreads) is no longer a target. It is the reason the schema moved to v2 (ADR-015).
+Early work against public sites (Wikipedia, Goodreads) was dropped as a target. It is why the schema moved to semantic targets (ADR-015).
 
-**Next, in order:**
-1. **Promote human fixes into profiles**: propose an interstitial from a captured handoff, with review before use.
-2. **Approval states and replay-stability scores**: draft → approved, where approval requires N green matrix-style replays; `run_capability` would then refuse drafts.
-3. **Handoff over MCP**: surface an escalation to the host (MCP elicitation) instead of ending the run.
+**Next:**
+1. Promote a human's fix from a handoff into a proposed profile entry, reviewed before use.
+2. Approval states: an artifact becomes runnable unattended after N green replays.
+3. Handoff over MCP via elicitation.
+
+Design decisions and alternatives are recorded in [DECISIONS.md](./DECISIONS.md).
