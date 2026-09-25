@@ -139,14 +139,14 @@ Handoffs are limited to two per step. Human actions are returned in the `ReplayR
 - Irreversible steps are never retried automatically, and native confirmation dialogs are never accepted implicitly.
 - Discovery self-checks skip artifacts with irreversible steps.
 
-**Data handling.** Regulated values (SSNs, account and card numbers) never leave the process or reach disk:
-- They are redacted in the page snapshot sent to the model provider, in step logs, snapshot files and LLM logs, and in stored artifacts.
-- Screenshots are masked by Playwright over any matching text.
-- Human-action capture records targets, never typed values.
-- The server validates artifact and evidence paths against traversal, and validates run requests.
+**Data handling.** Regulated values never leave the process or reach disk. Two mechanisms cover them:
+- **Fixed patterns:** SSNs and account and card numbers.
+- **Profile classification with value propagation:** for what patterns cannot see, such as names and dates of birth. The app profile says where sensitive data sits: fields (columns or labels such as `Name`, `DOB`, `Member`) and patterns with a capture group (`Member Detail - (.+)`). A per-run `SensitiveDataRedactor` learns the actual values as screens are observed, then scrubs them from all text for the rest of the run.
+
+Both apply to the prompt sent to the model provider, step logs, snapshot files, LLM logs and saved artifacts. Screenshots are masked by Playwright over matching and learned text. Human-action capture records targets, never typed values. The server validates artifact and evidence paths against traversal, and validates run requests.
 
 **Limits.**
-- Redaction is pattern-based. Names and dates of birth are *not* redacted: they appear in screenshots and snapshots of the fake mock data. Production needs field-level classification (e.g. marking the SSN/DOB/name columns in the app profile).
+- A value is only learned once it has appeared in a classified field or pattern. Text shown *before* that, or in places the profile does not describe, is covered only by the fixed patterns, so profiles need review per app.
 - `confirmIrreversible` trusts the caller.
 - No rate limiting.
 - Allowlists are per artifact, not per tenant.
@@ -166,5 +166,4 @@ The first public-site work (Wikipedia, Goodreads) is no longer a target. It is t
 1. **Promote human fixes into profiles**: propose an interstitial from a captured handoff, with review before use.
 2. **Tenant overlays** on profiles and targets, plus a two-variant demo of the mock app (the canonicalization stretch goal).
 3. **Approval states and replay-stability scores**: draft → approved, where approval requires N green matrix-style replays.
-4. **Field-level PII classification** in profiles.
-5. **Capability catalog**: an agent-facing tool surface over saved artifacts.
+4. **Capability catalog**: an agent-facing tool surface over saved artifacts.

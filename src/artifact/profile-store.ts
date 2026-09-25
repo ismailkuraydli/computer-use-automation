@@ -39,5 +39,12 @@ export function validateProfile(raw: unknown): AppProfile {
       throw new ProfileValidationError(`condition "${c.description}" has invalid kind "${c.kind}"`);
     }
   }
+  for (const pattern of profile.sensitive?.patterns ?? []) {
+    try {
+      new RegExp(pattern);
+    } catch {
+      throw new ProfileValidationError(`sensitive pattern "${pattern}" is not a valid regex`);
+    }
+  }
   return profile;
 }

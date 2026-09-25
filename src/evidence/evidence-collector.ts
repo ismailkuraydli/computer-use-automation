@@ -7,7 +7,7 @@ import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import type { AXNode, TargetSpec } from "../surface/types.js";
-import { redactPII, redactPIIInObject } from "../safety/pii-redactor.js";
+import { SensitiveDataRedactor } from "../safety/sensitive-data.js";
 
 export interface LogStepEntry {
   step: number;
@@ -56,7 +56,11 @@ export class EvidenceCollector {
   private steps: LogStepEntry[] = [];
   private llmLogs: LLMLogEntry[] = [];
 
-  constructor(baseDir: string = "./evidence") {
+  /** Redacts everything written; learns sensitive values as the surface observes. */
+  readonly redactor: SensitiveDataRedactor;
+
+  constructor(baseDir: string = "./evidence", redactor: SensitiveDataRedactor = new SensitiveDataRedactor()) {
+    this.redactor = redactor;
     this.runId = randomUUID().slice(0, 8);
     this.runDir = path.join(baseDir, this.runId);
     this.screenshotDir = path.join(this.runDir, "screenshots");
@@ -65,7 +69,7 @@ export class EvidenceCollector {
 
   logStep(entry: LogStepEntry): void {
     // Redact PII from everything that is logged, snapshots included
-    const redacted: LogStepEntry = redactPIIInObject(entry);
+    const redacted: LogStepEntry = this.redactor.redactDeep(entry);
 
     this.steps.push(redacted);
 
@@ -81,7 +85,7 @@ export class EvidenceCollector {
   }
 
   logLLMCall(entry: LLMLogEntry): void {
-    this.llmLogs.push(redactPIIInObject(entry));
+    this.llmLogs.push(this.redactor.redactDeep(entry));
 
     // Write LLM conversation log (updated each call)
     const llmLogPath = path.join(this.runDir, "llm-conversation.json");
@@ -94,10 +98,10 @@ export class EvidenceCollector {
       ...summary,
       outputs: summary.outputs
         ? Object.fromEntries(
-            Object.entries(summary.outputs).map(([k, v]) => [k, typeof v === "string" ? redactPII(v) : String(v)])
+            Object.entries(summary.outputs).map(([k, v]) => [k, typeof v === "string" ? this.redactor.redact(v) : String(v)])
           )
         : undefined,
-      error: summary.error ? redactPII(summary.error) : undefined,
+      error: summary.error ? this.redactor.redact(summary.error) : undefined,
     };
     writeFileSync(summaryPath, JSON.stringify(redacted, null, 2));
   }

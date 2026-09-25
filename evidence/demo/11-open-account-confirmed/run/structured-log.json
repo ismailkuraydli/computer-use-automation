@@ -6,7 +6,7 @@
       "target": "http://localhost:3000/new-account?id={{memberId}}",
       "result": "success",
       "url": "http://localhost:3000/new-account?id=12345",
-      "screenshotPath": "evidence/f4a46e9e/screenshots/screen-52f02945.png",
+      "screenshotPath": "evidence/dc592f91/screenshots/screen-86892b12.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -16,24 +16,24 @@
         },
         {
           "role": "heading",
-          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "name": "Open New Sub-Account for [REDACTED] (12345)",
           "children": [],
           "framePath": [],
           "context": {
             "row": [
-              "Open New Sub-Account for John A. Smith (12345)"
+              "Open New Sub-Account for [REDACTED] (12345)"
             ]
           }
         },
         {
           "role": "StaticText",
-          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "name": "Open New Sub-Account for [REDACTED] (12345)",
           "children": [],
           "framePath": []
         },
         {
           "role": "InlineTextBox",
-          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "name": "Open New Sub-Account for [REDACTED] (12345)",
           "children": [],
           "framePath": []
         },
@@ -158,11 +158,11 @@
         },
         {
           "role": "cell",
-          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "name": "Open New Sub-Account for [REDACTED] (12345)",
           "children": [],
           "context": {
             "row": [
-              "Open New Sub-Account for John A. Smith (12345)"
+              "Open New Sub-Account for [REDACTED] (12345)"
             ]
           },
           "framePath": []
@@ -223,7 +223,7 @@
       "target": "combobox \"Account Type\"",
       "result": "success",
       "url": "http://localhost:3000/new-account?id=12345",
-      "screenshotPath": "evidence/f4a46e9e/screenshots/screen-02278b94.png",
+      "screenshotPath": "evidence/dc592f91/screenshots/screen-c9f90599.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -233,24 +233,24 @@
         },
         {
           "role": "heading",
-          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "name": "Open New Sub-Account for [REDACTED] (12345)",
           "children": [],
           "framePath": [],
           "context": {
             "row": [
-              "Open New Sub-Account for John A. Smith (12345)"
+              "Open New Sub-Account for [REDACTED] (12345)"
             ]
           }
         },
         {
           "role": "StaticText",
-          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "name": "Open New Sub-Account for [REDACTED] (12345)",
           "children": [],
           "framePath": []
         },
         {
           "role": "InlineTextBox",
-          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "name": "Open New Sub-Account for [REDACTED] (12345)",
           "children": [],
           "framePath": []
         },
@@ -375,11 +375,11 @@
         },
         {
           "role": "cell",
-          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "name": "Open New Sub-Account for [REDACTED] (12345)",
           "children": [],
           "context": {
             "row": [
-              "Open New Sub-Account for John A. Smith (12345)"
+              "Open New Sub-Account for [REDACTED] (12345)"
             ]
           },
           "framePath": []
@@ -440,7 +440,7 @@
       "target": "textbox \"Initial Deposit\"",
       "result": "success",
       "url": "http://localhost:3000/new-account?id=12345",
-      "screenshotPath": "evidence/f4a46e9e/screenshots/screen-ded97670.png",
+      "screenshotPath": "evidence/dc592f91/screenshots/screen-888912e6.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -450,24 +450,24 @@
         },
         {
           "role": "heading",
-          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "name": "Open New Sub-Account for [REDACTED] (12345)",
           "children": [],
           "framePath": [],
           "context": {
             "row": [
-              "Open New Sub-Account for John A. Smith (12345)"
+              "Open New Sub-Account for [REDACTED] (12345)"
             ]
           }
         },
         {
           "role": "StaticText",
-          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "name": "Open New Sub-Account for [REDACTED] (12345)",
           "children": [],
           "framePath": []
         },
         {
           "role": "InlineTextBox",
-          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "name": "Open New Sub-Account for [REDACTED] (12345)",
           "children": [],
           "framePath": []
         },
@@ -605,11 +605,11 @@
         },
         {
           "role": "cell",
-          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "name": "Open New Sub-Account for [REDACTED] (12345)",
           "children": [],
           "context": {
             "row": [
-              "Open New Sub-Account for John A. Smith (12345)"
+              "Open New Sub-Account for [REDACTED] (12345)"
             ]
           },
           "framePath": []
@@ -670,7 +670,7 @@
       "target": "button \"Continue\"",
       "result": "success",
       "url": "http://localhost:3000/new-account-confirm",
-      "screenshotPath": "evidence/f4a46e9e/screenshots/screen-c8e1c32a.png",
+      "screenshotPath": "evidence/dc592f91/screenshots/screen-9ae90e35.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -751,20 +751,20 @@
           "context": {
             "row": [
               "Member",
-              "John A. Smith (12345)"
+              "[REDACTED]"
             ],
             "column": "Field"
           }
         },
         {
           "role": "cell",
-          "name": "John A. Smith (12345)",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": [],
           "context": {
             "row": [
               "Member",
-              "John A. Smith (12345)"
+              "[REDACTED]"
             ],
             "column": "Value",
             "label": "Member"
@@ -877,7 +877,7 @@
         },
         {
           "role": "StaticText",
-          "name": "John A. Smith (12345)",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -937,7 +937,7 @@
         },
         {
           "role": "InlineTextBox",
-          "name": "John A. Smith (12345)",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -990,11 +990,11 @@
         },
         {
           "role": "cell",
-          "name": "FieldValue\n      MemberJohn A. Smith (12345)\n      Account Typechecking\n      Account Number35213428",
+          "name": "FieldValue\n      Member[REDACTED]\n      Account Typechecking\n      Account Number61600884",
           "children": [],
           "context": {
             "row": [
-              "FieldValue MemberJohn A. Smith (12345) Account Typechecking "
+              "FieldValue Member[REDACTED] Account Typechecking "
             ]
           },
           "framePath": []
@@ -1018,7 +1018,7 @@
       "target": "cell labelled \"Account Number\"",
       "result": "success",
       "url": "http://localhost:3000/new-account-confirm",
-      "screenshotPath": "evidence/f4a46e9e/screenshots/screen-1b695e27.png",
+      "screenshotPath": "evidence/dc592f91/screenshots/screen-e86baec5.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -1099,20 +1099,20 @@
           "context": {
             "row": [
               "Member",
-              "John A. Smith (12345)"
+              "[REDACTED]"
             ],
             "column": "Field"
           }
         },
         {
           "role": "cell",
-          "name": "John A. Smith (12345)",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": [],
           "context": {
             "row": [
               "Member",
-              "John A. Smith (12345)"
+              "[REDACTED]"
             ],
             "column": "Value",
             "label": "Member"
@@ -1225,7 +1225,7 @@
         },
         {
           "role": "StaticText",
-          "name": "John A. Smith (12345)",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -1285,7 +1285,7 @@
         },
         {
           "role": "InlineTextBox",
-          "name": "John A. Smith (12345)",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -1338,11 +1338,11 @@
         },
         {
           "role": "cell",
-          "name": "FieldValue\n      MemberJohn A. Smith (12345)\n      Account Typechecking\n      Account Number35213428",
+          "name": "FieldValue\n      Member[REDACTED]\n      Account Typechecking\n      Account Number61600884",
           "children": [],
           "context": {
             "row": [
-              "FieldValue MemberJohn A. Smith (12345) Account Typechecking "
+              "FieldValue Member[REDACTED] Account Typechecking "
             ]
           },
           "framePath": []

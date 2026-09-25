@@ -8,7 +8,7 @@
 import type { LLMClient, LLMRequest, LLMResponse, PlanResponse, CapabilityPlan } from "./types.js";
 import type { Action } from "../surface/types.js";
 import type { CuaConfig } from "../config.js";
-import { redactPII, redactPIIInObject } from "../safety/pii-redactor.js";
+import { SensitiveDataRedactor } from "../safety/sensitive-data.js";
 
 export class OpenRouterClient implements LLMClient {
   private apiKey: string;
@@ -17,7 +17,11 @@ export class OpenRouterClient implements LLMClient {
   private maxTokens: number;
   private _callCount = 0;
 
-  constructor(apiKey: string, config: CuaConfig) {
+  /** Regulated data never leaves the process: the model sees [REDACTED]. */
+  private redactor: SensitiveDataRedactor;
+
+  constructor(apiKey: string, config: CuaConfig, redactor: SensitiveDataRedactor = new SensitiveDataRedactor()) {
+    this.redactor = redactor;
     this.apiKey = apiKey;
     this.model = config.model;
     this.baseUrl = config.baseUrl;
@@ -205,7 +209,7 @@ ${request.outputNames && request.outputNames.length > 0 ? `\nOutputs to extract:
 ${request.subGoals && request.subGoals.length > 0 ? `\nSub-goals:\n${request.subGoals.map(sg => `  [${request.completedSubGoals?.includes(sg.id) ? "DONE" : request.currentSubGoal === sg.id ? "CURRENT" : "PENDING"}] ${sg.id}: ${sg.description}`).join("\n")}\n\nCurrent sub-goal: ${request.subGoals.find(sg => sg.id === request.currentSubGoal)?.description || "none"}\nFocus on completing the CURRENT sub-goal. When it is done, set subGoalComplete=true.\n` : ""}
 ${request.paramNames && request.paramNames.length > 0 ? `\nInput parameters available: ${request.paramNames.join(", ")}\n` : ""}
 AX Tree (${request.screenState.axTree.length} total elements, showing most relevant):
-${JSON.stringify(this._prioritizeAXTree(request.screenState.axTree, 100, request.subGoals?.find(sg => sg.id === request.currentSubGoal)?.keywords).map(n => redactPIIInObject({ role: n.role, name: n.name, value: n.value, row: n.context?.row?.join(" | ") }))
+${JSON.stringify(this._prioritizeAXTree(request.screenState.axTree, 100, request.subGoals?.find(sg => sg.id === request.currentSubGoal)?.keywords).map(n => this.redactor.redactDeep({ role: n.role, name: n.name, value: n.value, row: n.context?.row?.join(" | ") }))
       // Regulated data (SSNs, account numbers) never leaves the process: the
       // model sees [REDACTED] instead.
       , null, 2)}
@@ -216,7 +220,7 @@ ${request.history.map(h => {
   const target = a.target ? `${a.target.role}:${a.target.name}${a.target.row ? ` (row ${a.target.row})` : ""}` : "";
   const val = a.value ? ` value="${a.value}"` : "";
   const out = a.output ? ` output=${a.output}` : "";
-  const obs = h.observation ? ` → ${redactPII(h.observation.substring(0, 100))}` : "";
+  const obs = h.observation ? ` → ${this.redactor.redact(h.observation.substring(0, 100))}` : "";
   return `Step ${h.step}: ${a.type} ${target}${val}${out} -> ${h.result}${obs}`;
 }).join("\n") || "None"}
 

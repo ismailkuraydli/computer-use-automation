@@ -7,7 +7,7 @@ Everything here was produced by `scripts/generate-evidence.sh` against the Keyst
 - `screenshots/`: screenshots with PII masked;
 - for discovery, `llm-conversation.json`.
 
-SSNs and account numbers are redacted everywhere; the member names and dates of birth are fake mock data.
+SSNs, account numbers, member names and dates of birth are redacted in every file and masked in screenshots. Names and dates of birth are found through the `sensitive` section of `profiles/keystone-cu.json`.
 
 ## The artifact
 

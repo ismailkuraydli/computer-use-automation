@@ -6,7 +6,7 @@
       "target": "http://localhost:3000/search",
       "result": "success",
       "url": "http://localhost:3000/search",
-      "screenshotPath": "evidence/329d1609/screenshots/screen-e13a5172.png",
+      "screenshotPath": "evidence/1a363969/screenshots/screen-92019d76.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -119,7 +119,7 @@
       "target": "textbox \"Member ID\"",
       "result": "success",
       "url": "http://localhost:3000/search",
-      "screenshotPath": "evidence/329d1609/screenshots/screen-2b661c6f.png",
+      "screenshotPath": "evidence/1a363969/screenshots/screen-11fdef0f.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -245,7 +245,7 @@
       "target": "button \"Search\"",
       "result": "success",
       "url": "http://localhost:3000/search?q=12345&btnSearch=Search",
-      "screenshotPath": "evidence/329d1609/screenshots/screen-3b00f637.png",
+      "screenshotPath": "evidence/1a363969/screenshots/screen-9227169a.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -340,7 +340,7 @@
           "context": {
             "row": [
               "12345",
-              "John A. Smith",
+              "[REDACTED]",
               "[REDACTED]",
               "2"
             ],
@@ -349,13 +349,13 @@
         },
         {
           "role": "cell",
-          "name": "John A. Smith",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": [],
           "context": {
             "row": [
               "12345",
-              "John A. Smith",
+              "[REDACTED]",
               "[REDACTED]",
               "2"
             ],
@@ -370,7 +370,7 @@
           "context": {
             "row": [
               "12345",
-              "John A. Smith",
+              "[REDACTED]",
               "[REDACTED]",
               "2"
             ],
@@ -385,7 +385,7 @@
           "context": {
             "row": [
               "12345",
-              "John A. Smith",
+              "[REDACTED]",
               "[REDACTED]",
               "2"
             ],
@@ -424,7 +424,7 @@
           "context": {
             "row": [
               "12345",
-              "John A. Smith",
+              "[REDACTED]",
               "[REDACTED]",
               "2"
             ],
@@ -433,7 +433,7 @@
         },
         {
           "role": "StaticText",
-          "name": "John A. Smith",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -516,7 +516,7 @@
         },
         {
           "role": "InlineTextBox",
-          "name": "John A. Smith",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -592,11 +592,11 @@
         },
         {
           "role": "cell",
-          "name": "Member IDNameSSNAccounts\n          12345\n          John A. Smith[REDACTED]\n          2",
+          "name": "Member IDNameSSNAccounts\n          12345\n          [REDACTED][REDACTED]\n          2",
           "children": [],
           "context": {
             "row": [
-              "Member IDNameSSNAccounts 12345 John A. Smith[REDACTED] 2"
+              "Member IDNameSSNAccounts 12345 [REDACTED][REDACTED] 2"
             ]
           },
           "framePath": []
@@ -609,7 +609,7 @@
       "target": "link \"{{memberId}}\"",
       "result": "failure",
       "url": "http://localhost:3000/detail?id=12345",
-      "screenshotPath": "evidence/329d1609/screenshots/screen-54ec25c7.png",
+      "screenshotPath": "evidence/1a363969/screenshots/screen-79d5827c.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",

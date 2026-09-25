@@ -301,3 +301,13 @@ The AX prioritizer boosts elements matching the current sub-goal's keywords to t
 **Decision:** `ReplayEngine` routes every escalation through an optional handoff (`EscalationManager.handoff`): pause, send an intervention request (capability, step, reason, screenshot, CDP endpoint) through an `OperatorChannel`, capture the human's clicks/edits/navigations on the *same* page (never typed values), then on `done` verify the step's checkpoint and continue (or re-run the step the human unblocked); `complete`/`abort` end the run with that resolution. An unconfirmed irreversible step becomes a human approval. Bounded to two handoffs per step. `replay --handoff` wires a terminal operator channel.
 
 **Consequences:** The control transfer is real end to end; only the operator UI is minimal (a terminal prompt). A web console or queue can implement `OperatorChannel` without touching the engine.
+
+---
+
+### ADR-017: Sensitive data classified in the app profile, learned per run
+
+**Context:** Pattern redaction catches SSNs and account numbers but not names or dates of birth, which reached LLM prompts, logs and screenshots.
+
+**Decision:** The app profile declares where sensitive data sits (`sensitive.fields`: column headers or labels; `sensitive.patterns`: regexes with a sensitive capture group). One `SensitiveDataRedactor` per run learns the actual values from each observed screen and scrubs them from all text afterwards: the LLM prompt, evidence, artifacts and screenshot masks. It keeps the fixed patterns too.
+
+**Consequences:** No named-entity guessing and no over-redaction of ordinary text. It is as complete as the profile: a value is protected once it has been seen in a classified place, so profiles need per-app review.

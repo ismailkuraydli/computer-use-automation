@@ -10,6 +10,7 @@
  */
 
 import type { ErrorHandler, StateGuard, TargetSpec } from "./types.js";
+import type { SensitiveDataSpec } from "../safety/sensitive-data.js";
 
 export const PROFILE_SCHEMA_VERSION = "1.0";
 
@@ -27,6 +28,8 @@ export interface AppProfile {
   description?: string;
   interstitials: Interstitial[];
   conditions: ErrorHandler[];
+  /** Where regulated data sits on this app's screens (names, dates of birth...). */
+  sensitive?: SensitiveDataSpec;
 }
 
 export const EMPTY_PROFILE: AppProfile = {

@@ -6,7 +6,7 @@
       "target": "http://localhost:3000/search",
       "result": "success",
       "url": "http://localhost:3000/search",
-      "screenshotPath": "evidence/89410a53/screenshots/screen-13b853fc.png",
+      "screenshotPath": "evidence/45d1c8db/screenshots/screen-a72e3130.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -119,7 +119,7 @@
       "target": "23456",
       "result": "success",
       "url": "http://localhost:3000/search",
-      "screenshotPath": "evidence/89410a53/screenshots/screen-77272041.png",
+      "screenshotPath": "evidence/45d1c8db/screenshots/screen-1db325d6.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -245,7 +245,7 @@
       "target": "Search",
       "result": "success",
       "url": "http://localhost:3000/search?q=23456&btnSearch=Search",
-      "screenshotPath": "evidence/89410a53/screenshots/screen-49b20ceb.png",
+      "screenshotPath": "evidence/45d1c8db/screenshots/screen-1fc61ee7.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -340,7 +340,7 @@
           "context": {
             "row": [
               "23456",
-              "Maria B. Johnson",
+              "[REDACTED]",
               "[REDACTED]",
               "3"
             ],
@@ -349,13 +349,13 @@
         },
         {
           "role": "cell",
-          "name": "Maria B. Johnson",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": [],
           "context": {
             "row": [
               "23456",
-              "Maria B. Johnson",
+              "[REDACTED]",
               "[REDACTED]",
               "3"
             ],
@@ -370,7 +370,7 @@
           "context": {
             "row": [
               "23456",
-              "Maria B. Johnson",
+              "[REDACTED]",
               "[REDACTED]",
               "3"
             ],
@@ -385,7 +385,7 @@
           "context": {
             "row": [
               "23456",
-              "Maria B. Johnson",
+              "[REDACTED]",
               "[REDACTED]",
               "3"
             ],
@@ -424,7 +424,7 @@
           "context": {
             "row": [
               "23456",
-              "Maria B. Johnson",
+              "[REDACTED]",
               "[REDACTED]",
               "3"
             ],
@@ -433,7 +433,7 @@
         },
         {
           "role": "StaticText",
-          "name": "Maria B. Johnson",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -516,7 +516,7 @@
         },
         {
           "role": "InlineTextBox",
-          "name": "Maria B. Johnson",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -592,11 +592,11 @@
         },
         {
           "role": "cell",
-          "name": "Member IDNameSSNAccounts\n          23456\n          Maria B. Johnson[REDACTED]\n          3",
+          "name": "Member IDNameSSNAccounts\n          23456\n          [REDACTED][REDACTED]\n          3",
           "children": [],
           "context": {
             "row": [
-              "Member IDNameSSNAccounts 23456 Maria B. Johnson[REDACTED] 3"
+              "Member IDNameSSNAccounts 23456 [REDACTED][REDACTED] 3"
             ]
           },
           "framePath": []
@@ -609,7 +609,7 @@
       "target": "23456",
       "result": "success",
       "url": "http://localhost:3000/detail?id=23456",
-      "screenshotPath": "evidence/89410a53/screenshots/screen-534db88f.png",
+      "screenshotPath": "evidence/45d1c8db/screenshots/screen-b0394293.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -619,12 +619,12 @@
         },
         {
           "role": "heading",
-          "name": "Member Detail - Maria B. Johnson",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "framePath": [],
           "context": {
             "row": [
-              "Member Detail - Maria B. Johnson"
+              "Member Detail - [REDACTED]"
             ]
           }
         },
@@ -664,7 +664,7 @@
         },
         {
           "role": "StaticText",
-          "name": "Member Detail - Maria B. Johnson",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -694,7 +694,7 @@
         },
         {
           "role": "InlineTextBox",
-          "name": "Member Detail - Maria B. Johnson",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -746,7 +746,7 @@
             "row": [
               "23456",
               "[REDACTED]",
-              "1982-07-22"
+              "[REDACTED]"
             ],
             "column": "Member ID"
           }
@@ -760,21 +760,21 @@
             "row": [
               "23456",
               "[REDACTED]",
-              "1982-07-22"
+              "[REDACTED]"
             ],
             "column": "SSN"
           }
         },
         {
           "role": "cell",
-          "name": "1982-07-22",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": [],
           "context": {
             "row": [
               "23456",
               "[REDACTED]",
-              "1982-07-22"
+              "[REDACTED]"
             ],
             "column": "DOB"
           }
@@ -1059,7 +1059,7 @@
         },
         {
           "role": "StaticText",
-          "name": "1982-07-22",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -1218,7 +1218,7 @@
         },
         {
           "role": "InlineTextBox",
-          "name": "1982-07-22",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -1338,22 +1338,22 @@
         },
         {
           "role": "cell",
-          "name": "Member Detail - Maria B. Johnson",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "context": {
             "row": [
-              "Member Detail - Maria B. Johnson"
+              "Member Detail - [REDACTED]"
             ]
           },
           "framePath": []
         },
         {
           "role": "cell",
-          "name": "Member IDSSNDOB\n      23456[REDACTED]1982-07-22",
+          "name": "Member IDSSNDOB\n      23456[REDACTED][REDACTED]",
           "children": [],
           "context": {
             "row": [
-              "Member IDSSNDOB 23456[REDACTED]1982-07-22"
+              "Member IDSSNDOB 23456[REDACTED][REDACTED]"
             ]
           },
           "framePath": []
@@ -1399,7 +1399,7 @@
       "target": "$8,234.50",
       "result": "success",
       "url": "http://localhost:3000/detail?id=23456",
-      "screenshotPath": "evidence/89410a53/screenshots/screen-a878a6c6.png",
+      "screenshotPath": "evidence/45d1c8db/screenshots/screen-325e232e.png",
       "axSnapshot": [
         {
           "role": "RootWebArea",
@@ -1409,12 +1409,12 @@
         },
         {
           "role": "heading",
-          "name": "Member Detail - Maria B. Johnson",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "framePath": [],
           "context": {
             "row": [
-              "Member Detail - Maria B. Johnson"
+              "Member Detail - [REDACTED]"
             ]
           }
         },
@@ -1454,7 +1454,7 @@
         },
         {
           "role": "StaticText",
-          "name": "Member Detail - Maria B. Johnson",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -1484,7 +1484,7 @@
         },
         {
           "role": "InlineTextBox",
-          "name": "Member Detail - Maria B. Johnson",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -1536,7 +1536,7 @@
             "row": [
               "23456",
               "[REDACTED]",
-              "1982-07-22"
+              "[REDACTED]"
             ],
             "column": "Member ID"
           }
@@ -1550,21 +1550,21 @@
             "row": [
               "23456",
               "[REDACTED]",
-              "1982-07-22"
+              "[REDACTED]"
             ],
             "column": "SSN"
           }
         },
         {
           "role": "cell",
-          "name": "1982-07-22",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": [],
           "context": {
             "row": [
               "23456",
               "[REDACTED]",
-              "1982-07-22"
+              "[REDACTED]"
             ],
             "column": "DOB"
           }
@@ -1849,7 +1849,7 @@
         },
         {
           "role": "StaticText",
-          "name": "1982-07-22",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -2008,7 +2008,7 @@
         },
         {
           "role": "InlineTextBox",
-          "name": "1982-07-22",
+          "name": "[REDACTED]",
           "children": [],
           "framePath": []
         },
@@ -2128,22 +2128,22 @@
         },
         {
           "role": "cell",
-          "name": "Member Detail - Maria B. Johnson",
+          "name": "Member Detail - [REDACTED]",
           "children": [],
           "context": {
             "row": [
-              "Member Detail - Maria B. Johnson"
+              "Member Detail - [REDACTED]"
             ]
           },
           "framePath": []
         },
         {
           "role": "cell",
-          "name": "Member IDSSNDOB\n      23456[REDACTED]1982-07-22",
+          "name": "Member IDSSNDOB\n      23456[REDACTED][REDACTED]",
           "children": [],
           "context": {
             "row": [
-              "Member IDSSNDOB 23456[REDACTED]1982-07-22"
+              "Member IDSSNDOB 23456[REDACTED][REDACTED]"
             ]
           },
           "framePath": []

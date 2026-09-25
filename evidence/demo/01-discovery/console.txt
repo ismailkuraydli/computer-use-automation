@@ -8,9 +8,9 @@ Capability: lookup-member-savings-balance
 Params: ["memberId"]
 Outputs: ["savingsBalance"]
 Sub-goals:
-  1: Enter the member ID into the search or member lookup field (keywords: search, member, ID, textbox)
-  2: Submit the lookup to view the member's account details (keywords: submit, lookup, button, Search)
-  3: Locate and read the balance of the Savings account (keywords: Savings, balance, account)
+  1: Enter the member ID into the search or member lookup field (keywords: search, member, ID, textbox, input)
+  2: Submit the search or click the member lookup button (keywords: lookup, search, submit, button)
+  3: Locate and read the balance of the Savings account (keywords: Savings, balance, account, amount)
 
 Browser: headless
 
@@ -27,8 +27,8 @@ Reason: goal met
 Outputs: {
   "savingsBalance": "$8,234.50"
 }
-Evidence: evidence/89410a53
-Self-check replay: passed (evidence/e0a49866)
-Artifact saved: artifacts/lookup-member-savings-balance/v9.json
+Evidence: evidence/45d1c8db
+Self-check replay: passed (evidence/9a5c80fe)
+Artifact saved: artifacts/lookup-member-savings-balance/v11.json
 
-Evidence directory: evidence/89410a53
+Evidence directory: evidence/45d1c8db

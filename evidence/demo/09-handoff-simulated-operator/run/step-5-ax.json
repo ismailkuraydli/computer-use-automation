@@ -7,12 +7,12 @@
   },
   {
     "role": "heading",
-    "name": "Member Detail - John A. Smith",
+    "name": "Member Detail - [REDACTED]",
     "children": [],
     "framePath": [],
     "context": {
       "row": [
-        "Member Detail - John A. Smith"
+        "Member Detail - [REDACTED]"
       ]
     }
   },
@@ -52,7 +52,7 @@
   },
   {
     "role": "StaticText",
-    "name": "Member Detail - John A. Smith",
+    "name": "Member Detail - [REDACTED]",
     "children": [],
     "framePath": []
   },
@@ -82,7 +82,7 @@
   },
   {
     "role": "InlineTextBox",
-    "name": "Member Detail - John A. Smith",
+    "name": "Member Detail - [REDACTED]",
     "children": [],
     "framePath": []
   },
@@ -134,7 +134,7 @@
       "row": [
         "12345",
         "[REDACTED]",
-        "1975-03-15"
+        "[REDACTED]"
       ],
       "column": "Member ID"
     }
@@ -148,21 +148,21 @@
       "row": [
         "12345",
         "[REDACTED]",
-        "1975-03-15"
+        "[REDACTED]"
       ],
       "column": "SSN"
     }
   },
   {
     "role": "cell",
-    "name": "1975-03-15",
+    "name": "[REDACTED]",
     "children": [],
     "framePath": [],
     "context": {
       "row": [
         "12345",
         "[REDACTED]",
-        "1975-03-15"
+        "[REDACTED]"
       ],
       "column": "DOB"
     }
@@ -387,7 +387,7 @@
   },
   {
     "role": "StaticText",
-    "name": "1975-03-15",
+    "name": "[REDACTED]",
     "children": [],
     "framePath": []
   },
@@ -513,7 +513,7 @@
   },
   {
     "role": "InlineTextBox",
-    "name": "1975-03-15",
+    "name": "[REDACTED]",
     "children": [],
     "framePath": []
   },
@@ -603,22 +603,22 @@
   },
   {
     "role": "cell",
-    "name": "Member Detail - John A. Smith",
+    "name": "Member Detail - [REDACTED]",
     "children": [],
     "context": {
       "row": [
-        "Member Detail - John A. Smith"
+        "Member Detail - [REDACTED]"
       ]
     },
     "framePath": []
   },
   {
     "role": "cell",
-    "name": "Member IDSSNDOB\n      12345[REDACTED]1975-03-15",
+    "name": "Member IDSSNDOB\n      12345[REDACTED][REDACTED]",
     "children": [],
     "context": {
       "row": [
-        "Member IDSSNDOB 12345[REDACTED]1975-03-15"
+        "Member IDSSNDOB 12345[REDACTED][REDACTED]"
       ]
     },
     "framePath": []

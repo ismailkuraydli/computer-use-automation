@@ -78,20 +78,20 @@
     "context": {
       "row": [
         "Member",
-        "John A. Smith (12345)"
+        "[REDACTED]"
       ],
       "column": "Field"
     }
   },
   {
     "role": "cell",
-    "name": "John A. Smith (12345)",
+    "name": "[REDACTED]",
     "children": [],
     "framePath": [],
     "context": {
       "row": [
         "Member",
-        "John A. Smith (12345)"
+        "[REDACTED]"
       ],
       "column": "Value",
       "label": "Member"
@@ -204,7 +204,7 @@
   },
   {
     "role": "StaticText",
-    "name": "John A. Smith (12345)",
+    "name": "[REDACTED]",
     "children": [],
     "framePath": []
   },
@@ -264,7 +264,7 @@
   },
   {
     "role": "InlineTextBox",
-    "name": "John A. Smith (12345)",
+    "name": "[REDACTED]",
     "children": [],
     "framePath": []
   },
@@ -317,11 +317,11 @@
   },
   {
     "role": "cell",
-    "name": "FieldValue\n      MemberJohn A. Smith (12345)\n      Account Typechecking\n      Account Number35213428",
+    "name": "FieldValue\n      Member[REDACTED]\n      Account Typechecking\n      Account Number61600884",
     "children": [],
     "context": {
       "row": [
-        "FieldValue MemberJohn A. Smith (12345) Account Typechecking "
+        "FieldValue Member[REDACTED] Account Typechecking "
       ]
     },
     "framePath": []

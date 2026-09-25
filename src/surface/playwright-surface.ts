@@ -14,7 +14,7 @@
 
 import { chromium, type Browser, type Page, type Locator } from "playwright";
 import { resolveTarget } from "./playwright-resolver.js";
-import { PII_TEXT_PATTERN } from "../safety/pii-redactor.js";
+import { SensitiveDataRedactor } from "../safety/sensitive-data.js";
 import type {
   Surface,
   ScreenState,
@@ -113,6 +113,8 @@ export interface PlaywrightSurfaceOptions {
   headless?: boolean;
   screenshotDir?: string;
   remoteDebuggingPort?: number;
+  /** Learns sensitive values from each snapshot and masks them in screenshots. */
+  redactor?: SensitiveDataRedactor;
 }
 
 // JavaScript that runs in the browser to build an AX-like tree
@@ -259,6 +261,7 @@ export class PlaywrightSurface implements Surface {
   private screenshotDir: string;
   private headless: boolean;
   private remoteDebuggingPort?: number;
+  private redactor: SensitiveDataRedactor;
   private dialogs: string[] = [];
   private capturing = false;
   private humanActions: HumanAction[] = [];
@@ -267,6 +270,7 @@ export class PlaywrightSurface implements Surface {
     this.headless = options.headless ?? true;
     this.screenshotDir = options.screenshotDir ?? "./screenshots";
     this.remoteDebuggingPort = options.remoteDebuggingPort;
+    this.redactor = options.redactor ?? new SensitiveDataRedactor();
   }
 
   async _start(url?: string): Promise<void> {
@@ -302,6 +306,7 @@ export class PlaywrightSurface implements Surface {
 
     // Build unified AX tree across all frames
     const axTree = await this._buildUnifiedAXTree();
+    this.redactor.learn(axTree);
     const frameUrls = this.page.frames().map((f) => f.url());
 
     // DOM snapshot (simplified — just the body HTML)
@@ -313,8 +318,8 @@ export class PlaywrightSurface implements Surface {
     const screenshotPath = path.join(this.screenshotDir, `screen-${randomUUID().slice(0, 8)}.png`);
     try {
       // Screenshots are evidence on disk: cover anything that looks like an
-      // SSN, card or account number.
-      const mask = this.page.frames().map((f) => f.getByText(PII_TEXT_PATTERN));
+      // SSN, card or account number, and every sensitive value learned so far.
+      const mask = this.page.frames().flatMap((f) => this.redactor.maskTexts.map((t) => f.getByText(t)));
       await this.page.screenshot({ path: screenshotPath, fullPage: false, mask });
     } catch {
       // Screenshot may fail if page is navigating — that's OK

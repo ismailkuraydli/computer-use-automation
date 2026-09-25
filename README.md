@@ -112,5 +112,5 @@ TypeScript on Node.js · Playwright (Chromium, accessibility tree, frames) · Vi
 ## Limitations
 
 - **Public consumer sites** use bot detection, CAPTCHAs and marketing overlays. The system does not try to get around them. An unknown overlay or dialog escalates to a human (`--handoff`), and the fix can become a profile entry.
-- **PII redaction is pattern-based** (SSNs, account and card numbers). Names and dates of birth still appear in the (fake) mock data's snapshots and screenshots. See REPORT §6.
+- **Redaction depends on the app profile.** SSNs and account/card numbers are caught by pattern. Names, dates of birth and other fields are caught once the profile marks where they appear (`sensitive` in `profiles/<app>.json`). See REPORT §6.
 - **One browser session per run.** It runs as a single local process, with no queueing or session pooling.
