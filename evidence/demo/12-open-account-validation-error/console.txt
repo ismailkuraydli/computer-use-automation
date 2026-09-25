@@ -1,0 +1,16 @@
+◇ injected env (6) from .env
+Browser: headless
+
+Replaying artifact: open-sub-account
+Params expected: ["memberId","accountType","deposit"]
+App profile: keystone-cu
+Params provided: {"memberId":"12345","accountType":"Checking","deposit":"-5"}
+Target: about:blank
+
+
+--- Replay Result ---
+Status: business-outcome
+Outcome: validation-error
+Detail: The form rejected the input
+
+Evidence: evidence/a8df0740

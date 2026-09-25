@@ -1,0 +1,17 @@
+◇ injected env (6) from .env
+Browser: headless
+
+Replaying artifact: lookup-member-savings-balance
+Params expected: ["memberId"]
+App profile: keystone-cu
+Params provided: {"memberId":"12345"}
+Target: about:blank
+
+
+--- Replay Result ---
+Status: escalated
+Step: 4
+Reason: Session expired — a human must re-authenticate
+Resolution: unresolved
+
+Evidence: evidence/329d1609

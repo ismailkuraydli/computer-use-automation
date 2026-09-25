@@ -1,0 +1,31 @@
+[
+  {
+    "role": "RootWebArea",
+    "name": "Keystone CU - Session Expired",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Session Expired: Your session has timed out. Please log in again.",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Session Expired: Your session has timed out. Please log in again.",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "Session Expired: Your session has timed out. Please log in again.",
+    "children": [],
+    "context": {
+      "row": [
+        "Session Expired: Your session has timed out. Please log in a"
+      ]
+    },
+    "framePath": []
+  }
+]

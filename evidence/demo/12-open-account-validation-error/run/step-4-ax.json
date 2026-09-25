@@ -1,0 +1,65 @@
+[
+  {
+    "role": "RootWebArea",
+    "name": "Keystone CU - Error",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Validation Error: Initial deposit must be a positive amount.",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "link",
+    "name": "Back to Form",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Back to Form"
+      ]
+    }
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Validation Error: Initial deposit must be a positive amount.",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Back to Form",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Back to Form",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "Validation Error: Initial deposit must be a positive amount.",
+    "children": [],
+    "context": {
+      "row": [
+        "Validation Error: Initial deposit must be a positive amount."
+      ]
+    },
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "Back to Form",
+    "children": [],
+    "context": {
+      "row": [
+        "Back to Form"
+      ]
+    },
+    "framePath": []
+  }
+]

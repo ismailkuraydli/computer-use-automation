@@ -13,7 +13,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 OUT=evidence/demo
 MOCK=http://localhost:3000
-rm -rf "$OUT"
+rm -rf "$OUT"/[0-9][0-9]-* "$OUT/artifacts"
 mkdir -p "$OUT/artifacts"
 
 if ! curl -s -o /dev/null "$MOCK/search"; then

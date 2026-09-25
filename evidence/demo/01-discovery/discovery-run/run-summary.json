@@ -1,0 +1,8 @@
+{
+  "goal": "goal met",
+  "totalSteps": 4,
+  "success": true,
+  "outputs": {
+    "savingsBalance": "$8,234.50"
+  }
+}

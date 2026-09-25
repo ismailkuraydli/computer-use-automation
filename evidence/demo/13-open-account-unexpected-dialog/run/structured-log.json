@@ -1,0 +1,899 @@
+{
+  "steps": [
+    {
+      "step": 1,
+      "action": "navigate",
+      "target": "http://localhost:3000/new-account?id={{memberId}}",
+      "result": "success",
+      "url": "http://localhost:3000/new-account?id=12345",
+      "screenshotPath": "evidence/206cdf8e/screenshots/screen-09df4629.png",
+      "axSnapshot": [
+        {
+          "role": "RootWebArea",
+          "name": "Keystone CU - New Sub-Account",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "heading",
+          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Open New Sub-Account for John A. Smith (12345)"
+            ]
+          }
+        },
+        {
+          "role": "StaticText",
+          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Account Type:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "combobox",
+          "name": "Account Type",
+          "value": "Savings",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Account Type:",
+              "Savings Checking Certificate of Deposit"
+            ],
+            "label": "Account Type:"
+          }
+        },
+        {
+          "role": "StaticText",
+          "name": "Initial Deposit:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "textbox",
+          "name": "Initial Deposit",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Initial Deposit:",
+              ""
+            ],
+            "label": "Initial Deposit:"
+          }
+        },
+        {
+          "role": "button",
+          "name": "Continue",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "",
+              ""
+            ],
+            "label": ""
+          }
+        },
+        {
+          "role": "button",
+          "name": "Cancel",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "",
+              ""
+            ],
+            "label": ""
+          }
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Account Type:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Initial Deposit:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Continue",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Cancel",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "option",
+          "name": "Savings",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "option",
+          "name": "Checking",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "option",
+          "name": "Certificate of Deposit",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Continue",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Cancel",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "children": [],
+          "context": {
+            "row": [
+              "Open New Sub-Account for John A. Smith (12345)"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Account Type:\n      \n      Savings\n      Checking\n      Certificate of Deposit\n      \n      Initial ",
+          "children": [],
+          "context": {
+            "row": [
+              "Account Type: Savings Checking Certificate of Deposit Initia"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Account Type:",
+          "children": [],
+          "context": {
+            "row": [
+              "Account Type:",
+              "Savings Checking Certificate of Deposit"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Savings\n      Checking\n      Certificate of Deposit",
+          "children": [],
+          "context": {
+            "row": [
+              "Account Type:",
+              "Savings Checking Certificate of Deposit"
+            ],
+            "label": "Account Type:"
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Initial Deposit:",
+          "children": [],
+          "context": {
+            "row": [
+              "Initial Deposit:",
+              ""
+            ]
+          },
+          "framePath": []
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "action": "select",
+      "target": "combobox \"Account Type\"",
+      "result": "success",
+      "url": "http://localhost:3000/new-account?id=12345",
+      "screenshotPath": "evidence/206cdf8e/screenshots/screen-b24a89fc.png",
+      "axSnapshot": [
+        {
+          "role": "RootWebArea",
+          "name": "Keystone CU - New Sub-Account",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "heading",
+          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Open New Sub-Account for John A. Smith (12345)"
+            ]
+          }
+        },
+        {
+          "role": "StaticText",
+          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Account Type:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "combobox",
+          "name": "Account Type",
+          "value": "Savings",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Account Type:",
+              "Savings Checking Certificate of Deposit"
+            ],
+            "label": "Account Type:"
+          }
+        },
+        {
+          "role": "StaticText",
+          "name": "Initial Deposit:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "textbox",
+          "name": "Initial Deposit",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Initial Deposit:",
+              ""
+            ],
+            "label": "Initial Deposit:"
+          }
+        },
+        {
+          "role": "button",
+          "name": "Continue",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "",
+              ""
+            ],
+            "label": ""
+          }
+        },
+        {
+          "role": "button",
+          "name": "Cancel",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "",
+              ""
+            ],
+            "label": ""
+          }
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Account Type:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Initial Deposit:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Continue",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Cancel",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "option",
+          "name": "Savings",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "option",
+          "name": "Checking",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "option",
+          "name": "Certificate of Deposit",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Continue",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Cancel",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "children": [],
+          "context": {
+            "row": [
+              "Open New Sub-Account for John A. Smith (12345)"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Account Type:\n      \n      Savings\n      Checking\n      Certificate of Deposit\n      \n      Initial ",
+          "children": [],
+          "context": {
+            "row": [
+              "Account Type: Savings Checking Certificate of Deposit Initia"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Account Type:",
+          "children": [],
+          "context": {
+            "row": [
+              "Account Type:",
+              "Savings Checking Certificate of Deposit"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Savings\n      Checking\n      Certificate of Deposit",
+          "children": [],
+          "context": {
+            "row": [
+              "Account Type:",
+              "Savings Checking Certificate of Deposit"
+            ],
+            "label": "Account Type:"
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Initial Deposit:",
+          "children": [],
+          "context": {
+            "row": [
+              "Initial Deposit:",
+              ""
+            ]
+          },
+          "framePath": []
+        }
+      ]
+    },
+    {
+      "step": 3,
+      "action": "type",
+      "target": "textbox \"Initial Deposit\"",
+      "result": "success",
+      "url": "http://localhost:3000/new-account?id=12345",
+      "screenshotPath": "evidence/206cdf8e/screenshots/screen-89b7b049.png",
+      "axSnapshot": [
+        {
+          "role": "RootWebArea",
+          "name": "Keystone CU - New Sub-Account",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "heading",
+          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Open New Sub-Account for John A. Smith (12345)"
+            ]
+          }
+        },
+        {
+          "role": "StaticText",
+          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Account Type:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "combobox",
+          "name": "Account Type",
+          "value": "Savings",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Account Type:",
+              "Savings Checking Certificate of Deposit"
+            ],
+            "label": "Account Type:"
+          }
+        },
+        {
+          "role": "StaticText",
+          "name": "Initial Deposit:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "textbox",
+          "name": "Initial Deposit",
+          "value": "250",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Initial Deposit:",
+              ""
+            ],
+            "label": "Initial Deposit:"
+          }
+        },
+        {
+          "role": "button",
+          "name": "Continue",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "",
+              ""
+            ],
+            "label": ""
+          }
+        },
+        {
+          "role": "button",
+          "name": "Cancel",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "",
+              ""
+            ],
+            "label": ""
+          }
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Account Type:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Initial Deposit:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Continue",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Cancel",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "option",
+          "name": "Savings",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "option",
+          "name": "Checking",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "option",
+          "name": "Certificate of Deposit",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "250",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Continue",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Cancel",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "250",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "children": [],
+          "context": {
+            "row": [
+              "Open New Sub-Account for John A. Smith (12345)"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Account Type:\n      \n      Savings\n      Checking\n      Certificate of Deposit\n      \n      Initial ",
+          "children": [],
+          "context": {
+            "row": [
+              "Account Type: Savings Checking Certificate of Deposit Initia"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Account Type:",
+          "children": [],
+          "context": {
+            "row": [
+              "Account Type:",
+              "Savings Checking Certificate of Deposit"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Savings\n      Checking\n      Certificate of Deposit",
+          "children": [],
+          "context": {
+            "row": [
+              "Account Type:",
+              "Savings Checking Certificate of Deposit"
+            ],
+            "label": "Account Type:"
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Initial Deposit:",
+          "children": [],
+          "context": {
+            "row": [
+              "Initial Deposit:",
+              ""
+            ]
+          },
+          "framePath": []
+        }
+      ]
+    },
+    {
+      "step": 4,
+      "action": "submit",
+      "target": "button \"Continue\"",
+      "result": "failure",
+      "url": "http://localhost:3000/new-account?id=12345",
+      "screenshotPath": "evidence/206cdf8e/screenshots/screen-77435aea.png",
+      "axSnapshot": [
+        {
+          "role": "RootWebArea",
+          "name": "Keystone CU - New Sub-Account",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "heading",
+          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Open New Sub-Account for John A. Smith (12345)"
+            ]
+          }
+        },
+        {
+          "role": "StaticText",
+          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Account Type:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "combobox",
+          "name": "Account Type",
+          "value": "Savings",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Account Type:",
+              "Savings Checking Certificate of Deposit"
+            ],
+            "label": "Account Type:"
+          }
+        },
+        {
+          "role": "StaticText",
+          "name": "Initial Deposit:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "textbox",
+          "name": "Initial Deposit",
+          "value": "250",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "Initial Deposit:",
+              ""
+            ],
+            "label": "Initial Deposit:"
+          }
+        },
+        {
+          "role": "button",
+          "name": "Continue",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "",
+              ""
+            ],
+            "label": ""
+          }
+        },
+        {
+          "role": "button",
+          "name": "Cancel",
+          "children": [],
+          "framePath": [],
+          "context": {
+            "row": [
+              "",
+              ""
+            ],
+            "label": ""
+          }
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Account Type:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Initial Deposit:",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Continue",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "Cancel",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "option",
+          "name": "Savings",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "option",
+          "name": "Checking",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "option",
+          "name": "Certificate of Deposit",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "StaticText",
+          "name": "250",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Continue",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "Cancel",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "InlineTextBox",
+          "name": "250",
+          "children": [],
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Open New Sub-Account for John A. Smith (12345)",
+          "children": [],
+          "context": {
+            "row": [
+              "Open New Sub-Account for John A. Smith (12345)"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Account Type:\n      \n      Savings\n      Checking\n      Certificate of Deposit\n      \n      Initial ",
+          "children": [],
+          "context": {
+            "row": [
+              "Account Type: Savings Checking Certificate of Deposit Initia"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Account Type:",
+          "children": [],
+          "context": {
+            "row": [
+              "Account Type:",
+              "Savings Checking Certificate of Deposit"
+            ]
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Savings\n      Checking\n      Certificate of Deposit",
+          "children": [],
+          "context": {
+            "row": [
+              "Account Type:",
+              "Savings Checking Certificate of Deposit"
+            ],
+            "label": "Account Type:"
+          },
+          "framePath": []
+        },
+        {
+          "role": "cell",
+          "name": "Initial Deposit:",
+          "children": [],
+          "context": {
+            "row": [
+              "Initial Deposit:",
+              ""
+            ]
+          },
+          "framePath": []
+        }
+      ],
+      "detail": "unexpected-dialog: Dismissed confirm: Open this account? This cannot be undone."
+    }
+  ]
+}

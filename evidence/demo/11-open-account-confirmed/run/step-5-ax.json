@@ -1,0 +1,340 @@
+[
+  {
+    "role": "RootWebArea",
+    "name": "Keystone CU - Confirmation",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "heading",
+    "name": "Sub-Account Opened Successfully",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Sub-Account Opened Successfully"
+      ]
+    }
+  },
+  {
+    "role": "link",
+    "name": "Back to Member Detail",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Back to Member Detail"
+      ]
+    }
+  },
+  {
+    "role": "StaticText",
+    "name": "Sub-Account Opened Successfully",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Back to Member Detail",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Sub-Account Opened Successfully",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "columnheader",
+    "name": "Field",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Field",
+        "Value"
+      ]
+    }
+  },
+  {
+    "role": "columnheader",
+    "name": "Value",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Field",
+        "Value"
+      ],
+      "label": "Field"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "Member",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Member",
+        "John A. Smith (12345)"
+      ],
+      "column": "Field"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "John A. Smith (12345)",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Member",
+        "John A. Smith (12345)"
+      ],
+      "column": "Value",
+      "label": "Member"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "Account Type",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Account Type",
+        "checking"
+      ],
+      "column": "Field"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "checking",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Account Type",
+        "checking"
+      ],
+      "column": "Value",
+      "label": "Account Type"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "Account Number",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Account Number",
+        "[REDACTED]"
+      ],
+      "column": "Field"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Account Number",
+        "[REDACTED]"
+      ],
+      "column": "Value",
+      "label": "Account Number"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "Initial Deposit",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Initial Deposit",
+        "$250"
+      ],
+      "column": "Field"
+    }
+  },
+  {
+    "role": "cell",
+    "name": "$250",
+    "children": [],
+    "framePath": [],
+    "context": {
+      "row": [
+        "Initial Deposit",
+        "$250"
+      ],
+      "column": "Value",
+      "label": "Initial Deposit"
+    }
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Back to Member Detail",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Field",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Value",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Member",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "John A. Smith (12345)",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Account Type",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "checking",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Account Number",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "Initial Deposit",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "StaticText",
+    "name": "$250",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Field",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Value",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Member",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "John A. Smith (12345)",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Account Type",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "checking",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Account Number",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "[REDACTED]",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "Initial Deposit",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "InlineTextBox",
+    "name": "$250",
+    "children": [],
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "Sub-Account Opened Successfully",
+    "children": [],
+    "context": {
+      "row": [
+        "Sub-Account Opened Successfully"
+      ]
+    },
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "FieldValue\n      MemberJohn A. Smith (12345)\n      Account Typechecking\n      Account Number35213428",
+    "children": [],
+    "context": {
+      "row": [
+        "FieldValue MemberJohn A. Smith (12345) Account Typechecking "
+      ]
+    },
+    "framePath": []
+  },
+  {
+    "role": "cell",
+    "name": "Back to Member Detail",
+    "children": [],
+    "context": {
+      "row": [
+        "Back to Member Detail"
+      ]
+    },
+    "framePath": []
+  }
+]

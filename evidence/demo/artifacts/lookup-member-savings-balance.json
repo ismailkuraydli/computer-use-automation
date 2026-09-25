@@ -1,0 +1,154 @@
+{
+  "schemaVersion": "2.0",
+  "artifactVersion": 9,
+  "capability": "lookup-member-savings-balance",
+  "description": "Look up a member by ID and read the balance of their Savings account.",
+  "surface": {
+    "type": "web",
+    "baseUrl": "http://localhost:3000",
+    "app": "keystone-cu"
+  },
+  "params": [
+    {
+      "name": "memberId",
+      "type": "string",
+      "required": true,
+      "description": "The ID of the member to look up"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "savingsBalance",
+      "type": "string",
+      "description": "The balance of the member's Savings account"
+    }
+  ],
+  "allowlist": {
+    "permittedDomains": [
+      "localhost",
+      "127.0.0.1"
+    ],
+    "permittedUrlPatterns": [
+      "/search*",
+      "/detail*",
+      "/account-action*",
+      "/new-account*",
+      "/nav.html"
+    ],
+    "permittedActions": [
+      "navigate",
+      "click",
+      "type",
+      "select",
+      "extract",
+      "wait",
+      "scroll",
+      "read_page_text",
+      "submit"
+    ],
+    "irreversibleActions": [
+      "submit"
+    ]
+  },
+  "steps": [
+    {
+      "id": 1,
+      "action": "navigate",
+      "value": "http://localhost:3000/search",
+      "checkpoint": {
+        "anyOf": [
+          {
+            "urlPattern": "/search",
+            "axContains": [
+              {
+                "role": "textbox",
+                "name": "Member ID"
+              },
+              {
+                "role": "button",
+                "name": "Search"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "action": "type",
+      "target": {
+        "role": "textbox",
+        "name": "Member ID"
+      },
+      "value": "{{memberId}}"
+    },
+    {
+      "id": 3,
+      "action": "click",
+      "target": {
+        "role": "button",
+        "name": "Search"
+      },
+      "checkpoint": {
+        "anyOf": [
+          {
+            "urlPattern": "/search?q={{memberId}}&btnSearch=*",
+            "axContains": [
+              {
+                "role": "columnheader",
+                "name": "Member ID"
+              },
+              {
+                "role": "columnheader",
+                "name": "Name"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "action": "click",
+      "target": {
+        "role": "link",
+        "name": "{{memberId}}"
+      },
+      "checkpoint": {
+        "anyOf": [
+          {
+            "urlPattern": "/detail?id={{memberId}}",
+            "axContains": [
+              {
+                "role": "columnheader",
+                "name": "DOB"
+              },
+              {
+                "role": "columnheader",
+                "name": "Type"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "action": "extract",
+      "target": {
+        "role": "cell",
+        "row": "Savings",
+        "column": "Balance"
+      },
+      "output": "savingsBalance"
+    }
+  ],
+  "checkpoint": {
+    "outputsExtracted": true
+  },
+  "metadata": {
+    "recordedAt": "2026-09-25T04:06:13.107Z",
+    "recordedBy": "ismailkuraydli",
+    "selfCheck": "passed (evidence/e0a49866)"
+  }
+}

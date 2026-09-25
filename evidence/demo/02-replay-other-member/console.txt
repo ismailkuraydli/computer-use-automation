@@ -1,0 +1,17 @@
+◇ injected env (6) from .env
+Browser: headless
+
+Replaying artifact: lookup-member-savings-balance
+Params expected: ["memberId"]
+App profile: keystone-cu
+Params provided: {"memberId":"45678"}
+Target: about:blank
+
+
+--- Replay Result ---
+Status: success
+Outputs: {
+  "savingsBalance": "$45,200.00"
+}
+
+Evidence: evidence/f2ef45f1
