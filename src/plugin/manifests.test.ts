@@ -26,6 +26,8 @@ describe("Claude Code plugin", () => {
     const server = manifest.mcpServers[PLUGIN];
     expect(server.command).toBe("${CLAUDE_PLUGIN_ROOT}/bin/cua-mcp");
     expect(server.env.OPENROUTER_API_KEY).toBe("${user_config.openrouter_api_key}");
+    expect(server.env.CUA_TARGET_URL).toBe("${user_config.target_url}");
+    expect(manifest.userConfig.target_url.sensitive).toBe(false);
     expect(manifest.userConfig.openrouter_api_key.sensitive).toBe(true);
   });
 
@@ -48,7 +50,7 @@ describe("Codex plugin", () => {
   it("starts the launcher from the plugin root with a timeout long enough for discovery", () => {
     const server = read(manifest.mcpServers).mcpServers[PLUGIN];
     expect(server).toMatchObject({ command: "./bin/cua-mcp", cwd: "." });
-    expect(server.env_vars).toEqual(expect.arrayContaining(["OPENROUTER_API_KEY", "CUA_WORKSPACE"]));
+    expect(server.env_vars).toEqual(expect.arrayContaining(["OPENROUTER_API_KEY", "CUA_TARGET_URL", "CUA_WORKSPACE"]));
     expect(server.tool_timeout_sec).toBeGreaterThanOrEqual(300);
   });
 

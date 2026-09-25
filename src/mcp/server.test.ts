@@ -149,6 +149,11 @@ describe("MCP capability catalog", () => {
     }
   });
 
+  it("reports the configured target URL (none here) in the catalog", async () => {
+    const { body } = await call("list_capabilities");
+    expect(body.targetUrl).toBeNull();
+  });
+
   it(
     "discovers a new capability, self-checks it, and makes it runnable",
     async () => {
@@ -163,4 +168,100 @@ describe("MCP capability catalog", () => {
     },
     TIMEOUT_MS
   );
+});
+
+describe("MCP with a configured target URL (plugin setting target_url)", () => {
+  let configured: Client;
+  let configuredRoot: string;
+
+  async function callConfigured(name: string, args: Record<string, unknown> = {}) {
+    const result = await configured.callTool({ name, arguments: args });
+    const text = (result.content as Array<{ text: string }>)[0].text;
+    return { isError: result.isError === true, text, body: JSON.parse(text) };
+  }
+
+  beforeAll(async () => {
+    // Recorded against some other deployment; must run against the configured one
+    configuredRoot = mkdtempSync(path.join(tmpdir(), "cua-mcp-configured-"));
+    const recorded = lookupSavingsBalance("http://recorded-elsewhere.invalid:9");
+    mkdirSync(path.join(configuredRoot, "artifacts", recorded.capability), { recursive: true });
+    writeFileSync(path.join(configuredRoot, "artifacts", recorded.capability, "v1.json"), JSON.stringify(recorded));
+
+    const mcp = createCuaServer({
+      workspace: resolveWorkspace({ CUA_WORKSPACE: configuredRoot }),
+      targetUrl: baseUrl,
+      discovery: {
+        llm: () =>
+          new MockLLMClient({
+            plan: {
+              capability: "open-search",
+              description: "Open member search",
+              params: [],
+              outputs: [{ name: "result", type: "string" }],
+              subGoals: [],
+            },
+            script: [
+              { action: { type: "extract", target: { role: "heading", name: "Member Servicing - Search" }, output: "result" }, reasoning: "read", goalMet: true },
+            ],
+          }),
+      },
+    });
+    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+    configured = new Client({ name: "test-agent", version: "1.0.0" });
+    await Promise.all([mcp.connect(serverSide), configured.connect(clientSide)]);
+  });
+
+  afterAll(async () => {
+    await configured.close();
+    rmSync(configuredRoot, { recursive: true, force: true });
+  });
+
+  it(
+    "runs a capability against the configured URL instead of the recorded one",
+    async () => {
+      const { body } = await callConfigured("run_capability", { name: "lookup-savings-balance", params: { memberId: "23456" } });
+
+      expect(body).toMatchObject({ status: "success", outputs: { savingsBalance: "$8,234.50" } });
+    },
+    TIMEOUT_MS
+  );
+
+  it(
+    "starts discovery at the configured URL when no target is given, or resolves a path against it",
+    async () => {
+      const { body: list } = await callConfigured("list_capabilities");
+      expect(list.targetUrl).toBe(baseUrl);
+
+      const relative = await callConfigured("discover_capability", { goal: "Read the search page heading", target: "/search" });
+      expect(relative.body).toMatchObject({ success: true, capability: "open-search" });
+    },
+    TIMEOUT_MS
+  );
+});
+
+describe("MCP without any target", () => {
+  it("asks for a target URL when none is given or configured", async () => {
+    const mcp = createCuaServer({ workspace: resolveWorkspace({ CUA_WORKSPACE: mkdtempSync(path.join(tmpdir(), "cua-none-")) }) });
+    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+    const bare = new Client({ name: "t", version: "1" });
+    await Promise.all([mcp.connect(serverSide), bare.connect(clientSide)]);
+
+    const result = await bare.callTool({ name: "discover_capability", arguments: { goal: "x" } });
+
+    expect(result.isError).toBe(true);
+    expect((result.content as Array<{ text: string }>)[0].text).toMatch(/target_url/);
+    await bare.close();
+  });
+
+  it("reports a malformed configured URL instead of using it", async () => {
+    const mcp = createCuaServer({ workspace: resolveWorkspace({ CUA_WORKSPACE: mkdtempSync(path.join(tmpdir(), "cua-bad-")) }), targetUrl: "ftp://nope" });
+    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+    const bare = new Client({ name: "t", version: "1" });
+    await Promise.all([mcp.connect(serverSide), bare.connect(clientSide)]);
+
+    const result = await bare.callTool({ name: "list_capabilities", arguments: {} });
+
+    expect((result.content as Array<{ text: string }>)[0].text).toMatch(/not an http\(s\) URL/);
+    await bare.close();
+  });
 });

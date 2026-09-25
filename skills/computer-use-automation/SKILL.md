@@ -15,10 +15,16 @@ discovery uses an LLM.
   outputs, version and whether they contain irreversible steps. Call it first.
 - `run_capability` — `{ name, params, version?, tenant?, confirmIrreversible? }`.
   Params must match the schema exactly (names and types).
-- `discover_capability` — `{ goal, target, app?, allowlist? }`. Records a new
+- `discover_capability` — `{ goal, target?, app?, allowlist? }`. Records a new
   capability from a goal with example values, replays it once as a self-check,
   and saves it. Takes minutes and costs model tokens; prefer an existing
-  capability when one fits.
+  capability when one fits. `target` may be omitted (start at the configured
+  application URL) or be a path such as `/search` on it.
+
+`list_capabilities` also returns `targetUrl`: the application URL configured
+for this plugin. Replays run against it, whatever URL a capability was
+recorded on. If it is `null` and the user expects a specific environment,
+tell them to set the plugin's application URL.
 
 ## Reading results
 

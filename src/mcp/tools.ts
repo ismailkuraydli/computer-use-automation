@@ -27,6 +27,11 @@ const dataName = () => z.string().regex(SAFE_NAME, "must be a name (letters, dig
 
 export interface CuaServerOptions {
   workspace?: Workspace;
+  /**
+   * Where the application runs (plugin setting target_url, env
+   * CUA_TARGET_URL). Replays are rebased onto it; discovery starts there.
+   */
+  targetUrl?: string;
   /** Overrides for tests (e.g. a scripted LLM for discovery). */
   discovery?: Partial<Pick<DiscoveryRequest, "llm" | "headed" | "configPath">>;
   replay?: Partial<Pick<ReplayRequest, "headed" | "configPath">>;
@@ -41,6 +46,9 @@ const json = (value: unknown, isError = false): ToolResult => ({
 
 export function createCuaServer(opts: CuaServerOptions = {}): McpServer {
   const ws = opts.workspace ?? resolveWorkspace();
+  const targetUrl = opts.targetUrl?.trim() || undefined;
+  const targetError =
+    targetUrl && !isHttpUrl(targetUrl) ? `Configured target_url "${targetUrl}" is not an http(s) URL` : undefined;
   const catalog = new CapabilityCatalog(ws.artifactsDir);
   const relative = (p: string) => path.relative(ws.root, p) || ".";
 
@@ -56,7 +64,10 @@ export function createCuaServer(opts: CuaServerOptions = {}): McpServer {
       inputSchema: {},
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
-    async () => json({ workspace: ws.root, capabilities: catalog.list() })
+    async () =>
+      targetError
+        ? json({ error: targetError }, true)
+        : json({ workspace: ws.root, targetUrl: targetUrl ?? null, capabilities: catalog.list() })
   );
 
   server.registerTool(
@@ -78,6 +89,7 @@ export function createCuaServer(opts: CuaServerOptions = {}): McpServer {
       annotations: { destructiveHint: true, openWorldHint: true },
     },
     async ({ name, params, version, tenant, confirmIrreversible }) => {
+      if (targetError) return json({ error: targetError }, true);
       const artifact = catalog.get(name, version);
       if (!artifact) {
         return json({ error: `No capability "${name}"${version ? ` v${version}` : ""}`, available: catalog.list().map((c) => c.name) }, true);
@@ -90,6 +102,7 @@ export function createCuaServer(opts: CuaServerOptions = {}): McpServer {
           artifact,
           params,
           tenant,
+          baseUrl: targetUrl,
           confirmIrreversible,
           workspace: ws,
           ...opts.replay,
@@ -112,17 +125,23 @@ export function createCuaServer(opts: CuaServerOptions = {}): McpServer {
         "capability's name, artifact path and self-check result; then call run_capability with other params.",
       inputSchema: {
         goal: z.string().min(1).describe('What to do, with example values, e.g. "Look up member 23456 and read their Savings balance"'),
-        target: z.string().url().describe("URL of the page to start from"),
+        target: z
+          .string()
+          .optional()
+          .describe("Page to start from: a full URL, or a path such as /search on the configured target_url; defaults to target_url"),
         app: dataName().optional().describe("App profile name (profiles/<app>.json), e.g. keystone-cu"),
         allowlist: dataName().optional().describe("Allowlist name (allowlists/<name>.json); defaults to the target's host"),
       },
       annotations: { openWorldHint: true },
     },
     async ({ goal, target, app, allowlist }) => {
+      if (targetError) return json({ error: targetError }, true);
+      const start = resolveStart(target, targetUrl);
+      if (!start.ok) return json({ error: start.error }, true);
       try {
         const outcome = await discoverCapability({
           goal,
-          target,
+          target: start.url,
           app,
           allowlist,
           workspace: ws,
@@ -151,4 +170,28 @@ export function createCuaServer(opts: CuaServerOptions = {}): McpServer {
   );
 
   return server;
+}
+
+/** A full URL as-is; a path against the configured target URL; else that URL. */
+function resolveStart(target: string | undefined, targetUrl: string | undefined): { ok: true; url: string } | { ok: false; error: string } {
+  if (target && isHttpUrl(target)) return { ok: true, url: target };
+  if (!targetUrl) {
+    return {
+      ok: false,
+      error: target
+        ? `"${target}" is not a full URL and no target_url is configured`
+        : "No target given and no target_url configured (plugin setting target_url, or env CUA_TARGET_URL)",
+    };
+  }
+  if (!target) return { ok: true, url: targetUrl };
+  if (!target.startsWith("/")) return { ok: false, error: `target must be a full http(s) URL or a path starting with "/", got "${target}"` };
+  return { ok: true, url: targetUrl.replace(/\/+$/, "") + target };
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    return ["http:", "https:"].includes(new URL(value).protocol);
+  } catch {
+    return false;
+  }
 }

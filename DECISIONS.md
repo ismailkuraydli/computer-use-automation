@@ -331,3 +331,13 @@ The AX prioritizer boosts elements matching the current sub-goal's keywords to t
 **Decision:** Checkpoint URLs are recorded as route shapes (`{{param}}`, `:id` for other ID-like segments, `*` for other query values). Tenant overlays (`profiles/tenants/<app>/<tenant>.json`) list only a tenant's differences: host, relabelled UI text, route rewrites, extra interstitials, conditions and sensitive fields. `applyTenantOverlay` is a pure function applied at replay time (`--tenant`, `run_capability.tenant`).
 
 **Consequences:** One recorded artifact serves every tenant of a product; per-tenant work is a short, reviewable data file. Without an overlay, drift fails precisely at the first changed step. Not yet: overlay inheritance, per-tenant storage, scheduled drift runs.
+
+---
+
+### ADR-020: The application URL is deployment configuration, not part of the capability
+
+**Context:** Artifacts record the URL they were discovered on (the local mock app). Installed as a plugin, the same capability must run against wherever the application actually lives: staging, production, a path-prefixed portal.
+
+**Decision:** The plugin setting `target_url` (env `CUA_TARGET_URL`; CLI `--base-url`) says where the app runs. `rebaseArtifact` moves an artifact onto it: host and path prefix in navigation steps, checkpoint URL patterns and the allowlist. A tenant overlay's own `baseUrl` takes precedence (it names a different institution's host); without either, the recorded URL is used. Discovery starts at the configured URL, and `target` may be a path on it. Starting the mock app from the plugin was rejected: it is a test fixture, not the product.
+
+**Consequences:** One recorded capability runs unchanged across deployments. The allowlist follows the configured host automatically, so the setting is trusted configuration (set by the user in the plugin UI or the environment, never by a tool call).

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * MCP server (stdio) — the entry point that Claude Code and Codex plugins
- * launch via bin/cua-mcp. Data lives in CUA_WORKSPACE (default: cwd).
+ * launch via bin/cua-mcp. Data lives in CUA_WORKSPACE (default: cwd); the
+ * application URL comes from CUA_TARGET_URL (plugin setting target_url).
  */
 
 import "./stdio-guard.js"; // must stay first: keeps stdout for the protocol
@@ -11,9 +12,12 @@ import { resolveWorkspace } from "../app/workspace.js";
 
 async function main(): Promise<void> {
   const workspace = resolveWorkspace();
-  const server = createCuaServer({ workspace });
+  const targetUrl = process.env.CUA_TARGET_URL;
+  const server = createCuaServer({ workspace, targetUrl });
   await server.connect(new StdioServerTransport());
-  console.error(`computer-use-automation MCP server ready (workspace: ${workspace.root})`);
+  console.error(
+    `computer-use-automation MCP server ready (workspace: ${workspace.root}, target: ${targetUrl || "as recorded"})`
+  );
 }
 
 main().catch((e) => {
