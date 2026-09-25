@@ -14,6 +14,7 @@
 
 import { chromium, type Browser, type Page, type Locator } from "playwright";
 import { resolveTarget } from "./playwright-resolver.js";
+import { PII_TEXT_PATTERN } from "../safety/pii-redactor.js";
 import type {
   Surface,
   ScreenState,
@@ -311,7 +312,10 @@ export class PlaywrightSurface implements Surface {
     // Screenshot
     const screenshotPath = path.join(this.screenshotDir, `screen-${randomUUID().slice(0, 8)}.png`);
     try {
-      await this.page.screenshot({ path: screenshotPath, fullPage: false });
+      // Screenshots are evidence on disk: cover anything that looks like an
+      // SSN, card or account number.
+      const mask = this.page.frames().map((f) => f.getByText(PII_TEXT_PATTERN));
+      await this.page.screenshot({ path: screenshotPath, fullPage: false, mask });
     } catch {
       // Screenshot may fail if page is navigating — that's OK
     }

@@ -17,6 +17,11 @@ const ACCOUNT_NUMBER_PATTERN = /\b\d{10,12}\b/g;
 // Credit card: 16 digits, optionally separated by spaces in groups of 4
 const CREDIT_CARD_PATTERN = /\b(?:\d{4}\s?){3}\d{4}\b/g;
 
+/** Matches any text that contains a known PII pattern — for masking screenshots. */
+export const PII_TEXT_PATTERN = new RegExp(
+  [CREDIT_CARD_PATTERN, SSN_PATTERN, ACCOUNT_NUMBER_PATTERN].map((p) => p.source).join("|")
+);
+
 /**
  * Redact all known PII patterns from a string, replacing them with [REDACTED].
  * If the input is not a string, returns it as-is.
